@@ -1,0 +1,36 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require
+    driver-class-name: org.postgresql.Driver
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:259200000}
+
+sentry:
+  dsn: ${SENTRY_DSN}
+  exception-resolver-order: -2147483647
+  max-request-body-size: always
+  send-default-pii: true
+  traces-sample-rate: 1.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true

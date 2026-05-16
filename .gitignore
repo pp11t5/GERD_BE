@@ -1,0 +1,19 @@
+# Gradle
+.gradle/
+build/
+build/generated/
+src/main/generated/
+.kotlin
+
+/src/main/resources/application-secret.properties
+
+# IDE
+.idea/
+*.iml
+out/
+
+# OS
+.DS_Store
+
+# Env
+.env

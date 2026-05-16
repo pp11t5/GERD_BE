@@ -1,0 +1,41 @@
+name: "🐞 Bug Report"
+description: "버그 제보 및 수정 요청"
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: 📄 버그 설명
+      description: 어떤 문제가 발생했는지 설명해 주세요.
+      placeholder: 어떤 기능에서 어떤 문제가 발생했는지 구체적으로 작성해 주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🔁 재현 방법
+      description: 어떤 절차를 따라야 이 문제가 발생하는지 설명해 주세요.
+      placeholder: |
+        1. 어떤 페이지로 이동
+        2. 어떤 버튼 클릭
+        3. 어떤 현상 발생
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🧩 기대 동작
+      description: 원래는 어떻게 동작했어야 하나요?
+      placeholder: 정상적으로 표시되거나 동작해야 할 내용을 작성해주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 💻 환경 정보
+      description: 사용한 브라우저, OS, 디바이스 등을 알려주세요.
+      placeholder: |
+        - Device: [e.g. iPhone 14, MacBook M1]
+        - OS: [e.g. iOS 16.4, macOS 13.5]
+        - Browser: [e.g. Chrome 113.0.5672.92]
+    validations:
+      required: false

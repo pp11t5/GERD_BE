@@ -1,0 +1,25 @@
+name: "🧹 Refactor"
+description: "기능은 그대로, 코드 개선 요청"
+labels: ["refactor"]
+body:
+  - type: textarea
+    attributes:
+      label: 🧼 리팩토링 대상 설명
+      description: 어떤 부분의 코드를 리팩토링하려는지 작성해 주세요.
+      placeholder:  예 - 중복된 조건문, 불필요한 클래스 분리 등
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ 작업 항목
+      description: 리팩토링할 구체적인 내용을 체크박스로 적어주세요.
+      placeholder: |
+        - [ ] 변수명 변경
+        - [ ] 로직 분리
+        - [ ] 리팩토링 후 테스트 코드 통과 확인
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 💬 비고
+      description: 특별히 참고할 내용이 있다면 작성해주세요.

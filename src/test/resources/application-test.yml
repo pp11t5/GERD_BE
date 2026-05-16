@@ -1,0 +1,41 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  h2:
+    console:
+      enabled: false
+
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtMzItYnl0ZXMhIQ==
+  access-expiration-ms: 3600000
+  refresh-expiration-ms: 259200000
+
+r2:
+  credentials:
+    access-key: test-access-key
+    secret-key: test-secret-key
+  endpoint: https://test.r2.local
+  bucket: test-bucket
+
+sentry:
+  dsn:
+  exception-resolver-order: -2147483647
+  max-request-body-size: always
+  send-default-pii: false
+  traces-sample-rate: 0.0
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

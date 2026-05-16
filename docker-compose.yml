@@ -1,0 +1,34 @@
+services:
+  # PostgreSQL local verification DB
+  # JDBC: jdbc:postgresql://localhost:5432/gerd
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: gerd
+      POSTGRES_USER: gerd
+      POSTGRES_PASSWORD: gerd
+      TZ: Asia/Seoul
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # H2 server mode local verification DB
+  # app default is in-memory: jdbc:h2:mem:gerd;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+  # compose H2 uses TCP server mode: jdbc:h2:tcp://localhost:1521/gerd;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+  h2:
+    image: oscarfonts/h2
+    platform: linux/amd64
+    ports:
+      - "1521:1521"
+      - "8082:81"
+    environment:
+      H2_OPTIONS: -ifNotExists
+    volumes:
+      - h2_data:/opt/h2-data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  h2_data:
