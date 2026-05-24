@@ -1,46 +1,45 @@
-# =========================
-# Gradle
-# =========================
+# Build outputs
 .gradle/
 build/
+**/build/
 gradlew.bat
 
-# =========================
-# Test
-# =========================
+# Tests
 src/test/
 
-# =========================
 # IDE
-# =========================
 .idea/
 *.iml
+.vscode/
 out/
 
-# =========================
 # OS
-# =========================
 .DS_Store
+Thumbs.db
 
-# =========================
 # Git
-# =========================
 .git/
 .gitignore
+.gitattributes
 .github/
 
-# =========================
-# Secret / Env
-# =========================
+# Secrets / env
 .env
-*.env
+.env.*
+*.local
 
-# =========================
-# Docs / Tooling
-# =========================
+# Logs / temp
+*.log
+tmp/
+
+# Docs / tooling
 .claude/
 docs/
 skills/
 README.md
 AGENTS.md
 *.md
+
+# Docker
+Dockerfile
+.dockerignore

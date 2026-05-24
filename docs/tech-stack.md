@@ -104,9 +104,12 @@
 | 에러 추적 | Sentry | 7.9.0 |
 | 헬스체크 | Spring Actuator (`/actuator/health`) | — |
 | 요청 추적 | MDC TraceId (`X-Trace-Id` 헤더) | 자체 구현 |
+| 운영 로그 | Logback JSON 로그 | logstash-logback-encoder 8.0 |
 
 - Sentry: `prod` 프로파일에서만 활성화 (`SENTRY_DSN` 환경변수)
+- Sentry: `environment`, `release`, `tracesSampleRate`를 환경변수로 주입
 - TraceId: 요청마다 UUID 생성 → MDC 저장 → 실패 응답 바디 + 응답 헤더에 포함
+- Actuator: `health`, `liveness`, `readiness`, `diskspace`, `ping` 기반 운영 상태 점검
 
 ---
 
@@ -144,7 +147,7 @@
 | `SPRING_PROFILES_ACTIVE` | `prod` 고정 |
 | `JWT_SECRET` | JWT 서명 키 |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | PostgreSQL 연결 정보 |
-| `SENTRY_DSN` | Sentry 에러 추적 |
+| `SENTRY_DSN` / `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` / `SENTRY_TRACES_SAMPLE_RATE` | Sentry 에러 추적 및 트레이싱 제어 |
 | `R2_ACCESS_KEY` / `R2_SECRET_KEY` / `R2_ENDPOINT` / `R2_BUCKET` | Cloudflare R2 |
 
 ---

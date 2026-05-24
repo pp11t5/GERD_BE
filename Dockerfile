@@ -1,34 +1,36 @@
-FROM gradle:9.4.1-jdk21-jammy AS builder
+# syntax=docker/dockerfile:1
+
+FROM gradle:9.4.1-jdk21-jammy AS build
 
 WORKDIR /app
 
-ENV TZ=Asia/Seoul
-
-RUN apt-get update && apt-get install -y tzdata && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    echo $TZ > /etc/timezone && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
-RUN ./gradlew dependencies --no-daemon
+RUN ./gradlew dependencies --no-daemon || true
 
 COPY src ./src
-RUN GRADLE_OPTS="-Xmx512m -Xms256m" ./gradlew clean bootJar -x test --no-daemon
+RUN --mount=type=cache,target=/home/gradle/.gradle \
+    GRADLE_OPTS="-Xmx512m -Xms256m" ./gradlew clean bootJar -x test --no-daemon
+
+FROM eclipse-temurin:21-jre-jammy AS extract
+
+WORKDIR /app
+
+COPY --from=build /app/build/libs/*.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract
 
 FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-ENV TZ=Asia/Seoul
+RUN addgroup --system spring && adduser --system --ingroup spring spring
+USER spring:spring
 
-RUN apt-get update && apt-get install -y tzdata && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    echo $TZ > /etc/timezone && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /app/build/libs/*.jar app.jar
+COPY --from=extract /app/dependencies/ ./
+COPY --from=extract /app/spring-boot-loader/ ./
+COPY --from=extract /app/snapshot-dependencies/ ./
+COPY --from=extract /app/application/ ./
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]

@@ -20,17 +20,32 @@ jwt:
 
 sentry:
   dsn: ${SENTRY_DSN}
+  environment: ${SENTRY_ENVIRONMENT:prod}
+  release: ${SENTRY_RELEASE:${RAILWAY_GIT_COMMIT_SHA:unknown}}
   exception-resolver-order: -2147483647
   max-request-body-size: always
   send-default-pii: true
-  traces-sample-rate: 1.0
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.2}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info
   endpoint:
     health:
+      show-details: never
       probes:
         enabled: true
+  health:
+    diskspace:
+      enabled: true
+    ping:
+      enabled: true
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

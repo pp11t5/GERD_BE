@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class SentryConfig(
     @Value("\${sentry.dsn:}") private val dsn: String,
+    @Value("\${sentry.environment:}") private val environment: String,
+    @Value("\${sentry.release:}") private val release: String,
     @Value("\${sentry.traces-sample-rate:0.0}") private val tracesSampleRate: Double,
     @Value("\${sentry.send-default-pii:false}") private val sendDefaultPii: Boolean,
 ) {
@@ -25,6 +27,12 @@ class SentryConfig(
 
         Sentry.init { options ->
             options.dsn = dsn
+            if (environment.isNotBlank()) {
+                options.environment = environment
+            }
+            if (release.isNotBlank()) {
+                options.release = release
+            }
             options.tracesSampleRate = tracesSampleRate
             options.isSendDefaultPii = sendDefaultPii
         }
