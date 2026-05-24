@@ -9,8 +9,7 @@ COPY gradle ./gradle
 RUN ./gradlew dependencies --no-daemon || true
 
 COPY src ./src
-RUN --mount=type=cache,id=gradle-cache,target=/home/gradle/.gradle \
-    GRADLE_OPTS="-Xmx512m -Xms256m" ./gradlew clean bootJar -x test --no-daemon
+RUN GRADLE_OPTS="-Xmx512m -Xms256m" ./gradlew clean bootJar -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-jammy AS extract
 
