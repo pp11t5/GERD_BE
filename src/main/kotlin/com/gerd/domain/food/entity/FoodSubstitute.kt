@@ -1,6 +1,7 @@
 package com.gerd.domain.food.entity
 
 import com.gerd.domain.food.entity.id.FoodSubstituteId
+import com.gerd.global.common.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
@@ -37,4 +38,4 @@ class FoodSubstitute(
 
     @EmbeddedId
     val id: FoodSubstituteId = FoodSubstituteId(),
-)
+) : BaseEntity()

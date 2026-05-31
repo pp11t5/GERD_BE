@@ -1,6 +1,7 @@
 package com.gerd.domain.food.entity
 
 import com.gerd.domain.food.entity.id.FoodAllergenId
+import com.gerd.global.common.entity.BaseEntity
 import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -25,4 +26,4 @@ class FoodAllergen(
 
     @EmbeddedId
     val id: FoodAllergenId = FoodAllergenId(),
-)
+) : BaseEntity()

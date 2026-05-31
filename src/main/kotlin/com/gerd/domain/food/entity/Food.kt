@@ -5,7 +5,6 @@ import com.gerd.domain.food.converter.FoodVisibilityConverter
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.global.common.entity.BaseEntity
-import jakarta.persistence.AttributeOverride
 import jakarta.persistence.Column
 import jakarta.persistence.Convert
 import jakarta.persistence.Entity
@@ -23,12 +22,10 @@ import java.time.LocalDateTime
  * - seed/curated/user 음식을 source/visibility로 구분해 단일 테이블에 통합
  * - deletedAt 기반 soft delete — delete 시 UPDATE로 전환되고 조회 시 활성 row만 노출
  */
-// 스키마 명세(food-schema.sql)가 updated_at을 SoT로 두므로 BaseEntity.modifiedAt 컬럼을 updated_at으로 매핑한다
 // @SQLRestriction은 전역 필터라 삭제 row 조회가 필요하면 네이티브 쿼리로 우회한다
 @Entity
 @Table(name = "foods")
-@AttributeOverride(name = "modifiedAt", column = Column(name = "updated_at"))
-@SQLDelete(sql = "UPDATE foods SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE food_id = ?")
+@SQLDelete(sql = "UPDATE foods SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP WHERE food_id = ?")
 @SQLRestriction("deleted_at IS NULL")
 class Food(
     @Id

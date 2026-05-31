@@ -1,5 +1,6 @@
 package com.gerd.domain.food.entity
 
+import com.gerd.global.common.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -27,4 +28,4 @@ class Allergen(
 
     @Column(name = "sort_order", nullable = false)
     val sortOrder: Int = 0,
-)
+) : BaseEntity()
