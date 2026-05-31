@@ -11,7 +11,7 @@ import jakarta.persistence.Table
 
 // food ↔ trigger_label M:N 조인 (한 음식이 가진 역류 유발 요인)
 @Entity
-@Table(name = "food_trigger")
+@Table(name = "food_triggers")
 class FoodTrigger(
     @MapsId("foodId")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

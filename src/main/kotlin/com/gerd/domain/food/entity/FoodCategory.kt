@@ -9,7 +9,7 @@ import jakarta.persistence.Table
 
 // 음식 분류 마스터 (밥·죽, 면류 등 13종 고정 코드) — 시드로 적재되어 food와 M:N으로 연결된다
 @Entity
-@Table(name = "food_category")
+@Table(name = "food_categories")
 class FoodCategory(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

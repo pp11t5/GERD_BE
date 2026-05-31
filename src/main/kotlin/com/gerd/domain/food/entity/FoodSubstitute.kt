@@ -17,7 +17,7 @@ import jakarta.persistence.Table
  */
 // food_id <> substitute_food_id 제약은 DB CHECK로만 강제된다 (JPA 비이식)
 @Entity
-@Table(name = "food_substitute")
+@Table(name = "food_substitutes")
 class FoodSubstitute(
     @MapsId("foodId")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -11,7 +11,7 @@ import jakarta.persistence.Table
 
 // food ↔ allergen M:N 조인 (한 음식이 포함한 알레르기 유발 식품)
 @Entity
-@Table(name = "food_allergen")
+@Table(name = "food_allergens")
 class FoodAllergen(
     @MapsId("foodId")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

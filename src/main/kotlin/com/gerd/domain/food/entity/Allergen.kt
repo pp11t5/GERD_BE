@@ -9,7 +9,7 @@ import jakarta.persistence.Table
 
 // 알레르기 유발 식품 마스터 (식약처 표시의무 8종 고정 코드) — 시드로 적재되어 food와 M:N으로 연결된다
 @Entity
-@Table(name = "allergen")
+@Table(name = "allergens")
 class Allergen(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

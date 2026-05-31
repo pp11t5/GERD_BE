@@ -13,18 +13,23 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLDelete
+import org.hibernate.annotations.SQLRestriction
 import java.time.LocalDateTime
 
 /**
  * 음식 카탈로그 (메뉴 단위)
  *
  * - seed/curated/user 음식을 source/visibility로 구분해 단일 테이블에 통합
- * - deletedAt 기반 soft delete — null이면 활성 상태
+ * - deletedAt 기반 soft delete — delete 시 UPDATE로 전환되고 조회 시 활성 row만 노출
  */
-// BaseEntity.modifiedAt은 컬럼명이 modified_at이지만, 스키마 명세는 updated_at을 사용하므로 매핑을 덮어쓴다
+// 스키마 명세(food-schema.sql)가 updated_at을 SoT로 두므로 BaseEntity.modifiedAt 컬럼을 updated_at으로 매핑한다
+// @SQLRestriction은 전역 필터라 삭제 row 조회가 필요하면 네이티브 쿼리로 우회한다
 @Entity
-@Table(name = "food")
+@Table(name = "foods")
 @AttributeOverride(name = "modifiedAt", column = Column(name = "updated_at"))
+@SQLDelete(sql = "UPDATE foods SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE food_id = ?")
+@SQLRestriction("deleted_at IS NULL")
 class Food(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -55,10 +60,6 @@ class Food(
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null,
 ) : BaseEntity() {
-
-    fun softDelete(deletedAt: LocalDateTime) {
-        this.deletedAt = deletedAt
-    }
 
     fun updateDetails(name: String, description: String?, imageUrl: String?) {
         this.name = name

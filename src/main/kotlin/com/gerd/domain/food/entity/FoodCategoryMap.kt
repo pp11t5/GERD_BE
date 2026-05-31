@@ -11,7 +11,7 @@ import jakarta.persistence.Table
 
 // food ↔ food_category M:N 조인 (한 음식이 복합 메뉴일 때 여러 분류를 가짐)
 @Entity
-@Table(name = "food_category_map")
+@Table(name = "food_category_maps")
 class FoodCategoryMap(
     @MapsId("foodId")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

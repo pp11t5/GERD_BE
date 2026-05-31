@@ -9,7 +9,7 @@ import jakarta.persistence.Table
 
 // 역류 유발 요인 마스터 (커피, 매운 음식 등 고정 코드 집합) — 시드로 적재되어 food와 M:N으로 연결된다
 @Entity
-@Table(name = "trigger_label")
+@Table(name = "trigger_labels")
 class TriggerLabel(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
