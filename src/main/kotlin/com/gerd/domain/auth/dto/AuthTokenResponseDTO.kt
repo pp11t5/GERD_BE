@@ -10,8 +10,8 @@ data class AuthTokenResponseDTO(
     @field:Schema(description = "발급된 Refresh Token", example = "eyJhbGciOiJIUzI1NiJ9.refresh-token")
     val refreshToken: String,
 
-    @field:Schema(description = "토큰이 발급된 사용자 ID", example = "1")
-    val userId: Long,
+    @field:Schema(description = "토큰이 발급된 사용자 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+    val userId: String,
 
     @field:Schema(description = "토큰이 발급된 사용자 이메일", example = "user@test.com")
     val email: String,
