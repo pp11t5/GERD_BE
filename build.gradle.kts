@@ -42,7 +42,10 @@ dependencies {
     implementation("io.sentry:sentry:7.14.0")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
-    // web
+    // cache
+    implementation("com.github.ben-manes.caffeine:caffeine")
+
+// web
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 
