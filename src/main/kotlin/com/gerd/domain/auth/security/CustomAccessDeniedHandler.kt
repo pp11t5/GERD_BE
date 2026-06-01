@@ -1,4 +1,4 @@
-package com.gerd.global.security
+package com.gerd.domain.auth.security
 
 import com.gerd.domain.auth.exception.AuthErrorCode
 import jakarta.servlet.http.HttpServletRequest
