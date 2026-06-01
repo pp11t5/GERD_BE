@@ -8,5 +8,6 @@ import org.springframework.security.test.context.support.WithSecurityContext
 annotation class WithCustomUser(
     val userId: Long = 1L,
     val email: String = "user@test.com",
+    val nickname: String = "tester",
     val role: String = "USER",
 )
