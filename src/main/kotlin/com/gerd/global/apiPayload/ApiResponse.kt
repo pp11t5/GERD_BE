@@ -1,6 +1,7 @@
 package com.gerd.global.apiPayload
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.gerd.global.apiPayload.code.BaseErrorCode
 import com.gerd.global.apiPayload.code.BaseSuccessCode
 import com.gerd.global.apiPayload.code.CommonSuccessCode
@@ -8,6 +9,7 @@ import org.slf4j.MDC
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ApiResponse<T>(
+    @get:JsonProperty("isSuccess")
     val isSuccess: Boolean,
     val code: String,
     val message: String,
