@@ -62,13 +62,14 @@
 
 | 항목 | 선택 | 버전 |
 |---|---|---|
-| 인증 | JWT (JJWT) | 0.11.2 |
+| 인증 | JWT (JJWT) | 0.11.5 |
 | 보안 필터 | Spring Security | — |
 
 **JWT 구조**
-- `JwtProvider`: 토큰 생성/검증/userId 추출
+- `JwtProvider`: Access/Refresh Token 생성·검증·claims 추출
+- `RefreshToken`: userId를 PK로 DB에 `sha256(tokenValue)` 저장 — save()가 upsert로 동작해 단일 세션 유지
 - `JwtAuthenticationFilter`: Bearer 토큰 파싱 → `SecurityContextHolder` 세팅
-- `@CurrentUser`: `HandlerMethodArgumentResolver`로 Controller에서 `User` 직접 주입
+- `@CurrentUser`: `HandlerMethodArgumentResolver`로 Controller에서 `CustomUserDetails` 주입 (userId만 저장, 서비스에서 필요 시 User 엔티티 조회)
 
 ---
 
@@ -91,9 +92,8 @@
 | Object Storage | Cloudflare R2 | AWS SDK v2 (2.25.4) |
 
 - R2는 S3 호환 API → AWS SDK v2 (`software.amazon.awssdk:s3`) 그대로 사용
-- `R2Config`에서 `S3Client` 빈 등록, `endpointOverride`로 Cloudflare 엔드포인트 지정
-- region은 `"auto"` 고정
-- 자격증명: `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_ENDPOINT`, `R2_BUCKET` 환경변수로 주입
+- `R2Config`, `R2Properties` 설정 클래스는 현재 미사용으로 제거됨 (파일 스토리지 도메인 구현 시 재추가 예정)
+- 자격증명: `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_ENDPOINT`, `R2_BUCKET` 환경변수로 주입 예정
 
 ---
 
@@ -145,10 +145,14 @@
 | 변수 | 설명 |
 |---|---|
 | `SPRING_PROFILES_ACTIVE` | `prod` 고정 |
-| `JWT_SECRET` | JWT 서명 키 |
+| `JWT_SECRET` | JWT Access Token 서명 키 |
+| `JWT_EXPIRATION_MS` | Access Token 만료 시간 (ms, 기본 3600000 = 1h) |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | PostgreSQL 연결 정보 |
+| `KAKAO_NATIVE_APP_KEY` | 카카오 네이티브 앱 키 (OIDC audience 검증) |
+| `KAKAO_ISS` | 카카오 OIDC issuer URL |
+| `KAKAO_JWKS_URL` | 카카오 JWKS 공개키 엔드포인트 |
+| `KAKAO_ADMIN_KEY` | 카카오 Admin 키 (Unlink API용) |
 | `SENTRY_DSN` / `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` / `SENTRY_TRACES_SAMPLE_RATE` | Sentry 에러 추적 및 트레이싱 제어 |
-| `R2_ACCESS_KEY` / `R2_SECRET_KEY` / `R2_ENDPOINT` / `R2_BUCKET` | Cloudflare R2 |
 
 ---
 
