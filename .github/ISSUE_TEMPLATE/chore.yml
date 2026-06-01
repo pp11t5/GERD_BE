@@ -1,6 +1,6 @@
-name: "✨ Feature"
-description: "새로운 기능 추가"
-labels: ["✨ Feature"]
+name: "🛠️ Chores"
+description: "빌드, 설정, 패키지 관리 등 운영성 작업"
+labels: ["🛠️ Chores"]
 body:
   - type: dropdown
     attributes:
@@ -28,19 +28,24 @@ body:
 
   - type: textarea
     attributes:
-      label: 📄 설명
-      description: 새로운 기능에 대한 설명을 작성해 주세요.
-      placeholder: 자세히 적을수록 좋습니다!
+      label: 📄 작업 설명
+      description: 어떤 운영성 작업이 필요한지 작성해 주세요.
+      placeholder: 예 - Gradle 버전 업데이트, CI 설정 정리, 공통 설정값 수정
     validations:
       required: true
+
   - type: textarea
     attributes:
       label: ✅ 작업할 내용
-      description: 할 일을 체크박스 형태로 작성해주세요.
-      placeholder: 최대한 세분화 해서 적어주세요!
+      description: 수행할 항목을 체크박스 형태로 작성해 주세요.
+      placeholder: |
+        - [ ] 설정 변경
+        - [ ] 영향 범위 확인
+        - [ ] 배포/CI 검증
     validations:
       required: true
+
   - type: textarea
     attributes:
-      label: 🙋🏻 참고 자료
-      description: 참고 자료가 있다면 작성해 주세요.
+      label: 💬 비고
+      description: 참고할 맥락이나 주의사항이 있으면 적어주세요.

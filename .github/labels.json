@@ -1,0 +1,47 @@
+[
+  {
+    "name": "🐛 Bug",
+    "color": "D73A4A",
+    "description": "예상치 못한 문제나 오류"
+  },
+  {
+    "name": "✨ Feature",
+    "color": "1D76DB",
+    "description": "새로운 기능 추가 요청"
+  },
+  {
+    "name": "📚 Docs",
+    "color": "0075CA",
+    "description": "문서(README, 위키 등) 개선"
+  },
+  {
+    "name": "♻️ Refactor",
+    "color": "A2EEEF",
+    "description": "기능 변경 없는 코드 구조 개선"
+  },
+  {
+    "name": "🛠️ Chores",
+    "color": "7057FF",
+    "description": "빌드, 패키지 관리 등 잡무"
+  },
+  {
+    "name": "🔴Critical",
+    "color": "B60205",
+    "description": "최우선으로 해결해야 하는 긴급 이슈"
+  },
+  {
+    "name": "🟠 High",
+    "color": "D93F0B",
+    "description": "빠르게 처리해야 하는 이슈"
+  },
+  {
+    "name": "🟡 Medium",
+    "color": "FBCA04",
+    "description": "일반적인 처리 우선순위"
+  },
+  {
+    "name": "🟢 Low",
+    "color": "0E8A16",
+    "description": "여유 있게 처리해도 되는 이슈"
+  }
+]
