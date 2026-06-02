@@ -1,10 +1,9 @@
 package com.gerd.global.resolver
 
-import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.global.annotation.CurrentUser
 import com.gerd.global.apiPayload.GeneralException
-import com.gerd.global.security.CustomUserDetails
+import com.gerd.domain.auth.security.CustomUserDetails
 import org.springframework.core.MethodParameter
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
@@ -18,7 +17,7 @@ class CurrentUserArgumentResolver : HandlerMethodArgumentResolver {
 
     override fun supportsParameter(parameter: MethodParameter): Boolean =
         parameter.hasParameterAnnotation(CurrentUser::class.java) &&
-            parameter.parameterType == User::class.java
+            parameter.parameterType == CustomUserDetails::class.java
 
     override fun resolveArgument(
         parameter: MethodParameter,
@@ -32,6 +31,6 @@ class CurrentUserArgumentResolver : HandlerMethodArgumentResolver {
             throw GeneralException(AuthErrorCode.UNAUTHORIZED)
         }
 
-        return (authentication.principal as CustomUserDetails).user
+        return authentication.principal as CustomUserDetails
     }
 }

@@ -1,10 +1,10 @@
-package com.gerd.global.filter
+package com.gerd.domain.auth.filter
 
+import com.gerd.domain.auth.entity.enums.UserRole
 import com.gerd.domain.auth.exception.AuthErrorCode
-import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.security.CustomUserDetails
+import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.global.apiPayload.GeneralException
-import com.gerd.global.security.CustomUserDetails
-import com.gerd.global.security.JwtProvider
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -13,11 +13,10 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
-
+// JWT claims에서 바로 인증 객체 구성 — DB 조회 없이 stateless하게 처리
 @Component
 class JwtAuthenticationFilter(
     private val jwtProvider: JwtProvider,
-    private val userRepository: UserRepository,
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -27,9 +26,20 @@ class JwtAuthenticationFilter(
     ) {
         extractToken(request)
             ?.let { token ->
-                val user = userRepository.findById(jwtProvider.extractUserId(token))
-                    .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-                val userDetails = CustomUserDetails(user)
+                val claims = jwtProvider.validateAccessToken(token)
+
+                val email = claims["email"] as? String
+                    ?: throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+                val role = (claims["role"] as? String)?.let { UserRole.valueOf(it) }
+                    ?: throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+
+                val userDetails = CustomUserDetails(
+                    userId = jwtProvider.extractUserId(claims),
+                    email = email,
+                    nickname = claims["nickname"] as? String,
+                    role = role,
+                )
+
                 SecurityContextHolder.getContext().authentication =
                     UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
             }

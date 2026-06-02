@@ -1,7 +1,31 @@
 name: "✨ Feature"
 description: "새로운 기능 추가"
-labels: ["feature"]
+labels: ["✨ Feature"]
 body:
+  - type: dropdown
+    attributes:
+      label: 📅 처리 시기
+      description: 이슈를 언제 처리해야 하는지 선택해 주세요.
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🚨 중요도
+      description: 이슈의 중요도를 선택해 주세요.
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: 📄 설명

@@ -1,4 +1,4 @@
-package com.gerd.global.security
+package com.gerd.domain.auth.security
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gerd.global.apiPayload.ApiResponse

@@ -24,7 +24,7 @@ Thumbs.db
 .github/
 
 # Secrets / env
-.env
+src/main/resources/.env
 .env.*
 *.local
 

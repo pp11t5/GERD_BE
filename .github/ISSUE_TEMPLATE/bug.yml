@@ -1,7 +1,31 @@
 name: "🐞 Bug Report"
 description: "버그 제보 및 수정 요청"
-labels: ["bug"]
+labels: ["🐛 Bug"]
 body:
+  - type: dropdown
+    attributes:
+      label: 📅 처리 시기
+      description: 이슈를 언제 처리해야 하는지 선택해 주세요.
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🚨 중요도
+      description: 이슈의 중요도를 선택해 주세요.
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: 📄 버그 설명

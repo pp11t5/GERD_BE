@@ -26,4 +26,12 @@ object UserFixture {
         ReflectionTestUtils.setField(user, "id", 3L)
         return user
     }
+
+    // 탈퇴 유예 상태 테스트용 — status=DELETED, deletedAt != null
+    fun deletedUser(): User {
+        val user = User(email = "deleted@test.com", nickname = "deleted-user", role = UserRole.USER)
+        ReflectionTestUtils.setField(user, "id", 4L)
+        user.withdraw()
+        return user
+    }
 }

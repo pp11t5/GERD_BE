@@ -1,0 +1,51 @@
+name: "🛠️ Chores"
+description: "빌드, 설정, 패키지 관리 등 운영성 작업"
+labels: ["🛠️ Chores"]
+body:
+  - type: dropdown
+    attributes:
+      label: 📅 처리 시기
+      description: 이슈를 언제 처리해야 하는지 선택해 주세요.
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🚨 중요도
+      description: 이슈의 중요도를 선택해 주세요.
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 📄 작업 설명
+      description: 어떤 운영성 작업이 필요한지 작성해 주세요.
+      placeholder: 예 - Gradle 버전 업데이트, CI 설정 정리, 공통 설정값 수정
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ✅ 작업할 내용
+      description: 수행할 항목을 체크박스 형태로 작성해 주세요.
+      placeholder: |
+        - [ ] 설정 변경
+        - [ ] 영향 범위 확인
+        - [ ] 배포/CI 검증
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 💬 비고
+      description: 참고할 맥락이나 주의사항이 있으면 적어주세요.

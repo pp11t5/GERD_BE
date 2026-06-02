@@ -16,4 +16,4 @@ out/
 .DS_Store
 
 # Env
-.env
+src/main/resources/.env

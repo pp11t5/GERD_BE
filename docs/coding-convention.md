@@ -15,15 +15,18 @@
 
 ```
 src/main/kotlin/com/<project>/
-├── common/           # 공통 응답, 예외, 유틸
-├── config/           # Spring 설정 클래스
-└── <domain>/
-    ├── controller/
-    ├── service/
-    ├── repository/
-    ├── entity/
-    └── dto/
+├── global/           # 공통 응답, 예외, 설정, 유틸
+└── domain/
+    └── <domain>/
+        ├── controller/
+        ├── service/
+        ├── repository/
+        ├── entity/
+        ├── dto/
+        └── security/   # 도메인 전용 보안 컴포넌트 (예: auth/security)
 ```
+
+- `global/security`는 제거, 보안 컴포넌트는 해당 도메인(`domain/auth/security`) 하위에 위치
 
 ## 4. 계층별 책임
 
@@ -45,6 +48,17 @@ src/main/kotlin/com/<project>/
 - DTO에 `toEntity()` 금지
 - 상태 변경은 의미 있는 도메인 메서드로만 노출
 - JPA용 기본 생성자는 `protected`
+
+**기본키 전략**
+
+| 용도 | 타입 | 전략 |
+|---|---|---|
+| 내부 PK (JOIN, FK) | `Long` | `@GeneratedValue(IDENTITY)` |
+| 외부 노출 ID (API 응답) | `UUID` | `@UuidGenerator(style = TIME)` — `BaseEntity.externalId` |
+
+- 순차 Long으로 조인 성능을 확보하고, 외부에는 UUID를 노출해 순차 열거 공격을 방지
+- `externalId`는 `BINARY(16)` 컬럼, `updatable = false`로 불변 보장
+- API 응답에서 엔티티 id(`Long`) 직접 노출 금지 — `externalId` 사용
 
 상세 규칙 → [jpa-entity skill](../.claude/skills/jpa-entity/SKILL.md)
 

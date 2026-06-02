@@ -1,9 +1,9 @@
 package com.gerd.global.config
 
-import com.gerd.global.filter.JwtAuthenticationFilter
-import com.gerd.global.filter.JwtExceptionFilter
-import com.gerd.global.security.CustomAccessDeniedHandler
-import com.gerd.global.security.CustomAuthenticationEntryPoint
+import com.gerd.domain.auth.filter.JwtAuthenticationFilter
+import com.gerd.domain.auth.filter.JwtExceptionFilter
+import com.gerd.domain.auth.security.CustomAccessDeniedHandler
+import com.gerd.domain.auth.security.CustomAuthenticationEntryPoint
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -31,6 +31,8 @@ class WebSecurityConfig(
             "/health/**",
             "/api/v1/auth/dev-login",
             "/api/v1/auth/refresh",
+            "/api/v1/auth/*/login",
+            "/api/v1/auth/*/recover",
         )
     }
 
@@ -43,6 +45,9 @@ class WebSecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers(*PUBLIC_URLS).permitAll()
+                    // TODO: 관리자 로그인 API 미구현 — 현재 ADMIN 역할 분기만 존재
+                    .requestMatchers("/v3/api-docs/admin").hasRole("ADMIN")
+                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
             .exceptionHandling {
@@ -61,7 +66,7 @@ class WebSecurityConfig(
             allowedOriginPatterns = listOf("*")
             allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             allowedHeaders = listOf("*")
-            allowCredentials = true
+            allowCredentials = false
         }
         return UrlBasedCorsConfigurationSource().apply {
             registerCorsConfiguration("/**", config)

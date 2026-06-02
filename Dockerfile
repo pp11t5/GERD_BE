@@ -22,6 +22,8 @@ FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
+ENV TZ=Asia/Seoul
+
 RUN addgroup --system spring && adduser --system --ingroup spring spring
 USER spring:spring
 
@@ -32,4 +34,4 @@ COPY --from=extract /app/application/ ./
 
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]
+ENTRYPOINT ["sh", "-c", "java -Duser.timezone=Asia/Seoul $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]

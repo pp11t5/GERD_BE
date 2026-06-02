@@ -1,0 +1,51 @@
+name: "📚 Docs"
+description: "README, 위키, 문서 정리 및 개선"
+labels: ["📚 Docs"]
+body:
+  - type: dropdown
+    attributes:
+      label: 📅 처리 시기
+      description: 이슈를 언제 처리해야 하는지 선택해 주세요.
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🚨 중요도
+      description: 이슈의 중요도를 선택해 주세요.
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 📄 문서 대상
+      description: 어떤 문서를 수정하거나 추가하려는지 작성해 주세요.
+      placeholder: 예 - README 실행 방법 보완, API 문서 예시 추가
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ✅ 작업할 내용
+      description: 변경할 항목을 체크박스 형태로 작성해 주세요.
+      placeholder: |
+        - [ ] 누락된 설명 추가
+        - [ ] 오래된 내용 수정
+        - [ ] 예시 보강
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🙋🏻 참고 자료
+      description: 참고할 링크나 관련 이슈가 있다면 적어주세요.
