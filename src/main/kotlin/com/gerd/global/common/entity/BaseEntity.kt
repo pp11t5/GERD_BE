@@ -19,7 +19,7 @@ import java.util.UUID
 abstract class BaseEntity {
 
     @UuidGenerator(style = Style.TIME)
-    @Column(name = "external_id", columnDefinition = "BINARY(16)", updatable = false, nullable = false, unique = true)
+    @Column(name = "external_id", updatable = false, nullable = false, unique = true)
     var externalId: UUID? = null
 
     @CreatedDate
