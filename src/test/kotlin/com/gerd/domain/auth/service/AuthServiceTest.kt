@@ -41,6 +41,9 @@ class AuthServiceTest {
     private lateinit var refreshTokenRepository: RefreshTokenRepository
 
     @Mock
+    private lateinit var refreshTokenRevoker: RefreshTokenRevoker
+
+    @Mock
     private lateinit var jwtProvider: JwtProvider
 
     @Mock
@@ -128,7 +131,7 @@ class AuthServiceTest {
         inner class `실패` {
 
             @Test
-            fun `저장된 리프레시 토큰이 없으면 INVALID_REFRESH_TOKEN을 던진다`() {
+            fun `저장된 리프레시 토큰이 없으면 전체 세션을 삭제하고 INVALID_REFRESH_TOKEN을 던진다`() {
                 val claims = mock<Claims>()
                 whenever(jwtProvider.validateRefreshToken("refresh.token")).thenReturn(claims)
                 whenever(jwtProvider.extractUserId(claims)).thenReturn(1L)
@@ -140,7 +143,8 @@ class AuthServiceTest {
                     .extracting("errorCode")
                     .isEqualTo(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
-                verify(refreshTokenRepository, never()).deleteById(any())
+                // 탈취 의심 시 전체 세션 삭제가 실제로 호출되는지 검증
+                verify(refreshTokenRevoker).revokeAllSessions(1L)
             }
 
         }
