@@ -20,10 +20,10 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 @Service
-@Transactional(readOnly = true)
 class AuthService(
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val refreshTokenRevoker: RefreshTokenRevoker,
     private val jwtProvider: JwtProvider,
     private val jwtProperties: JwtProperties,
 ) {
@@ -32,11 +32,8 @@ class AuthService(
     fun devLogin(nickname: String): AuthTokenResponseDTO {
         val user = userRepository.findByNickname(nickname)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-        when (user.status) {
-            UserStatus.INACTIVE -> throw GeneralException(AuthErrorCode.ACCOUNT_INACTIVE)
-            UserStatus.DELETED  -> throw GeneralException(AuthErrorCode.ACCOUNT_RECOVERABLE)
-            else -> {}
-        }
+        // @SQLRestriction으로 DELETED 유저는 조회되지 않으므로 INACTIVE만 체크
+        if (user.status == UserStatus.INACTIVE) throw GeneralException(AuthErrorCode.ACCOUNT_INACTIVE)
         user.updateLastLoginAt()
         return issueTokens(user)
     }
@@ -76,11 +73,7 @@ class AuthService(
 
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-
-        when (user.status) {
-            UserStatus.DELETED -> throw GeneralException(AuthErrorCode.ACCOUNT_RECOVERABLE)
-            else -> {}
-        }
+        // @SQLRestriction + 탈퇴 시 토큰 선삭제로 DELETED 유저는 이 경로에 도달하지 않음
 
         return issueTokens(user)
     }
@@ -89,7 +82,8 @@ class AuthService(
     private fun findStoredTokenOrDeleteAll(tokenHash: String, userId: Long): RefreshToken {
         return refreshTokenRepository.findByTokenHash(tokenHash)
             ?: run {
-                refreshTokenRepository.deleteAllByUserId(userId)
+                // REQUIRES_NEW 트랜잭션에서 먼저 커밋 — 이후 refresh() 롤백에 영향받지 않고 별도 삭제가 정상적으로 이루어짐
+                refreshTokenRevoker.revokeAllSessions(userId)
                 throw GeneralException(AuthErrorCode.INVALID_REFRESH_TOKEN)
             }
     }
@@ -98,14 +92,14 @@ class AuthService(
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         return UserMeResponseDTO(
-            userId = user.id!!.toString(),
+            userId = user.id?.toString() ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND),
             nickname = user.nickname,
             email = user.email,
             profileImage = user.profileImage,
         )
     }
 
-    // 만료 여부에 상관없이 subject 확인 — JwtException(완전히 위조된 토큰)이면 무시
+    // 만료 여부에 상관없이 subject 확인 — JwtException이면 무시
     @Transactional
     fun logout(currentUserId: Long, refreshToken: String) {
         val refreshSubjectId: Long? = try {

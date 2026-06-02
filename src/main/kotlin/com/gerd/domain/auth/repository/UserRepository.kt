@@ -18,6 +18,6 @@ interface UserRepository : JpaRepository<User, Long> {
 
     // @SQLRestriction 우회해 DB에서 물리 삭제 — 14일 유예 후 스케줄러에서 호출
     @Modifying
-    @Query("DELETE FROM User u WHERE u.id = :userId")
+    @Query(value = "DELETE FROM users WHERE user_id = :userId", nativeQuery = true)
     fun hardDelete(@Param("userId") userId: Long)
 }

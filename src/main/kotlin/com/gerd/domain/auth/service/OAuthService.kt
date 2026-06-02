@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional
 
 /**
  * OAuth 관련 비즈니스 로직을 처리하는 서비스
+ * - 로그인 처리
+ * - 로그인 시 상태분기해서 예외처리
+ * - 사용자 생성 처리
  */
 @Service
 @Transactional(readOnly = true)
@@ -39,8 +42,11 @@ class OAuthService(
             .orElse(null)
 
         if (authAccount != null) {
-            val user = authAccount.user
+            // 삭제된 사용자도 포함해서 조회
+            val user = userRepository.findByIdIncludingDeleted(authAccount.userId)
+                .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
             checkUserStatus(user)
+            // 최근 업로드 시점 저장
             user.updateLastLoginAt()
             return authService.issueTokens(user)
         }
@@ -48,7 +54,7 @@ class OAuthService(
         val email = claims.email ?: throw GeneralException(AuthErrorCode.EMAIL_REQUIRED)
         val nickname = claims.nickname ?: throw GeneralException(AuthErrorCode.NICKNAME_REQUIRED)
 
-        // REQUIRES_NEW 트랜잭션에서 user + authAccount 생성 — 동시 요청 충돌 안전
+        // REQUIRES_NEW 트랜잭션에서 user + authAccount 생성 — 실패 시 이 트랜잭션만 롤백
         val userId = userAccountRegistrar.findOrRegister(
             email = email,
             provider = provider,
@@ -88,6 +94,7 @@ class OAuthService(
     }
 
     // 유저 상태 검증 — 로그인 시점에 차단
+    // 로그인 시 상태를 검증해서 삭제된 사용자이지만 유예 기간이라면 복구가 가능함을 예외로 던짐
     private fun checkUserStatus(user: User) {
         when (user.status) {
             UserStatus.INACTIVE  -> throw GeneralException(AuthErrorCode.ACCOUNT_INACTIVE)

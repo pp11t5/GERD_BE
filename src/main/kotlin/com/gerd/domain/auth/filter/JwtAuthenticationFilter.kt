@@ -1,8 +1,10 @@
 package com.gerd.domain.auth.filter
 
 import com.gerd.domain.auth.entity.enums.UserRole
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.auth.security.JwtProvider
+import com.gerd.global.apiPayload.GeneralException
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -26,11 +28,16 @@ class JwtAuthenticationFilter(
             ?.let { token ->
                 val claims = jwtProvider.validateAccessToken(token)
 
+                val email = claims["email"] as? String
+                    ?: throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+                val role = (claims["role"] as? String)?.let { UserRole.valueOf(it) }
+                    ?: throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+
                 val userDetails = CustomUserDetails(
                     userId = jwtProvider.extractUserId(claims),
-                    email = claims["email"] as String,
-                    nickname = claims["nickname"] as String?,
-                    role = UserRole.valueOf(claims["role"] as String),
+                    email = email,
+                    nickname = claims["nickname"] as? String,
+                    role = role,
                 )
 
                 SecurityContextHolder.getContext().authentication =

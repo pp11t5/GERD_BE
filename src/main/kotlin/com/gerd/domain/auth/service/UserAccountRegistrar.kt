@@ -3,11 +3,8 @@ package com.gerd.domain.auth.service
 import com.gerd.domain.auth.entity.AuthAccount
 import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.AuthProvider
-import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
-import com.gerd.global.apiPayload.GeneralException
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -37,20 +34,11 @@ class UserAccountRegistrar(
 
     // 사용자 검색 또는 새로 저장
     private fun findOrCreateUser(email: String, buildUser: () -> User): User =
-        try {
-            userRepository.findByEmail(email).orElseGet { userRepository.save(buildUser()) }
-        } catch (e: DataIntegrityViolationException) {
-            userRepository.findByEmail(email)
-                .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-        }
+        userRepository.findByEmail(email).orElseGet { userRepository.save(buildUser()) }
 
     // 사용자 계정 엔티티 생성
     private fun findOrCreateAuthAccount(user: User, provider: AuthProvider, providerAccountId: String) {
         if (authAccountRepository.existsByProviderAndProviderAccountId(provider, providerAccountId)) return
-        try {
-            authAccountRepository.save(AuthAccount(user = user, provider = provider, providerAccountId = providerAccountId))
-        } catch (_: DataIntegrityViolationException) {
-            // 동시 요청이 먼저 저장한 경우 — 이미 존재하므로 무시
-        }
+        authAccountRepository.save(AuthAccount(user = user, provider = provider, providerAccountId = providerAccountId))
     }
 }
