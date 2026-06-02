@@ -65,7 +65,19 @@
 | 인증 | JWT (JJWT) | 0.11.5 |
 | 보안 필터 | Spring Security | — |
 
+**인증 엔드포인트**
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| `POST` | `/api/v1/auth/{provider}/login` | OIDC ID Token 검증 후 신규 가입 또는 로그인 |
+| `POST` | `/api/v1/auth/refresh` | Refresh Token 로테이션으로 토큰 재발급 |
+| `DELETE` | `/api/v1/auth/logout` | Refresh Token 삭제 |
+| `DELETE` | `/api/v1/auth/withdraw` | 상태를 `DELETED`로 변경, 전 기기 Refresh Token 즉시 만료 |
+| `POST` | `/api/v1/auth/{provider}/recover` | 탈퇴 유예(14일) 중 계정 복구 |
+| `POST` | `/api/v1/auth/dev-login` | 닉네임으로 토큰 발급 (dev/local 전용) |
+
 **JWT 구조**
+- Access Token 만료 1h / Refresh Token 만료 3d, claims 기반 인증으로 매 요청 DB 조회 없음
 - `JwtProvider`: Access/Refresh Token 생성·검증·claims 추출
 - `RefreshToken`: userId를 PK로 DB에 `sha256(tokenValue)` 저장 — save()가 upsert로 동작해 단일 세션 유지
 - `JwtAuthenticationFilter`: Bearer 토큰 파싱 → `SecurityContextHolder` 세팅
