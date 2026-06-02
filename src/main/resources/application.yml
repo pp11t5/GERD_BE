@@ -6,40 +6,24 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: gerd
-  datasource:
-    url: jdbc:h2:mem:gerd;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
-    open-in-view: false
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long}
-  access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}  # 1시간
-  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:259200000}  # 3일
+  access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:259200000}
 
 kakao:
-  native-app-key: ${KAKAO_NATIVE_APP_KEY}
-  iss: ${KAKAO_ISS}
-  jwks-url: ${KAKAO_JWKS_URL}
-  admin-key: ${KAKAO_ADMIN_KEY}
+  native-app-key: ${KAKAO_NATIVE_APP_KEY:}
+  iss: ${KAKAO_ISS:}
+  jwks-url: ${KAKAO_JWKS_URL:}
+  admin-key: ${KAKAO_ADMIN_KEY:}
 
 sentry:
-  dsn: ${SENTRY_DSN:}  # 로컬에서는 비워두면 비활성화
+  dsn: ${SENTRY_DSN:}
   exception-resolver-order: -2147483647
   max-request-body-size: always
-  send-default-pii: false  # 로컬은 PII 전송 off
-  traces-sample-rate: 0.0  # 로컬은 트레이싱 off
+  send-default-pii: false
+  traces-sample-rate: 0.0
 
 management:
   endpoints:

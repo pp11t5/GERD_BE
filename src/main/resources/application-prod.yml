@@ -4,10 +4,6 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${PGUSER}
     password: ${PGPASSWORD}
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT:6379}
   jpa:
     hibernate:
       ddl-auto: update
