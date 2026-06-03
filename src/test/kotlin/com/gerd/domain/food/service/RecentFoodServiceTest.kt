@@ -95,7 +95,6 @@ class RecentFoodServiceTest {
             whenever(foodRepository.findByExternalId(externalId)).thenReturn(food)
             whenever(foodSearchHistoryRepository.findByUserIdAndFoodId(userId, 10L)).thenReturn(null)
             whenever(foodSearchHistoryRepository.save(any())).thenAnswer { history(100, food, LocalDateTime.now()) }
-            whenever(foodSearchHistoryRepository.countByUserId(userId)).thenReturn(1)
             whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(10L))).thenReturn(emptyMap())
 
             val result = service.addRecent(externalId.toString(), userId)
@@ -110,7 +109,6 @@ class RecentFoodServiceTest {
             val existing = history(100, food, LocalDateTime.of(2026, 6, 1, 0, 0))
             whenever(foodRepository.findByExternalId(externalId)).thenReturn(food)
             whenever(foodSearchHistoryRepository.findByUserIdAndFoodId(userId, 10L)).thenReturn(existing)
-            whenever(foodSearchHistoryRepository.countByUserId(userId)).thenReturn(1)
             whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(10L))).thenReturn(emptyMap())
 
             val before = existing.searchedAt
@@ -127,7 +125,6 @@ class RecentFoodServiceTest {
             whenever(foodRepository.findByExternalId(externalId)).thenReturn(food)
             whenever(foodSearchHistoryRepository.findByUserIdAndFoodId(userId, 10L)).thenReturn(null)
             whenever(foodSearchHistoryRepository.save(any())).thenAnswer { history(111, food, LocalDateTime.now()) }
-            whenever(foodSearchHistoryRepository.countByUserId(userId)).thenReturn(11)
             // 최근순 11개 — 상한(10) 이후 1개가 삭제 대상
             whenever(foodSearchHistoryRepository.findIdsByUserIdOrderByRecent(userId)).thenReturn((1L..11L).toList())
             whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(10L))).thenReturn(emptyMap())

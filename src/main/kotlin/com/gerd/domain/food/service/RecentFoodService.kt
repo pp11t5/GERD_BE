@@ -71,7 +71,6 @@ class RecentFoodService(
 
     // 상한 초과 시 오래된 것부터 삭제 (id 목록은 최근순 → 상한 이후가 삭제 대상)
     private fun enforceLimit(userId: Long) {
-        if (foodSearchHistoryRepository.countByUserId(userId) <= RETENTION_LIMIT) return
         val ids = foodSearchHistoryRepository.findIdsByUserIdOrderByRecent(userId)
         if (ids.size > RETENTION_LIMIT) {
             foodSearchHistoryRepository.deleteAllById(ids.drop(RETENTION_LIMIT))
