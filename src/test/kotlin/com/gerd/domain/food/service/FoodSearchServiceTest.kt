@@ -1,11 +1,9 @@
 package com.gerd.domain.food.service
 
-import com.gerd.domain.food.entity.Food
-import com.gerd.domain.food.entity.enums.FoodSource
-import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.global.apiPayload.GeneralException
+import com.gerd.global.fixture.FoodFixture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
@@ -18,8 +16,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.test.util.ReflectionTestUtils
-import java.util.UUID
 
 /**
  * 음식 검색 서비스 단위 테스트 (기본 동작 위주)
@@ -42,12 +38,6 @@ class FoodSearchServiceTest {
     private lateinit var service: FoodSearchService
 
     private val userId = 1L
-
-    private fun food(id: Long, name: String): Food =
-        Food(name = name, source = FoodSource.SEED, visibility = FoodVisibility.PUBLIC).apply {
-            ReflectionTestUtils.setField(this, "id", id)
-            externalId = UUID.fromString("00000000-0000-0000-0000-00000000000$id") // BaseEntity의 public var로 직접 할당
-        }
 
     @Nested
     inner class `검색어 검증` {
@@ -98,7 +88,7 @@ class FoodSearchServiceTest {
 
         @Test
         fun `결과를 externalId와 카테고리를 포함한 DTO로 매핑한다`() {
-            val food = food(7, "된장찌개")
+            val food = FoodFixture.food(id = 7, name = "된장찌개")
             whenever(foodRepository.search("된장찌개", 10, userId)).thenReturn(listOf(food))
             whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(7L)))
                 .thenReturn(mapOf(7L to "soup_stew"))
