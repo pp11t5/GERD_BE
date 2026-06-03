@@ -4,6 +4,9 @@ import com.gerd.domain.food.entity.Allergen
 import com.gerd.domain.food.entity.TriggerLabel
 import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.entity.enums.TriggerCode
+import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.entity.enums.UserRole
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.repository.AllergenRepository
 import com.gerd.domain.food.repository.TriggerLabelRepository
 import com.gerd.domain.onboarding.dto.ConsentRequestDTO
@@ -39,11 +42,12 @@ class OnboardingIntegrationTest @Autowired constructor(
     private val userMedicationRepository: UserMedicationRepository,
     private val triggerLabelRepository: TriggerLabelRepository,
     private val allergenRepository: AllergenRepository,
+    private val userRepository: UserRepository,
 ) {
 
     @AfterEach
     fun tearDown() {
-        // 자식 → 부모 → 마스터 순으로 FK 제약을 지키며 정리
+        // 자식 → 부모 → 마스터 → users 순으로 FK 제약을 지키며 정리
         userSymptomRepository.deleteAll()
         userTriggerRepository.deleteAll()
         userAllergenRepository.deleteAll()
@@ -52,6 +56,7 @@ class OnboardingIntegrationTest @Autowired constructor(
         userConsentRepository.deleteAll()
         triggerLabelRepository.deleteAll()
         allergenRepository.deleteAll()
+        userRepository.deleteAll()
     }
 
     private fun seedMasters() {
@@ -59,12 +64,16 @@ class OnboardingIntegrationTest @Autowired constructor(
         allergenRepository.save(Allergen(code = "milk", displayName = "우유·유제품"))
     }
 
+    // user_profiles는 users와 @MapsId 공유 PK라 온보딩 전에 실제 User row가 있어야 한다
+    private fun seedUser(email: String): Long =
+        userRepository.save(User(email = email, role = UserRole.USER)).id!!
+
     @Nested
     inner class `동의-제출-조회 흐름` {
 
         @Test
         fun `동의 후 온보딩을 제출하면 완료 상태가 되고 자식이 모두 저장된다`() {
-            val userId = 1L
+            val userId = seedUser("flow@test.com")
             seedMasters()
 
             consentService.submitConsent(
@@ -95,7 +104,7 @@ class OnboardingIntegrationTest @Autowired constructor(
 
         @Test
         fun `이미 온보딩한 사용자가 재제출하면 409 예외가 발생한다`() {
-            val userId = 2L
+            val userId = seedUser("resubmit@test.com")
             seedMasters()
             onboardingService.submit(userId, OnboardingRequestDTO(triggers = listOf(TriggerCode.CAFFEINE)))
 
@@ -111,7 +120,7 @@ class OnboardingIntegrationTest @Autowired constructor(
 
         @Test
         fun `시드되지 않은 trigger code면 예외가 발생하고 프로필이 생성되지 않는다`() {
-            val userId = 3L
+            val userId = seedUser("partial@test.com")
             // caffeine만 시드, SPICY는 미시드
             triggerLabelRepository.save(TriggerLabel(code = "caffeine", displayName = "커피·카페인"))
 

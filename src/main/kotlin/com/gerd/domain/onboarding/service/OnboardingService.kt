@@ -1,5 +1,7 @@
 package com.gerd.domain.onboarding.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.Allergen
 import com.gerd.domain.food.entity.TriggerLabel
 import com.gerd.domain.food.entity.enums.AllergenCode
@@ -41,6 +43,7 @@ class OnboardingService(
     private val userMedicationRepository: UserMedicationRepository,
     private val triggerLabelRepository: TriggerLabelRepository,
     private val allergenRepository: AllergenRepository,
+    private val userRepository: UserRepository,
 ) {
 
     fun getStatus(userId: Long): OnboardingStatusResponseDTO =
@@ -57,9 +60,12 @@ class OnboardingService(
         val triggerLabels = resolveTriggers(request.triggers)
         val allergens = resolveAllergens(request.allergens)
 
+        // @MapsId 공유 PK — 연관 User를 조회해 프로필의 PK·FK를 함께 확정
+        val user = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val profile = userProfileRepository.save(
             UserProfile(
-                userId = userId,
+                user = user,
                 customTriggerText = request.customTriggerText,
                 onboardedAt = LocalDateTime.now(),
             ),

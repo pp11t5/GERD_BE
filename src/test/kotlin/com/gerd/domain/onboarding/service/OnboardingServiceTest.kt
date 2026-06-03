@@ -4,6 +4,7 @@ import com.gerd.domain.food.entity.Allergen
 import com.gerd.domain.food.entity.TriggerLabel
 import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.entity.enums.TriggerCode
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.repository.AllergenRepository
 import com.gerd.domain.food.repository.TriggerLabelRepository
 import com.gerd.domain.onboarding.dto.OnboardingRequestDTO
@@ -19,6 +20,7 @@ import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
 import com.gerd.domain.onboarding.repository.UserTriggerRepository
 import com.gerd.global.apiPayload.GeneralException
+import com.gerd.global.fixture.UserFixture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
@@ -32,6 +34,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class OnboardingServiceTest {
@@ -56,6 +59,9 @@ class OnboardingServiceTest {
 
     @Mock
     private lateinit var allergenRepository: AllergenRepository
+
+    @Mock
+    private lateinit var userRepository: UserRepository
 
     @InjectMocks
     private lateinit var onboardingService: OnboardingService
@@ -86,6 +92,7 @@ class OnboardingServiceTest {
                     .thenReturn(listOf(TriggerLabel(id = 10L, code = "caffeine", displayName = "커피·카페인")))
                 whenever(allergenRepository.findByCodeIn(listOf("milk")))
                     .thenReturn(listOf(Allergen(id = 20L, code = "milk", displayName = "우유·유제품")))
+                whenever(userRepository.findById(1L)).thenReturn(Optional.of(UserFixture.user()))
                 whenever(userProfileRepository.save(any<UserProfile>()))
                     .thenAnswer { it.arguments[0] as UserProfile }
 
@@ -101,7 +108,8 @@ class OnboardingServiceTest {
 
                 val profileCaptor = argumentCaptor<UserProfile>()
                 verify(userProfileRepository).save(profileCaptor.capture())
-                assertThat(profileCaptor.firstValue.userId).isEqualTo(1L)
+                // @MapsId라 userId는 flush 시점에 채워짐 — 단위테스트에서는 연관 User의 id로 확인
+                assertThat(profileCaptor.firstValue.user.id).isEqualTo(1L)
                 assertThat(profileCaptor.firstValue.customTriggerText).isEqualTo("오렌지주스")
 
                 verify(userSymptomRepository).saveAll(any<List<UserSymptom>>())
