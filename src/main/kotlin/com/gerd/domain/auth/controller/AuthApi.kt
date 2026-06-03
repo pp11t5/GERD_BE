@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface AuthApi {
 
     @Operation(summary = "내 정보 조회", description = "현재 로그인한 사용자의 기본 정보를 조회합니다.")
-    @ApiErrorExample(AuthErrorCode.USER_NOT_FOUND)
+    @ApiErrorExample(AuthErrorCode::class, "USER_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
     @GetMapping("/me")
     fun getMe(@CurrentUser userDetails: CustomUserDetails): ResponseEntity<ApiResponse<UserMeResponseDTO>>
@@ -47,13 +47,14 @@ interface AuthApi {
         """,
     )
     @ApiErrorExample(
-        AuthErrorCode.INVALID_TOKEN,
-        AuthErrorCode.EXPIRED_TOKEN,
-        AuthErrorCode.EMAIL_REQUIRED,
-        AuthErrorCode.NICKNAME_REQUIRED,
-        AuthErrorCode.UNSUPPORTED_PROVIDER,
-        AuthErrorCode.ACCOUNT_INACTIVE,
-        AuthErrorCode.ACCOUNT_RECOVERABLE,
+        AuthErrorCode::class,
+        "INVALID_TOKEN",
+        "EXPIRED_TOKEN",
+        "EMAIL_REQUIRED",
+        "NICKNAME_REQUIRED",
+        "UNSUPPORTED_PROVIDER",
+        "ACCOUNT_INACTIVE",
+        "ACCOUNT_RECOVERABLE",
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "토큰 발급 성공"))
     @PostMapping("/{provider}/login")
@@ -69,7 +70,7 @@ interface AuthApi {
             - 유효하지 않거나 만료된 Refresh Token이면 예외를 반환합니다.
         """,
     )
-    @ApiErrorExample(AuthErrorCode.INVALID_TOKEN, AuthErrorCode.EXPIRED_TOKEN, AuthErrorCode.USER_NOT_FOUND)
+    @ApiErrorExample(AuthErrorCode::class, "INVALID_TOKEN", "EXPIRED_TOKEN", "USER_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "토큰 재발급 성공"))
     @PostMapping("/refresh")
     fun refresh(
@@ -84,7 +85,7 @@ interface AuthApi {
             - 14일이 지나야 계정이 완전 삭제 처리되며 카카오 계정도 연결 해제됩니다.
         """,
     )
-    @ApiErrorExample(AuthErrorCode.USER_NOT_FOUND, AuthErrorCode.KAKAO_UNLINK_FAILED)
+    @ApiErrorExample(AuthErrorCode::class, "USER_NOT_FOUND", "KAKAO_UNLINK_FAILED")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "탈퇴 성공"))
     @DeleteMapping("/withdraw")
     fun withdraw(@CurrentUser userDetails: CustomUserDetails): ResponseEntity<ApiResponse<Unit>>
@@ -96,7 +97,7 @@ interface AuthApi {
             - Redis에서 해당 토큰을 삭제하여 더 이상 사용할 수 없도록 합니다.
         """,
     )
-    @ApiErrorExample(AuthErrorCode.USER_NOT_FOUND, AuthErrorCode.INVALID_TOKEN)
+    @ApiErrorExample(AuthErrorCode::class, "USER_NOT_FOUND", "INVALID_TOKEN")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "로그아웃 성공"))
     @DeleteMapping("/logout")
     fun logout(
@@ -113,7 +114,7 @@ interface AuthApi {
             - 복구 성공 시 토큰을 발급합니다.
         """,
     )
-    @ApiErrorExample(AuthErrorCode.USER_NOT_FOUND, AuthErrorCode.INVALID_TOKEN)
+    @ApiErrorExample(AuthErrorCode::class, "USER_NOT_FOUND", "INVALID_TOKEN")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "복구 및 토큰 발급 성공"))
     @PostMapping("/{provider}/recover")
     fun recoverAccount(

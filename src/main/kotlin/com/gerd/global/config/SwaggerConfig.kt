@@ -77,8 +77,7 @@ class SwaggerConfig {
             }
 
             findApiErrorExample(handlerMethod)
-                ?.value
-                ?.toList()
+                ?.let { resolveErrorCodes(it) }
                 ?.groupBy { it.httpStatus.value().toString() }
                 ?.forEach { (statusCode, errorCodes) ->
                     responses.addApiResponse(statusCode, errorResponse(errorCodes))
@@ -96,6 +95,15 @@ class SwaggerConfig {
 
             operation
         }
+
+    // 선언된 enum 클래스의 상수를 이름으로 선별 — codes가 비면 전체 상수를 문서화
+    private fun resolveErrorCodes(annotation: ApiErrorExample): List<BaseErrorCode> {
+        val constants = annotation.value.java.enumConstants?.toList() ?: return emptyList()
+        if (annotation.codes.isEmpty()) return constants
+        return annotation.codes.mapNotNull { name ->
+            constants.firstOrNull { (it as Enum<*>).name == name }
+        }
+    }
 
     private fun findApiErrorExample(handlerMethod: HandlerMethod): ApiErrorExample? =
         AnnotatedElementUtils.findMergedAnnotation(handlerMethod.method, ApiErrorExample::class.java)
