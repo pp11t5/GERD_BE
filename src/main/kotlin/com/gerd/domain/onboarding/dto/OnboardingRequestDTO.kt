@@ -4,6 +4,7 @@ import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.entity.enums.TriggerCode
 import com.gerd.domain.onboarding.entity.enums.SymptomCode
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Size
 
 /**
  * 온보딩 4단계(05~08) 일괄 제출 요청
@@ -17,6 +18,7 @@ data class OnboardingRequestDTO(
             sour_mouth_odor(입 신맛·악취), supine_chest_tight(누우면 가슴 답답), none_but_manage(불편 없지만 관리)""",
         example = "[\"heartburn_reflux\", \"post_meal_cough\"]",
     )
+    @field:Size(max = 6, message = "증상은 최대 6개까지 선택할 수 있습니다.")
     val symptoms: List<SymptomCode> = emptyList(),
 
     @field:Schema(
@@ -26,6 +28,7 @@ data class OnboardingRequestDTO(
             cheese_dairy(치즈·유제품), refined_flour(빵·정제 밀가루)""",
         example = "[\"caffeine\", \"carbonated\", \"spicy\"]",
     )
+    @field:Size(max = 12, message = "트리거 음식은 최대 12개까지 선택할 수 있습니다.")
     val triggers: List<TriggerCode> = emptyList(),
 
     @field:Schema(
@@ -34,11 +37,14 @@ data class OnboardingRequestDTO(
             crustacean(갑각류), tree_nut(견과류), fish_shellfish(생선·조개류)""",
         example = "[\"milk\", \"peanut\"]",
     )
+    @field:Size(max = 8, message = "알레르기는 최대 8개까지 선택할 수 있습니다.")
     val allergens: List<AllergenCode> = emptyList(),
 
     @field:Schema(description = "08 복용약 다건(각 1행, 자유 텍스트)", example = "[\"PPI\", \"제산제\"]")
-    val medications: List<String> = emptyList(),
+    @field:Size(max = 10, message = "복용약은 최대 10개까지 입력할 수 있습니다.")
+    val medications: List<@Size(max = 100, message = "복용약 이름은 최대 100자까지 입력할 수 있습니다.") String> = emptyList(),
 
     @field:Schema(description = "07 '해당 음식 없나요?' 자유입력 원문(nullable)", example = "오렌지주스, 라면")
+    @field:Size(max = 255, message = "트리거 자유입력은 최대 255자까지 입력할 수 있습니다.")
     val customTriggerText: String? = null,
 )
