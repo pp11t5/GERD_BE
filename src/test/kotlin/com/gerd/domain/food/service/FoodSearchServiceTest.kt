@@ -100,15 +100,15 @@ class FoodSearchServiceTest {
         fun `결과를 externalId와 카테고리를 포함한 DTO로 매핑한다`() {
             val food = food(7, "된장찌개")
             whenever(foodRepository.search("된장찌개", 10, userId)).thenReturn(listOf(food))
-            whenever(foodCategoryReader.loadByFoodIds(listOf(7L)))
-                .thenReturn(mapOf(7L to listOf("soup_stew")))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(7L)))
+                .thenReturn(mapOf(7L to "soup_stew"))
 
             val result = service.search("된장찌개", null, userId)
 
             assertThat(result).hasSize(1)
             assertThat(result[0].externalId).isEqualTo(food.externalId.toString())
             assertThat(result[0].name).isEqualTo("된장찌개")
-            assertThat(result[0].categories).containsExactly("soup_stew")
+            assertThat(result[0].category).isEqualTo("soup_stew")
         }
     }
 }

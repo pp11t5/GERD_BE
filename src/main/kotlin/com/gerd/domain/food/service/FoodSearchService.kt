@@ -34,12 +34,12 @@ class FoodSearchService(
         val size = (rawSize ?: DEFAULT_SIZE).coerceIn(1, MAX_SIZE)
         val foods = foodRepository.search(normalized, size, userId)
 
-        val categories = foodCategoryReader.loadByFoodIds(foods.mapNotNull { it.id })
+        val categories = foodCategoryReader.loadPrimaryByFoodIds(foods.mapNotNull { it.id })
         return foods.map { food ->
             FoodSummaryDTO(
                 externalId = food.externalId.toString(),
                 name = food.name,
-                categories = categories[food.id].orEmpty(),
+                category = categories[food.id],
             )
         }
     }

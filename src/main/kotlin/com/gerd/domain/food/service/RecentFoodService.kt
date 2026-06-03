@@ -33,8 +33,8 @@ class RecentFoodService(
         val size = (rawSize ?: DEFAULT_SIZE).coerceIn(1, MAX_SIZE)
         val histories = foodSearchHistoryRepository.findRecentWithFood(userId, PageRequest.of(0, size))
 
-        val categories = foodCategoryReader.loadByFoodIds(histories.mapNotNull { it.food.id })
-        return histories.map { it.toDTO(categories[it.food.id].orEmpty()) }
+        val categories = foodCategoryReader.loadPrimaryByFoodIds(histories.mapNotNull { it.food.id })
+        return histories.map { it.toDTO(categories[it.food.id]) }
     }
 
     @Transactional
@@ -53,8 +53,8 @@ class RecentFoodService(
 
         enforceLimit(userId)
 
-        val categories = foodCategoryReader.loadByFoodIds(listOf(foodId))
-        return history.toDTO(categories[foodId].orEmpty())
+        val category = foodCategoryReader.loadPrimaryByFoodIds(listOf(foodId))[foodId]
+        return history.toDTO(category)
     }
 
     @Transactional
@@ -90,12 +90,12 @@ class RecentFoodService(
         (source in PUBLIC_SOURCES && visibility == FoodVisibility.PUBLIC) ||
             (visibility == FoodVisibility.PRIVATE && ownerUserId == userId)
 
-    private fun FoodSearchHistory.toDTO(categories: List<String>) =
+    private fun FoodSearchHistory.toDTO(category: String?) =
         RecentFoodDTO(
             recentId = id!!,
             foodExternalId = food.externalId.toString(),
             name = food.name,
-            categories = categories,
+            category = category,
             searchedAt = searchedAt,
         )
 

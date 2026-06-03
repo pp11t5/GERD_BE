@@ -47,7 +47,7 @@ class FoodControllerTest @Autowired constructor(
         recentId = 1024,
         foodExternalId = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f",
         name = "된장찌개",
-        categories = listOf("soup_stew"),
+        category = "soup_stew",
         searchedAt = LocalDateTime.of(2026, 6, 3, 8, 12, 0),
     )
 
@@ -58,7 +58,7 @@ class FoodControllerTest @Autowired constructor(
         @WithCustomUser
         fun `검색에 성공하면 음식 목록을 반환한다`() {
             whenever(foodSearchService.search(any(), anyOrNull(), any()))
-                .thenReturn(listOf(FoodSummaryDTO("ext-1", "된장찌개", listOf("soup_stew"))))
+                .thenReturn(listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew")))
 
             mockMvc.get("/api/v1/foods/search") {
                 param("q", "된장")
@@ -66,7 +66,7 @@ class FoodControllerTest @Autowired constructor(
                 status { isOk() }
                 jsonPath("$.isSuccess") { value(true) }
                 jsonPath("$.result[0].name") { value("된장찌개") }
-                jsonPath("$.result[0].categories[0]") { value("soup_stew") }
+                jsonPath("$.result[0].category") { value("soup_stew") }
             }
         }
 
