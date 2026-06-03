@@ -15,8 +15,9 @@ data class RecentFoodDTO(
     @field:Schema(description = "음식 이름", example = "된장찌개")
     val name: String,
 
-    @field:Schema(description = "음식 분류 목록")
-    val categories: List<FoodCategoryDTO>,
+    // 분류는 code만 내리고 표시명은 클라이언트가 매핑한다(D6)
+    @field:Schema(description = "음식 분류 code 목록", example = "[\"soup_stew\"]")
+    val categories: List<String>,
 
     @field:JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     @field:Schema(description = "마지막으로 본 시각", example = "2026-06-03 08:12:00")

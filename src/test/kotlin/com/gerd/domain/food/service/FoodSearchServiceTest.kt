@@ -1,6 +1,5 @@
 package com.gerd.domain.food.service
 
-import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
@@ -102,14 +101,14 @@ class FoodSearchServiceTest {
             val food = food(7, "된장찌개")
             whenever(foodRepository.search("된장찌개", 10, userId)).thenReturn(listOf(food))
             whenever(foodCategoryReader.loadByFoodIds(listOf(7L)))
-                .thenReturn(mapOf(7L to listOf(FoodCategoryDTO("soup_stew", "국·찌개·탕"))))
+                .thenReturn(mapOf(7L to listOf("soup_stew")))
 
             val result = service.search("된장찌개", null, userId)
 
             assertThat(result).hasSize(1)
             assertThat(result[0].externalId).isEqualTo(food.externalId.toString())
             assertThat(result[0].name).isEqualTo("된장찌개")
-            assertThat(result[0].categories).extracting<String> { it.code }.containsExactly("soup_stew")
+            assertThat(result[0].categories).containsExactly("soup_stew")
         }
     }
 }

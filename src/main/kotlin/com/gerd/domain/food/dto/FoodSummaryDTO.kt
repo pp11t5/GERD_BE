@@ -10,6 +10,7 @@ data class FoodSummaryDTO(
     @field:Schema(description = "음식 이름", example = "된장찌개")
     val name: String,
 
-    @field:Schema(description = "음식 분류 목록")
-    val categories: List<FoodCategoryDTO>,
+    // 분류는 code만 내리고 표시명은 클라이언트가 매핑한다(D6)
+    @field:Schema(description = "음식 분류 code 목록", example = "[\"soup_stew\"]")
+    val categories: List<String>,
 )

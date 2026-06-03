@@ -1,6 +1,5 @@
 package com.gerd.domain.food.service
 
-import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.entity.FoodSearchHistory
@@ -91,7 +90,7 @@ class RecentFoodService(
         (source in PUBLIC_SOURCES && visibility == FoodVisibility.PUBLIC) ||
             (visibility == FoodVisibility.PRIVATE && ownerUserId == userId)
 
-    private fun FoodSearchHistory.toDTO(categories: List<FoodCategoryDTO>) =
+    private fun FoodSearchHistory.toDTO(categories: List<String>) =
         RecentFoodDTO(
             recentId = id!!,
             foodExternalId = food.externalId.toString(),
