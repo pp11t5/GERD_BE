@@ -52,9 +52,9 @@ class FoodController(
 
     override fun deleteRecent(
         @CurrentUser userDetails: CustomUserDetails,
-        recentId: Long,
+        foodExternalId: String,
     ): ResponseEntity<ApiResponse<Unit>> {
-        recentFoodService.deleteRecent(recentId, userDetails.userId)
+        recentFoodService.deleteRecent(foodExternalId, userDetails.userId)
         return ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
             .body(ApiResponse.onSuccess(Unit, CommonSuccessCode.OK))

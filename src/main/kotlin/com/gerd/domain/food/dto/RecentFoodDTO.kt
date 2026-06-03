@@ -4,12 +4,9 @@ import com.fasterxml.jackson.annotation.JsonFormat
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
-// 최근 본 음식 1건 — recentId는 단건 삭제용 식별자(food_search_history PK)
+// 최근 본 음식 1건 — (user, food)가 유니크라 foodExternalId가 단건 삭제 식별자도 겸한다(내부 PK 비노출)
 data class RecentFoodDTO(
-    @field:Schema(description = "최근 검색 항목 ID(단건 삭제용)", example = "1024")
-    val recentId: Long,
-
-    @field:Schema(description = "음식 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+    @field:Schema(description = "음식 외부 식별자(UUID) — 단건 삭제 시 그대로 사용", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
     val foodExternalId: String,
 
     @field:Schema(description = "음식 이름", example = "된장찌개")

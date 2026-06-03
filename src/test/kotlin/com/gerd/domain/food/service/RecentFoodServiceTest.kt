@@ -96,7 +96,7 @@ class RecentFoodServiceTest {
             val before = existing.searchedAt
             val result = service.addRecent(externalId.toString(), userId)
 
-            assertThat(result.recentId).isEqualTo(100L)
+            assertThat(result.foodExternalId).isEqualTo(externalId.toString())
             assertThat(existing.searchedAt).isAfter(before)
             verify(foodSearchHistoryRepository, never()).save(any())
         }
@@ -121,10 +121,18 @@ class RecentFoodServiceTest {
     inner class deleteRecent {
 
         @Test
-        fun `본인 항목이 없으면 RECENT_NOT_FOUND`() {
-            whenever(foodSearchHistoryRepository.findByIdAndUserId(999L, userId)).thenReturn(null)
+        fun `형식이 잘못된 UUID면 RECENT_NOT_FOUND`() {
+            assertThatThrownBy { service.deleteRecent("not-a-uuid", userId) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode").isEqualTo(FoodErrorCode.RECENT_NOT_FOUND)
+            verify(foodSearchHistoryRepository, never()).findByUserIdAndFoodExternalId(any(), any())
+        }
 
-            assertThatThrownBy { service.deleteRecent(999L, userId) }
+        @Test
+        fun `본인 항목이 없으면 RECENT_NOT_FOUND`() {
+            whenever(foodSearchHistoryRepository.findByUserIdAndFoodExternalId(userId, externalId)).thenReturn(null)
+
+            assertThatThrownBy { service.deleteRecent(externalId.toString(), userId) }
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(FoodErrorCode.RECENT_NOT_FOUND)
         }
@@ -132,9 +140,9 @@ class RecentFoodServiceTest {
         @Test
         fun `본인 항목이면 삭제한다`() {
             val existing = FoodFixture.history(100, FoodFixture.food(10), LocalDateTime.now())
-            whenever(foodSearchHistoryRepository.findByIdAndUserId(100L, userId)).thenReturn(existing)
+            whenever(foodSearchHistoryRepository.findByUserIdAndFoodExternalId(userId, externalId)).thenReturn(existing)
 
-            service.deleteRecent(100L, userId)
+            service.deleteRecent(externalId.toString(), userId)
 
             verify(foodSearchHistoryRepository).delete(existing)
         }

@@ -70,13 +70,17 @@ interface FoodApi {
         @RequestBody request: AddRecentRequestDTO,
     ): ResponseEntity<ApiResponse<RecentFoodDTO>>
 
-    @Operation(summary = "최근 본 음식 단건 삭제", description = "본인의 최근 검색 항목 1건을 삭제합니다.")
+    @Operation(
+        summary = "최근 본 음식 단건 삭제",
+        description = "본인의 최근 본 음식 1건을 음식 외부 식별자(externalId)로 삭제합니다. (user, food)가 유니크라 externalId가 항목을 유일하게 가리킵니다.",
+    )
     @ApiErrorExample(FoodErrorCode::class, "RECENT_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "삭제 성공"))
-    @DeleteMapping("/recent/{recentId}")
+    @DeleteMapping("/recent/{foodExternalId}")
     fun deleteRecent(
         @CurrentUser userDetails: CustomUserDetails,
-        @Parameter(description = "최근 검색 항목 ID", example = "1024") @PathVariable recentId: Long,
+        @Parameter(description = "음식 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        @PathVariable foodExternalId: String,
     ): ResponseEntity<ApiResponse<Unit>>
 
     @Operation(summary = "최근 본 음식 전체 삭제", description = "본인의 최근 검색 기록을 모두 삭제합니다.")

@@ -44,7 +44,6 @@ class FoodControllerTest @Autowired constructor(
     private lateinit var jwtProvider: JwtProvider
 
     private fun recentFood() = RecentFoodDTO(
-        recentId = 1024,
         foodExternalId = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f",
         name = "된장찌개",
         category = "soup_stew",
@@ -95,7 +94,7 @@ class FoodControllerTest @Autowired constructor(
 
             mockMvc.get("/api/v1/foods/recent").andExpect {
                 status { isOk() }
-                jsonPath("$.result[0].recentId") { value(1024) }
+                jsonPath("$.result[0].foodExternalId") { value("9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f") }
                 jsonPath("$.result[0].searchedAt") { value("2026-06-03 08:12:00") }
             }
         }
@@ -115,7 +114,7 @@ class FoodControllerTest @Autowired constructor(
                 content = objectMapper.writeValueAsString(body)
             }.andExpect {
                 status { isOk() }
-                jsonPath("$.result.recentId") { value(1024) }
+                jsonPath("$.result.foodExternalId") { value("9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f") }
             }
         }
 
@@ -142,7 +141,7 @@ class FoodControllerTest @Autowired constructor(
         @Test
         @WithCustomUser
         fun `단건 삭제에 성공한다`() {
-            mockMvc.delete("/api/v1/foods/recent/1024").andExpect {
+            mockMvc.delete("/api/v1/foods/recent/9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f").andExpect {
                 status { isOk() }
                 jsonPath("$.isSuccess") { value(true) }
             }
@@ -154,7 +153,7 @@ class FoodControllerTest @Autowired constructor(
             whenever(recentFoodService.deleteRecent(any(), any()))
                 .thenThrow(GeneralException(FoodErrorCode.RECENT_NOT_FOUND))
 
-            mockMvc.delete("/api/v1/foods/recent/999").andExpect {
+            mockMvc.delete("/api/v1/foods/recent/9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f").andExpect {
                 status { isNotFound() }
                 jsonPath("$.code") { value("FOOD404_2") }
             }

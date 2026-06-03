@@ -4,14 +4,15 @@ import com.gerd.domain.food.entity.FoodSearchHistory
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import java.util.UUID
 
 interface FoodSearchHistoryRepository : JpaRepository<FoodSearchHistory, Long> {
 
     // upsert 판정 — (user_id, food_id) 기존 항목 조회
     fun findByUserIdAndFoodId(userId: Long, foodId: Long): FoodSearchHistory?
 
-    // 단건 삭제 시 소유권 확인 — 본인 항목만 삭제 가능
-    fun findByIdAndUserId(id: Long, userId: Long): FoodSearchHistory?
+    // 단건 삭제 시 소유권 확인 — 본인 항목을 음식 externalId로 조회(내부 PK 비노출). FoodExternalId는 food.externalId로 해석된다
+    fun findByUserIdAndFoodExternalId(userId: Long, externalId: UUID): FoodSearchHistory?
 
     fun deleteByUserId(userId: Long)
 

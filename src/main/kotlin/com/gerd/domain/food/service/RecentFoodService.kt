@@ -58,8 +58,10 @@ class RecentFoodService(
     }
 
     @Transactional
-    fun deleteRecent(recentId: Long, userId: Long) {
-        val history = foodSearchHistoryRepository.findByIdAndUserId(recentId, userId)
+    fun deleteRecent(foodExternalId: String, userId: Long) {
+        // 형식이 잘못된 UUID는 존재할 수 없는 항목과 동일하게 취급(열거 단서 차단)
+        val externalId = parseUuid(foodExternalId) ?: throw GeneralException(FoodErrorCode.RECENT_NOT_FOUND)
+        val history = foodSearchHistoryRepository.findByUserIdAndFoodExternalId(userId, externalId)
             ?: throw GeneralException(FoodErrorCode.RECENT_NOT_FOUND)
         foodSearchHistoryRepository.delete(history)
     }
@@ -91,7 +93,6 @@ class RecentFoodService(
 
     private fun FoodSearchHistory.toDTO(category: String?) =
         RecentFoodDTO(
-            recentId = id!!,
             foodExternalId = food.externalId.toString(),
             name = food.name,
             category = category,
