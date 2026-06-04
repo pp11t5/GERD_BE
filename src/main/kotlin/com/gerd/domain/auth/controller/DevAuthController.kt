@@ -40,7 +40,7 @@ class DevAuthController(
             - 운영 환경(prod profile)에서는 비활성화됩니다.
         """,
     )
-    @ApiErrorExample(AuthErrorCode.USER_NOT_FOUND)
+    @ApiErrorExample(AuthErrorCode::class, "USER_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "토큰 발급 성공"))
     @PostMapping("/dev-login")
     fun devLogin(
