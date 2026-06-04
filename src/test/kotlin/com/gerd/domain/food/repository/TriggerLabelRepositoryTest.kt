@@ -1,13 +1,16 @@
 package com.gerd.domain.food.repository
 
 import com.gerd.domain.food.entity.TriggerLabel
+import com.gerd.global.config.QuerydslTestConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
+import org.springframework.context.annotation.Import
 
 @DataJpaTest
+@Import(QuerydslTestConfig::class)
 class TriggerLabelRepositoryTest @Autowired constructor(
     private val triggerLabelRepository: TriggerLabelRepository,
 ) {

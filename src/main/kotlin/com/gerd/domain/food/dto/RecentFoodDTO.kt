@@ -1,0 +1,22 @@
+package com.gerd.domain.food.dto
+
+import com.fasterxml.jackson.annotation.JsonFormat
+import io.swagger.v3.oas.annotations.media.Schema
+import java.time.LocalDateTime
+
+// 최근 본 음식 1건 — (user, food)가 유니크라 foodExternalId가 단건 삭제 식별자도 겸한다(내부 PK 비노출)
+data class RecentFoodDTO(
+    @field:Schema(description = "음식 외부 식별자(UUID) — 단건 삭제 시 그대로 사용", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+    val foodExternalId: String,
+
+    @field:Schema(description = "음식 이름", example = "된장찌개")
+    val name: String,
+
+    // 데이터상 다중 분류가 가능하지만 화면 노출은 대표 분류 1개 — code만 내리고 표시명은 클라이언트가 매핑(D6). 분류 없으면 null
+    @field:Schema(description = "대표 음식 분류 code", example = "soup_stew", nullable = true)
+    val category: String?,
+
+    @field:JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+    @field:Schema(description = "마지막으로 본 시각", example = "2026-06-03 08:12:00")
+    val searchedAt: LocalDateTime,
+)
