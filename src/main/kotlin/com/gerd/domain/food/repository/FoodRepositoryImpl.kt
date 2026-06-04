@@ -7,8 +7,6 @@ import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.querydsl.core.types.dsl.CaseBuilder
 import com.querydsl.core.types.dsl.Expressions
 import com.querydsl.jpa.impl.JPAQueryFactory
-import jakarta.persistence.EntityManager
-import jakarta.persistence.PersistenceContext
 
 /**
  * QueryDSL 음식 검색 구현 (Spring Data fragment — FoodRepository에 자동 결합)
@@ -17,16 +15,12 @@ import jakarta.persistence.PersistenceContext
  * - 노출 범위: 공개 카탈로그(seed/curated·public) ∪ 본인 비공개 음식. soft-deleted는 Food의 @SQLRestriction이 제외
  * - 정렬: 정규화 기준 정확일치 → 접두 → 이름. (pg_trgm은 prod 가속 인덱스일 뿐 결과 동일)
  *
- * fragment(*Impl)는 Spring Data가 규칙으로 결합하므로 @Repository가 불필요하다.
- * EntityManager로 JPAQueryFactory를 직접 구성해 자급식으로 둔다 — JPAQueryFactory 빈을 주입받게 하면
- * @DataJpaTest 슬라이스 컨텍스트(QuerydslConfig 미로딩)에 그 빈이 없어 FoodRepository fragment 생성이 실패하고
- * 모든 슬라이스 테스트가 깨진다. 자급식이라 별도 빈/설정 없이 슬라이스에서 동작한다.
+ * fragment(*Impl)는 Spring Data가 규칙으로 결합하므로 @Repository가 불필요하다
+ * JPAQueryFactory는 QuerydslConfig가 등록한 빈을 주입받는다 — @DataJpaTest 슬라이스에서는 QuerydslTestConfig가 같은 빈을 등록한다
  */
 class FoodRepositoryImpl(
-    @PersistenceContext private val entityManager: EntityManager,
+    private val queryFactory: JPAQueryFactory,
 ) : FoodRepositoryCustom {
-
-    private val queryFactory = JPAQueryFactory(entityManager)
 
     override fun search(normalizedQuery: String, size: Int, userId: Long): List<Food> {
         val food = QFood.food

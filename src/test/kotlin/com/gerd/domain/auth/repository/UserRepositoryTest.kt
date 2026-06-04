@@ -2,14 +2,17 @@ package com.gerd.domain.auth.repository
 
 import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.UserRole
+import com.gerd.global.config.QuerydslTestConfig
 import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
+import org.springframework.context.annotation.Import
 
 @DataJpaTest
+@Import(QuerydslTestConfig::class)
 class UserRepositoryTest @Autowired constructor(
     private val userRepository: UserRepository,
     private val entityManager: EntityManager,
