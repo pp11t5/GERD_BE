@@ -29,7 +29,7 @@ class UserFcmToken(
     // @MapsId가 채우는 공유 PK, 직접 할당 X
     @Id
     @Column(name = "user_id")
-    val userId: Long = 0L,
+    val userId: Long? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
