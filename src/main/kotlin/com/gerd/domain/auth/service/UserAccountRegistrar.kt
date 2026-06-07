@@ -5,6 +5,8 @@ import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.AuthProvider
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.notification.entity.UserNotificationSetting
+import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional
 class UserAccountRegistrar(
     private val userRepository: UserRepository,
     private val authAccountRepository: AuthAccountRepository,
+    private val notificationSettingRepository: UserNotificationSettingRepository,
 ) {
 
     // 필요 시에만 사용자 생성
@@ -32,9 +35,14 @@ class UserAccountRegistrar(
         return user.id!!
     }
 
-    // 사용자 검색 또는 새로 저장
-    private fun findOrCreateUser(email: String, buildUser: () -> User): User =
-        userRepository.findByEmail(email).orElseGet { userRepository.save(buildUser()) }
+    // 사용자 검색 또는 새로 저장 — 신규 가입이면 알림 설정 기본값도 함께 생성
+    private fun findOrCreateUser(email: String, buildUser: () -> User): User {
+        return userRepository.findByEmail(email).orElseGet {
+            val user = userRepository.save(buildUser())
+            notificationSettingRepository.save(UserNotificationSetting(user = user))
+            user
+        }
+    }
 
     // 사용자 계정 엔티티 생성
     private fun findOrCreateAuthAccount(user: User, provider: AuthProvider, providerAccountId: String) {
