@@ -35,8 +35,7 @@ class PostMealNotificationListener(
                         title = "식사 기록이 완료되었습니다!",
                         body = "식사 기록이 성공적으로 저장되었습니다. 6시간 뒤에 식사 후 알림이 발송됩니다.",
                         type = NotificationType.POST_MEAL,
-                        targetId = event.toString(
-                        )
+                        targetId = event.userId.toString()
                     )
                 )
             },

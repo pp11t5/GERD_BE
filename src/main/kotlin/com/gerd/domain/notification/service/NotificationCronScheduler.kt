@@ -4,9 +4,12 @@ import com.gerd.domain.fcm.FcmPushSender
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.notification.entity.enums.DailyNotificationTime
 import com.gerd.domain.notification.entity.enums.NotificationType
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+
+private val log = KotlinLogging.logger {}
 
 /**
  * 정기 푸시 발송 스케줄러
@@ -15,7 +18,7 @@ import org.springframework.stereotype.Component
  * - notification.scheduler.enabled=false 시 비활성화 (stage 환경 등)
  */
 @Component
-@ConditionalOnProperty(name = ["notification.scheduler.enabled"], havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = ["notification.scheduler.enabled"], havingValue = "true", matchIfMissing = false)
 class NotificationCronScheduler(
     private val fcmPushSender: FcmPushSender,
 ) {
@@ -48,7 +51,7 @@ class NotificationCronScheduler(
 
     // 해당 시간대 알림 활성 유저 토큰 조회 후 500개 단위 배치 발송
     private fun sendDailyRecord(time: DailyNotificationTime) {
-        TODO()
+        log.info { "일일 기록 푸시 스케줄러는 아직 구현되지 않았습니다. time=$time" }
     }
 
     companion object {
