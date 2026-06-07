@@ -28,7 +28,7 @@ class UserNotificationSetting(
 
     @Id
     @Column(name = "user_id")
-    val userId: Long? = 0L,
+    val userId: Long? = null,
 
     @Column(name = "post_meal_notification_enabled", nullable = false)
     var postMealNotificationEnabled: Boolean = true,
