@@ -11,5 +11,4 @@ class GerdApplicationTests {
     @Test
     fun contextLoads() {
     }
-
 }
