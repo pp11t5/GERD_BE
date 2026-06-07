@@ -13,6 +13,14 @@ spring:
         format_sql: true
     open-in-view: false
 
+firebase:
+  service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON}
+  project-id: ${FIREBASE_PROJECT_ID}
+
+notification:
+  scheduler:
+    enabled: false
+
 jwt:
   secret: ${JWT_SECRET}
   access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
