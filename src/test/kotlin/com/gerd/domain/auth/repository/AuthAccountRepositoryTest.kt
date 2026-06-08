@@ -35,7 +35,7 @@ class AuthAccountRepositoryTest @Autowired constructor(
         )
 
         assertThat(result).isPresent
-        assertThat(result.get().id).isEqualTo(authAccount.id)
+        assertThat(result.get().userId).isEqualTo(user.id)
         assertThat(result.get().user.id).isEqualTo(user.id)
     }
 }

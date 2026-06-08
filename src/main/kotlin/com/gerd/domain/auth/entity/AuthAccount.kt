@@ -7,11 +7,10 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
+import jakarta.persistence.MapsId
+import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.OnDelete
@@ -28,19 +27,16 @@ import org.hibernate.annotations.OnDeleteAction
     ],
 )
 class AuthAccount(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "auth_account_id")
-    val id: Long? = null,
 
-    // @SQLRestriction 우회용 — user lazy load 없이 FK 값 직접 접근
-    @Column(name = "user_id", insertable = false, updatable = false, nullable = false)
-    val userId: Long = 0L,
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @MapsId
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     val user: User,
+
+    @Id
+    @Column(name = "user_id")
+    val userId: Long? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

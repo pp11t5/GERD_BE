@@ -1,6 +1,7 @@
 package com.gerd.domain.auth.service
 
 import com.gerd.domain.auth.client.KakaoApiClient
+import com.gerd.domain.auth.entity.enums.AuthProvider
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.RefreshTokenRepository
@@ -34,7 +35,8 @@ class WithdrawService(
 
     // 14일 유예 후 스케줄러에서 호출 — 카카오 연동이 있으면 unlink 후 물리 삭제
     fun withdrawHardDelete(userId: Long) {
-        authAccountRepository.findKakaoAccountByUserId(userId)
+        authAccountRepository.findById(userId)
+            .filter { it.provider == AuthProvider.KAKAO }
             .ifPresent { kakaoApiClient.unlink(it.providerAccountId) }
 
         userRepository.hardDelete(userId)
