@@ -48,6 +48,7 @@ src/main/kotlin/com/<project>/
 - DTO에 `toEntity()` 금지
 - 상태 변경은 의미 있는 도메인 메서드로만 노출
 - JPA용 기본 생성자는 `protected`
+- 외부 노출 ID가 필요한 엔티티는 `BaseEntity`, 불필요한 엔티티는 `BaseTimeEntity`를 상속한다
 
 **기본키 전략**
 
@@ -60,9 +61,14 @@ src/main/kotlin/com/<project>/
 - `externalId`는 `BINARY(16)` 컬럼, `updatable = false`로 불변 보장
 - API 응답에서 엔티티 id(`Long`) 직접 노출 금지 — `externalId` 사용
 
+## 6. 로깅 규칙
+
+- 로거는 `kotlin-logging` 기반 선언을 사용한다
+- 문자열 보간이 필요한 로그는 람다 블록으로 감싸 불필요한 문자열 연산을 피한다
+
 상세 규칙 → [jpa-entity skill](../.claude/skills/jpa-entity/SKILL.md)
 
-## 6. Service 계층 규칙
+## 7. Service 계층 규칙
 
 - Command / Query 책임 분리 (CQRS)
 - `@Transactional` 경계는 Service 메서드 단위
@@ -70,7 +76,7 @@ src/main/kotlin/com/<project>/
 
 상세 규칙 → [service-layer skill](../.claude/skills/service-layer/SKILL.md)
 
-## 7. QueryDSL 규칙
+## 8. QueryDSL 규칙
 
 - 동적 조건 조회는 Custom Repository로 분리
 - Projection DTO는 `repository/dto` 패키지에 위치
@@ -79,7 +85,7 @@ src/main/kotlin/com/<project>/
 
 상세 규칙 → [querydsl skill](../.claude/skills/querydsl/SKILL.md)
 
-## 8. 예외 처리
+## 9. 예외 처리
 
 - 예외는 `CustomException` + 도메인 `*ErrorCode` 기준
 - Controller에서 직접 삼키지 않고 전역 핸들러로 위임

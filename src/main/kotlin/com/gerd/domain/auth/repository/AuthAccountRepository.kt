@@ -15,12 +15,4 @@ interface AuthAccountRepository : JpaRepository<AuthAccount, Long> {
         provider: AuthProvider,
         providerAccountId: String,
     ): Boolean
-
-    fun findByUserIdAndProvider(
-        userId: Long,
-        provider: AuthProvider,
-    ): Optional<AuthAccount>
-
-    fun findKakaoAccountByUserId(userId: Long): Optional<AuthAccount> =
-        findByUserIdAndProvider(userId, AuthProvider.KAKAO)
 }

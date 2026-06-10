@@ -64,6 +64,7 @@ dependencies {
     // kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
 
     // querydsl
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
@@ -84,6 +85,9 @@ dependencies {
     // swagger
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
+    // firebase
+    implementation("com.google.firebase:firebase-admin:9.4.3")
+
     // r2
     implementation("software.amazon.awssdk:s3:2.25.4")
     implementation("software.amazon.awssdk:auth:2.25.4")
@@ -100,6 +104,11 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     mockitoAgent("org.mockito:mockito-core:5.20.0") { isTransitive = false }
+
+    // kotest
+    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
+    testImplementation("io.kotest:kotest-assertions-core:5.9.1")
+    testImplementation("io.mockk:mockk:1.13.12")
 }
 
 kotlin {

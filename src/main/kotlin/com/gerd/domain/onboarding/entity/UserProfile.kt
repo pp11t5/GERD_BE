@@ -43,5 +43,5 @@ class UserProfile(
     // @MapsId가 user.id로 채우는 공유 PK — 직접 할당하지 않는다
     @Id
     @Column(name = "user_id")
-    val userId: Long = 0L
+    val userId: Long? = null
 }

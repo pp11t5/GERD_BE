@@ -43,7 +43,7 @@ class OAuthService(
 
         if (authAccount != null) {
             // 삭제된 사용자도 포함해서 조회
-            val user = userRepository.findByIdIncludingDeleted(authAccount.userId)
+            val user = userRepository.findByIdIncludingDeleted(authAccount.userId!!)
                 .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
             checkUserStatus(user)
             // 최근 업로드 시점 저장
@@ -82,7 +82,7 @@ class OAuthService(
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
 
         // @SQLRestriction 우회 — 탈퇴 유예 유저는 일반 조회에서 필터됨
-        val user = userRepository.findByIdIncludingDeleted(authAccount.userId)
+        val user = userRepository.findByIdIncludingDeleted(authAccount.userId!!)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
 
         if (user.status != UserStatus.DELETED) {
