@@ -26,6 +26,13 @@ kakao:
   jwks-url: ${KAKAO_JWKS_URL:}
   admin-key: ${KAKAO_ADMIN_KEY:}
 
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash-lite}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+  connect-timeout-ms: ${GEMINI_CONNECT_TIMEOUT_MS:3000}
+  read-timeout-ms: ${GEMINI_READ_TIMEOUT_MS:15000}
+
 sentry:
   dsn: ${SENTRY_DSN:}
   exception-resolver-order: -2147483647

@@ -1,0 +1,117 @@
+package com.gerd.domain.judgment.service
+
+import com.gerd.domain.judgment.dto.CachedJudgment
+import com.gerd.domain.judgment.dto.JudgmentContext
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
+import com.gerd.domain.judgment.dto.LlmJudgmentDTO
+import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.judgment.service.SafetyOverrideRule.OverrideResult
+import org.springframework.stereotype.Component
+
+/**
+ * 판정 응답 조립 — 등급별 제목 톤(spec §3), 고정 폴백 카피, 닉네임 치환을 담당한다
+ *
+ * 닉네임 치환은 캐시 밖에서 매 응답 직전에 수행한다 — 치환된 본문을 캐시하면
+ * 닉네임 변경 후에도 TTL 동안 옛 닉네임이 노출된다 (spec §7)
+ */
+@Component
+class JudgmentResponseAssembler {
+
+    // ② 오버라이드까지 끝난 최종 등급으로 캐시 value를 조립한다
+    fun assembleCacheable(
+        context: JudgmentContext,
+        llmJudgment: LlmJudgmentDTO,
+        override: OverrideResult,
+        substitutes: List<SubstituteDTO>,
+    ): CachedJudgment {
+        // LLM이 UNKNOWN을 낸 경우 같이 생성된 items는 버린다 — "왜 모르는지"를 LLM이 창작하지 않게(환각 차단, spec §4)
+        val baseItems = if (llmJudgment.grade == JudgmentGrade.UNKNOWN) {
+            UNKNOWN_FALLBACK_ITEMS
+        } else {
+            llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
+        }
+        // 알레르겐 매치는 LLM이 언급을 놓쳐도 슬롯 [1](알레르기·복용약)을 결정적 카피로 보장한다
+        val items = if (override.allergenMatches.isNotEmpty()) {
+            val labels = override.allergenMatches.joinToString(", ") { it.label }
+            baseItems.toMutableList().apply {
+                this[ALLERGY_SLOT] = JudgmentItemDTO(
+                    emphasis = "알레르기 성분이 들어 있어요",
+                    body = "등록하신 알레르기($labels)에 해당하는 성분이 포함돼 있어요. 권하지 않아요.",
+                )
+            }
+        } else {
+            baseItems
+        }
+
+        return CachedJudgment(
+            foodExternalId = context.foodExternalId,
+            foodName = context.food.name,
+            grade = override.grade,
+            personalTitleTemplate = TITLE_TEMPLATES.getValue(override.grade),
+            items = items,
+            substitutes = substitutes,
+        )
+    }
+
+    fun toResponse(cached: CachedJudgment, nickname: String?, cachedFlag: Boolean): JudgmentResponseDTO =
+        JudgmentResponseDTO(
+            foodExternalId = cached.foodExternalId,
+            foodName = cached.foodName,
+            grade = cached.grade,
+            personalTitle = cached.personalTitleTemplate.replaceNickname(nickname),
+            items = cached.items.map {
+                JudgmentItemDTO(it.emphasis.replaceNickname(nickname), it.body.replaceNickname(nickname))
+            },
+            stateRecords = emptyList(),
+            substitutes = cached.substitutes,
+            disclaimer = DISCLAIMER,
+            cached = cachedFlag,
+        )
+
+    // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 UNKNOWN 폴백 — 캐시하지 않는다
+    fun assembleUnknownFallback(context: JudgmentContext): JudgmentResponseDTO =
+        JudgmentResponseDTO(
+            foodExternalId = context.foodExternalId,
+            foodName = context.food.name,
+            grade = JudgmentGrade.UNKNOWN,
+            personalTitle = TITLE_TEMPLATES.getValue(JudgmentGrade.UNKNOWN),
+            items = UNKNOWN_FALLBACK_ITEMS,
+            stateRecords = emptyList(),
+            substitutes = emptyList(),
+            disclaimer = DISCLAIMER,
+            cached = false,
+        )
+
+    private fun String.replaceNickname(nickname: String?): String =
+        replace(NICKNAME_TOKEN, nickname ?: DEFAULT_NICKNAME)
+
+    companion object {
+        const val NICKNAME_TOKEN = "{nickname}"
+        const val DEFAULT_NICKNAME = "회원"
+        const val DISCLAIMER = "본 앱은 진단·치료 서비스가 아닙니다."
+
+        // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약 (기획 PItem-1 / PItem-2)
+        private const val ALLERGY_SLOT = 1
+
+        private val TITLE_TEMPLATES = mapOf(
+            JudgmentGrade.RECOMMEND to "${NICKNAME_TOKEN}님, 좋은 선택이에요!",
+            JudgmentGrade.CAUTION to "속이 편안할 수 있도록 천천히 드세요!",
+            JudgmentGrade.RISK to "오늘은 다른 메뉴가 더 편할 거예요",
+            JudgmentGrade.UNKNOWN to "이 음식은 정보가 충분하지 않아요",
+        )
+
+        // UNKNOWN의 items는 LLM 생성 없이 고정 카피 — 두 발생 경로(⓪게이트·LLM UNKNOWN) 공용 (spec §4)
+        private val UNKNOWN_FALLBACK_ITEMS = listOf(
+            JudgmentItemDTO(
+                emphasis = "정보가 부족해요",
+                body = "이 음식은 아직 분석할 수 있는 정보가 충분하지 않아요. 처음이라면 소량부터 천천히 드셔보는 게 좋아요.",
+            ),
+            JudgmentItemDTO(
+                emphasis = "알레르기 확인이 어려워요",
+                body = "등록하신 알레르기 성분이 포함됐는지 확인할 수 없어요. 성분표를 한 번 확인해 보세요.",
+            ),
+        )
+    }
+}
