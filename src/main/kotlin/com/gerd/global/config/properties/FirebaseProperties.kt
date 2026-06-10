@@ -6,6 +6,6 @@ import org.springframework.stereotype.Component
 @Component
 @ConfigurationProperties(prefix = "firebase")
 data class FirebaseProperties(
-    val serviceAccountJson: String = "",
-    val projectId: String = "",
+    var serviceAccountJson: String = "",
+    var projectId: String = "",
 )
