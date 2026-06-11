@@ -19,6 +19,7 @@ class GeminiClientTest {
     // 핸들러가 테스트별 응답을 돌려주도록 가변 상태로 둔다
     private var responseStatus = 200
     private var responseBody = ""
+    private var requestCount = 0
 
     // 운영의 Boot 자동 구성 mapper처럼 Kotlin 모듈을 ServiceLoader로 등록한다
     private val objectMapper = JsonMapper.builder().findAndAddModules().build()
@@ -27,6 +28,7 @@ class GeminiClientTest {
     fun setUp() {
         server = HttpServer.create(InetSocketAddress(0), 0).apply {
             createContext("/") { exchange ->
+                requestCount++
                 val bytes = responseBody.toByteArray(Charsets.UTF_8)
                 exchange.responseHeaders.add("Content-Type", "application/json")
                 exchange.sendResponseHeaders(responseStatus, bytes.size.toLong())
@@ -134,6 +136,23 @@ class GeminiClientTest {
             )
 
             assertThat(call()).isNull()
+        }
+
+        @Test
+        fun `API 키가 비어 있으면 HTTP 호출 없이 null을 반환한다`() {
+            val blankKeyClient = GeminiClient(
+                geminiProperties = GeminiProperties(
+                    apiKey = "",
+                    model = "gemini-test",
+                    baseUrl = "http://localhost:${server.address.port}",
+                    connectTimeoutMs = 1000,
+                    readTimeoutMs = 1000,
+                ),
+                objectMapper = objectMapper,
+            )
+
+            assertThat(blankKeyClient.generateJudgment("system", "user", mapOf("type" to "OBJECT"))).isNull()
+            assertThat(requestCount).isZero()
         }
     }
 }

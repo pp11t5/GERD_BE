@@ -8,8 +8,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Propagation
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.client.RestClient
 import tools.jackson.databind.ObjectMapper
 import java.net.http.HttpClient
@@ -41,13 +39,17 @@ class GeminiClient(
         )
         .build()
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     fun generateJudgment(
         systemInstruction: String,
         userContent: String,
         responseSchema: Map<String, Any>,
-    ): LlmJudgmentDTO? =
-        runCatching {
+    ): LlmJudgmentDTO? {
+        // 키 미설정 시 실패가 뻔한 HTTP 호출로 로그를 오염시키지 않고 즉시 UNKNOWN 폴백으로 보낸다
+        if (geminiProperties.apiKey.isBlank()) {
+            log.warn("Gemini API 키가 설정되지 않아 판정을 생략합니다 (GEMINI_API_KEY)")
+            return null
+        }
+        return try {
             val response = restClient.post()
                 .uri("/v1beta/models/{model}:generateContent", geminiProperties.model)
                 // API 키는 쿼리스트링 대신 헤더로 — 액세스 로그 유출 방지
@@ -58,10 +60,12 @@ class GeminiClient(
                 .body(GeminiGenerateResponseDTO::class.java)
 
             response?.let { parseJudgment(it) }
-        }.onFailure {
-            // 프롬프트/응답 본문은 건강정보라 로그에 남기지 않는다
-            log.warn("Gemini 판정 호출 실패: {} - {}", it.javaClass.simpleName, it.message)
-        }.getOrNull()
+        } catch (e: Exception) {
+            // Error까지 삼키지 않도록 Exception만 잡는다. 프롬프트/응답 본문은 건강정보라 로그에 남기지 않는다
+            log.warn("Gemini 판정 호출 실패: {} - {}", e.javaClass.simpleName, e.message)
+            null
+        }
+    }
 
     private fun buildRequestBody(
         systemInstruction: String,
