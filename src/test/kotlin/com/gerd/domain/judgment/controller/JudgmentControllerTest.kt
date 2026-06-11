@@ -13,7 +13,6 @@ import com.gerd.global.security.WithCustomUser
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -39,7 +38,7 @@ class JudgmentControllerTest @Autowired constructor(
         grade = JudgmentGrade.CAUTION,
         personalTitle = "속이 편안할 수 있도록 천천히 드세요!",
         items = listOf(
-            JudgmentItemDTO("카페인이 들어 있어요", "유진님이 등록한 커피류에 해당해요."),
+            JudgmentItemDTO("카페인이 들어 있어요", "등록하신 커피류 트리거에 해당해요."),
             JudgmentItemDTO("알레르기 해당 없어요", "알레르기 성분이 포함되지 않았어요."),
         ),
         stateRecords = emptyList(),
@@ -57,7 +56,7 @@ class JudgmentControllerTest @Autowired constructor(
             @Test
             @WithCustomUser
             fun `신호등 판정을 반환한다`() {
-                whenever(foodJudgmentQueryService.getJudgment(any(), any(), anyOrNull())).thenReturn(response)
+                whenever(foodJudgmentQueryService.getJudgment(any(), any())).thenReturn(response)
 
                 mockMvc.get("/api/v1/foods/$foodExternalId/judgment").andExpect {
                     status { isOk() }
@@ -79,7 +78,7 @@ class JudgmentControllerTest @Autowired constructor(
             @Test
             @WithCustomUser
             fun `음식이 없으면 FOOD404_1을 반환한다`() {
-                whenever(foodJudgmentQueryService.getJudgment(any(), any(), anyOrNull()))
+                whenever(foodJudgmentQueryService.getJudgment(any(), any()))
                     .thenThrow(GeneralException(FoodErrorCode.FOOD_NOT_FOUND))
 
                 mockMvc.get("/api/v1/foods/$foodExternalId/judgment").andExpect {

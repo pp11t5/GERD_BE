@@ -42,7 +42,7 @@ class FoodJudgmentQueryServiceTest {
         grade = JudgmentGrade.CAUTION,
         reasons = listOf("카페인"),
         items = listOf(
-            LlmJudgmentItemDTO("카페인이 들어 있어요", "{nickname}님이 등록한 커피류에 해당해요."),
+            LlmJudgmentItemDTO("카페인이 들어 있어요", "등록하신 커피류 트리거에 해당해요."),
             LlmJudgmentItemDTO("알레르기 해당 없어요", "알레르기 성분이 포함되지 않았어요."),
         ),
     )
@@ -94,7 +94,7 @@ class FoodJudgmentQueryServiceTest {
         fun `유저 입력 음식은 LLM 호출 없이 UNKNOWN 폴백을 반환한다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(userFoodContext())
 
-            val response = service.getJudgment(foodExternalId, userId, "유진")
+            val response = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(response.cached).isFalse()
@@ -111,8 +111,8 @@ class FoodJudgmentQueryServiceTest {
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstitutes(any())).thenReturn(emptyList())
 
-            val first = service.getJudgment(foodExternalId, userId, "유진")
-            val second = service.getJudgment(foodExternalId, userId, "유진")
+            val first = service.getJudgment(foodExternalId, userId)
+            val second = service.getJudgment(foodExternalId, userId)
 
             assertThat(first.cached).isFalse()
             assertThat(second.cached).isTrue()
@@ -125,8 +125,8 @@ class FoodJudgmentQueryServiceTest {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(null)
 
-            val first = service.getJudgment(foodExternalId, userId, "유진")
-            val second = service.getJudgment(foodExternalId, userId, "유진")
+            val first = service.getJudgment(foodExternalId, userId)
+            val second = service.getJudgment(foodExternalId, userId)
 
             assertThat(first.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(second.cached).isFalse()
@@ -144,7 +144,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(geminiClient.generateJudgment(any(), any(), any()))
                 .thenReturn(LlmJudgmentDTO(JudgmentGrade.UNKNOWN))
 
-            val response = service.getJudgment(foodExternalId, userId, "유진")
+            val response = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(response.items[0].emphasis).isEqualTo("정보가 부족해요")
@@ -161,7 +161,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(judgmentContextReader.loadSubstitutes(any()))
                 .thenReturn(listOf(SubstituteDTO(foodExternalId, "디카페인 아메리카노")))
 
-            val response = service.getJudgment(foodExternalId, userId, "유진")
+            val response = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.RISK)
             assertThat(response.items[1].emphasis).isEqualTo("알레르기 성분이 들어 있어요")
@@ -177,7 +177,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(geminiClient.generateJudgment(any(), any(), any()))
                 .thenReturn(llmJudgment.copy(grade = JudgmentGrade.RECOMMEND))
 
-            val response = service.getJudgment(foodExternalId, userId, "유진")
+            val response = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.RECOMMEND)
             assertThat(response.substitutes).isEmpty()
@@ -185,17 +185,14 @@ class FoodJudgmentQueryServiceTest {
         }
 
         @Test
-        fun `응답 직전 닉네임 토큰을 치환한다(캐시 HIT 경로 포함)`() {
+        fun `LLM items 본문을 가공 없이 그대로 응답에 담는다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstitutes(any())).thenReturn(emptyList())
 
-            val first = service.getJudgment(foodExternalId, userId, "유진")
-            val second = service.getJudgment(foodExternalId, userId, null)
+            val response = service.getJudgment(foodExternalId, userId)
 
-            assertThat(first.items[0].body).isEqualTo("유진님이 등록한 커피류에 해당해요.")
-            // 같은 캐시 엔트리라도 닉네임은 응답 시점 값으로 치환된다
-            assertThat(second.items[0].body).isEqualTo("회원님이 등록한 커피류에 해당해요.")
+            assertThat(response.items[0].body).isEqualTo("등록하신 커피류 트리거에 해당해요.")
         }
     }
 }

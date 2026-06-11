@@ -28,6 +28,18 @@ class JudgmentPromptBuilder(
             입력 JSON의 음식 정보(food), 사용자 건강 컨텍스트(user), 최근 기록(history)을 근거로
             이 사용자가 이 음식을 먹어도 괜찮을지 신호등 등급과 분석 항목을 생성하세요.
 
+            [입력 데이터 설명]
+            - food.knownAttributes: 음식에 대해 알려진 속성 설명
+            - food.triggerTags / user.triggerFoods: GERD 증상을 유발할 수 있는 성분 태그.
+              code는 시스템 식별자이고 label이 한글 표시명입니다 — 해석은 label 기준으로 하세요
+            - food.allergenTags / user.allergies: 알레르겐 태그 (code/label 구조 동일)
+            - user.symptoms: 사용자가 등록한 증상 코드. 의미는 다음과 같습니다:
+              heartburn_reflux=속쓰림·역류, post_meal_cough=식후 기침, throat_globus=목 이물감,
+              sour_mouth_odor=신물 올라옴·입냄새, supine_chest_tight=누우면 가슴 답답함,
+              none_but_manage=현재 증상은 없고 관리 목적
+            - user.meds: 복용 중인 약 (자유 텍스트)
+            - history: 최근 유사 음식 섭취 기록 (비어 있을 수 있음)
+
             [등급 기준]
             - RECOMMEND: 사용자의 트리거·알레르기·기록에 비추어 부담 없이 권할 수 있는 음식
             - CAUTION: 먹을 수는 있으나 양·속도·시점 조절이 필요한 음식
@@ -46,8 +58,8 @@ class JudgmentPromptBuilder(
             - 불확실한 내용을 단정하지 마세요
 
             [사용자 지칭]
-            - 사용자를 지칭할 때는 반드시 "{nickname}" 토큰을 그대로 사용하세요 (예: "{nickname}님이 등록한 트리거에 해당해요").
-              실제 이름을 지어내거나 추측하지 마세요.
+            - 사용자를 이름이나 별명으로 지칭하지 마세요. 이름을 지어내거나 추측하지 마세요.
+              지칭이 필요하면 "등록하신 트리거에 해당해요"처럼 주어 없이 표현하세요.
 
             출력은 지정된 JSON 스키마만 따르세요.
         """.trimIndent()

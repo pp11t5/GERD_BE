@@ -4,17 +4,12 @@ import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 
-/**
- * 캐시 value — 닉네임 placeholder({nickname}) 상태로 저장한다
- *
- * 치환 후 본문을 캐시하면 닉네임 변경 시 TTL 동안 옛 닉네임이 노출되므로,
- * 치환은 HIT/MISS 모두 응답 직전에 수행한다 (spec §7)
- */
+// 캐시 value — 사용자 식별 정보 없이 입력 스냅샷만으로 결정되는 최종 응답 본문이라 그대로 저장·재사용한다
 data class CachedJudgment(
     val foodExternalId: String,
     val foodName: String,
     val grade: JudgmentGrade,
-    val personalTitleTemplate: String,
+    val personalTitle: String,
     val items: List<JudgmentItemDTO>,
     val substitutes: List<SubstituteDTO>,
 )

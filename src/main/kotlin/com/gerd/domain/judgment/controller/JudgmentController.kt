@@ -22,7 +22,7 @@ class JudgmentController(
             .status(CommonSuccessCode.OK.httpStatus)
             .body(
                 ApiResponse.onSuccess(
-                    foodJudgmentQueryService.getJudgment(foodExternalId, userDetails.userId, userDetails.nickname),
+                    foodJudgmentQueryService.getJudgment(foodExternalId, userDetails.userId),
                     CommonSuccessCode.OK,
                 ),
             )

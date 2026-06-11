@@ -10,12 +10,7 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.SafetyOverrideRule.OverrideResult
 import org.springframework.stereotype.Component
 
-/**
- * 판정 응답 조립 — 등급별 제목 톤(spec §3), 고정 폴백 카피, 닉네임 치환을 담당한다
- *
- * 닉네임 치환은 캐시 밖에서 매 응답 직전에 수행한다 — 치환된 본문을 캐시하면
- * 닉네임 변경 후에도 TTL 동안 옛 닉네임이 노출된다 (spec §7)
- */
+// 판정 응답 조립 — 등급별 제목 톤(spec §3)과 고정 폴백 카피를 담당한다
 @Component
 class JudgmentResponseAssembler {
 
@@ -49,21 +44,19 @@ class JudgmentResponseAssembler {
             foodExternalId = context.foodExternalId,
             foodName = context.food.name,
             grade = override.grade,
-            personalTitleTemplate = TITLE_TEMPLATES.getValue(override.grade),
+            personalTitle = TITLE_TEMPLATES.getValue(override.grade),
             items = items,
             substitutes = substitutes,
         )
     }
 
-    fun toResponse(cached: CachedJudgment, nickname: String?, cachedFlag: Boolean): JudgmentResponseDTO =
+    fun toResponse(cached: CachedJudgment, cachedFlag: Boolean): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = cached.foodExternalId,
             foodName = cached.foodName,
             grade = cached.grade,
-            personalTitle = cached.personalTitleTemplate.replaceNickname(nickname),
-            items = cached.items.map {
-                JudgmentItemDTO(it.emphasis.replaceNickname(nickname), it.body.replaceNickname(nickname))
-            },
+            personalTitle = cached.personalTitle,
+            items = cached.items,
             stateRecords = emptyList(),
             substitutes = cached.substitutes,
             disclaimer = DISCLAIMER,
@@ -84,19 +77,14 @@ class JudgmentResponseAssembler {
             cached = false,
         )
 
-    private fun String.replaceNickname(nickname: String?): String =
-        replace(NICKNAME_TOKEN, nickname ?: DEFAULT_NICKNAME)
-
     companion object {
-        const val NICKNAME_TOKEN = "{nickname}"
-        const val DEFAULT_NICKNAME = "회원"
         const val DISCLAIMER = "본 앱은 진단·치료 서비스가 아닙니다."
 
         // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약 (기획 PItem-1 / PItem-2)
         private const val ALLERGY_SLOT = 1
 
         private val TITLE_TEMPLATES = mapOf(
-            JudgmentGrade.RECOMMEND to "${NICKNAME_TOKEN}님, 좋은 선택이에요!",
+            JudgmentGrade.RECOMMEND to "좋은 선택이에요!",
             JudgmentGrade.CAUTION to "속이 편안할 수 있도록 천천히 드세요!",
             JudgmentGrade.RISK to "오늘은 다른 메뉴가 더 편할 거예요",
             JudgmentGrade.UNKNOWN to "이 음식은 정보가 충분하지 않아요",
