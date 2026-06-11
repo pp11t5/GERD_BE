@@ -26,7 +26,7 @@ interface JudgmentApi {
             사용자 건강 컨텍스트(트리거·알레르기·복용약·증상)를 반영해 음식의 신호등 등급과 개인화 분석을 반환합니다.
             - grade: RECOMMEND(🟢) | CAUTION(🟡) | RISK(🔴) | UNKNOWN(⚪)
             - items: 항상 2슬롯 — [0]=트리거·증상 분석, [1]=알레르기·복용약 분석
-            - substitutes: CAUTION/RISK일 때만 대체 식단 노출(없으면 빈 배열)
+            - substitutes: CAUTION/RISK일 때만 대체 식단 노출(없으면 빈 배열). 사용자가 등록한 트리거·알레르기 성분을 가진 음식은 제외됩니다.
             - 본인이 직접 추가한 음식(source=user)은 검수 정보가 없어 항상 UNKNOWN입니다.
             - 동일한 (음식 × 사용자 상태)는 24시간 캐시돼 재호출 없이 재사용됩니다(cached=true).
         """,

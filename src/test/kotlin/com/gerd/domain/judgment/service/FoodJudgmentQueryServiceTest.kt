@@ -4,8 +4,8 @@ import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.judgment.client.GeminiClient
 import com.gerd.domain.judgment.dto.JudgmentContext
-import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
+import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO.LlmJudgmentItemDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
@@ -110,7 +110,7 @@ class FoodJudgmentQueryServiceTest {
         fun `같은 입력의 재호출은 LLM 없이 캐시로 응답한다(cached=true)`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
-            whenever(judgmentContextReader.loadSubstitutes(any())).thenReturn(emptyList())
+            whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
 
             val first = service.getJudgment(foodExternalId, userId)
             val second = service.getJudgment(foodExternalId, userId)
@@ -150,7 +150,7 @@ class FoodJudgmentQueryServiceTest {
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(response.items[0].emphasis).isEqualTo("정보가 부족해요")
             assertThat(response.substitutes).isEmpty()
-            verify(judgmentContextReader, never()).loadSubstitutes(any())
+            verify(judgmentContextReader, never()).loadSubstituteCandidates(any())
         }
 
         @Test
@@ -159,14 +159,35 @@ class FoodJudgmentQueryServiceTest {
                 .thenReturn(seedContext(foodAllergens = listOf(milk), userAllergens = listOf(milk)))
             whenever(geminiClient.generateJudgment(any(), any(), any()))
                 .thenReturn(llmJudgment.copy(grade = JudgmentGrade.RECOMMEND))
-            whenever(judgmentContextReader.loadSubstitutes(any()))
-                .thenReturn(listOf(SubstituteDTO(foodExternalId, "디카페인 아메리카노")))
+            whenever(judgmentContextReader.loadSubstituteCandidates(any()))
+                .thenReturn(listOf(SubstituteCandidateDTO(foodExternalId, "디카페인 아메리카노", emptySet())))
 
             val response = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.RISK)
             assertThat(response.items[1].emphasis).isEqualTo("알레르기 성분이 들어 있어요")
             assertThat(response.substitutes).hasSize(1)
+        }
+
+        @Test
+        fun `사용자 트리거·알레르겐을 가진 대체식 후보는 노출 전에 제외한다`() {
+            // 사용자: caffeine 트리거 + milk 알레르기. 음식: 우유 알레르겐 매치로 RISK
+            whenever(judgmentContextReader.load(foodExternalId, userId))
+                .thenReturn(seedContext(foodAllergens = listOf(milk), userAllergens = listOf(milk)))
+            whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+            whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(
+                listOf(
+                    SubstituteCandidateDTO(foodExternalId, "달걀찜", setOf("egg")),
+                    SubstituteCandidateDTO(foodExternalId, "치즈우유푸딩", setOf("milk")),
+                    SubstituteCandidateDTO(foodExternalId, "콜드브루", setOf("caffeine")),
+                    SubstituteCandidateDTO(foodExternalId, "율무차", emptySet()),
+                ),
+            )
+
+            val response = service.getJudgment(foodExternalId, userId)
+
+            // milk(알레르기)·caffeine(트리거) 보유 후보는 제외, 사용자와 무관한 egg와 클린 후보만 남는다
+            assertThat(response.substitutes.map { it.name }).containsExactly("달걀찜", "율무차")
         }
 
         @Test
@@ -182,14 +203,14 @@ class FoodJudgmentQueryServiceTest {
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.RECOMMEND)
             assertThat(response.substitutes).isEmpty()
-            verify(judgmentContextReader, never()).loadSubstitutes(any())
+            verify(judgmentContextReader, never()).loadSubstituteCandidates(any())
         }
 
         @Test
         fun `LLM items 본문과 제목을 가공 없이 그대로 응답에 담는다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
-            whenever(judgmentContextReader.loadSubstitutes(any())).thenReturn(emptyList())
+            whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
 
             val response = service.getJudgment(foodExternalId, userId)
 

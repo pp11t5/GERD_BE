@@ -9,8 +9,8 @@ import com.gerd.domain.food.repository.FoodTriggerRepository
 import com.gerd.domain.food.service.FoodAccessPolicy
 import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.JudgmentContext
-import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
+import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
@@ -78,14 +78,27 @@ class JudgmentContextReader(
         )
     }
 
-    // LLM 호출 이후 별도 짧은 트랜잭션으로 조회 — 캐시 loader 안의 커넥션 점유 시간을 최소화
-    fun loadSubstitutes(foodId: Long): List<SubstituteDTO> =
-        foodSubstituteRepository.findByFoodIdOrderBySortOrder(foodId).map {
-            SubstituteDTO(
+    // LLM 호출 이후 별도 짧은 트랜잭션으로 조회 — 캐시 loader 안의 커넥션 점유 시간을 최소화.
+    // 후보의 트리거·알레르겐 코드를 함께 실어 서비스가 사용자별 안전 필터를 적용할 수 있게 한다
+    fun loadSubstituteCandidates(foodId: Long): List<SubstituteCandidateDTO> {
+        val pairs = foodSubstituteRepository.findByFoodIdOrderBySortOrder(foodId)
+        if (pairs.isEmpty()) return emptyList()
+
+        val substituteIds = pairs.map { requireNotNull(it.substituteFood.id) { "영속 음식은 id를 가진다" } }
+        val codesByFoodId = (
+            foodTriggerRepository.findTagCodesByFoodIdIn(substituteIds) +
+                foodAllergenRepository.findTagCodesByFoodIdIn(substituteIds)
+            ).groupBy({ it.foodId }, { it.code })
+
+        return pairs.map {
+            val substituteId = requireNotNull(it.substituteFood.id) { "영속 음식은 id를 가진다" }
+            SubstituteCandidateDTO(
                 foodExternalId = requireNotNull(it.substituteFood.externalId) { "영속 음식은 externalId를 가진다" }.toString(),
                 name = it.substituteFood.name,
+                tagCodes = codesByFoodId[substituteId]?.toSet() ?: emptySet(),
             )
         }
+    }
 
     private fun parseUuid(value: String): UUID? =
         try {
