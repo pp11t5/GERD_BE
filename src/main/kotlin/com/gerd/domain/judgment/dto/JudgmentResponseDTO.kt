@@ -11,6 +11,10 @@ data class JudgmentResponseDTO(
     @field:Schema(description = "음식 이름", example = "아메리카노")
     val foodName: String,
 
+    // 데이터상 다중 분류가 가능하지만 화면 노출은 대표 분류 1개 — code만 내리고 표시명은 클라이언트가 매핑(D6). 분류 없으면 null
+    @field:Schema(description = "대표 음식 분류 code", example = "beverage", nullable = true)
+    val category: String?,
+
     @field:Schema(description = "신호등 등급", example = "CAUTION")
     val grade: JudgmentGrade,
 

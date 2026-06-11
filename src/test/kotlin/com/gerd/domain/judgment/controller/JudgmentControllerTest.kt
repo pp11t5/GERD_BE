@@ -35,6 +35,7 @@ class JudgmentControllerTest @Autowired constructor(
     private val response = JudgmentResponseDTO(
         foodExternalId = foodExternalId,
         foodName = "아메리카노",
+        category = "beverage",
         grade = JudgmentGrade.CAUTION,
         personalTitle = "속이 편안할 수 있도록 천천히 드세요!",
         items = listOf(
@@ -63,6 +64,7 @@ class JudgmentControllerTest @Autowired constructor(
                     jsonPath("$.isSuccess") { value(true) }
                     jsonPath("$.code") { value("COMMON200") }
                     jsonPath("$.result.foodExternalId") { value(foodExternalId) }
+                    jsonPath("$.result.category") { value("beverage") }
                     jsonPath("$.result.grade") { value("CAUTION") }
                     jsonPath("$.result.items.length()") { value(2) }
                     jsonPath("$.result.substitutes[0].name") { value("디카페인 아메리카노") }

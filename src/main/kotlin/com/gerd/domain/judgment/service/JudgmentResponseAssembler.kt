@@ -43,6 +43,7 @@ class JudgmentResponseAssembler {
         return CachedJudgment(
             foodExternalId = context.foodExternalId,
             foodName = context.food.name,
+            category = context.category,
             grade = override.grade,
             personalTitle = TITLE_TEMPLATES.getValue(override.grade),
             items = items,
@@ -54,6 +55,7 @@ class JudgmentResponseAssembler {
         JudgmentResponseDTO(
             foodExternalId = cached.foodExternalId,
             foodName = cached.foodName,
+            category = cached.category,
             grade = cached.grade,
             personalTitle = cached.personalTitle,
             items = cached.items,
@@ -68,6 +70,7 @@ class JudgmentResponseAssembler {
         JudgmentResponseDTO(
             foodExternalId = context.foodExternalId,
             foodName = context.food.name,
+            category = context.category,
             grade = JudgmentGrade.UNKNOWN,
             personalTitle = TITLE_TEMPLATES.getValue(JudgmentGrade.UNKNOWN),
             items = UNKNOWN_FALLBACK_ITEMS,

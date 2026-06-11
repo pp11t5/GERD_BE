@@ -52,6 +52,7 @@ class JudgmentResponseAssemblerTest {
 
             assertThat(cached.grade).isEqualTo(JudgmentGrade.CAUTION)
             assertThat(cached.foodName).isEqualTo("아메리카노")
+            assertThat(cached.category).isEqualTo("beverage")
             assertThat(cached.items).hasSize(2)
             assertThat(cached.items[0].emphasis).isEqualTo("카페인이 들어 있어요")
             assertThat(cached.substitutes).hasSize(1)
@@ -102,6 +103,7 @@ class JudgmentResponseAssemblerTest {
             val response = assembler.toResponse(cached, cachedFlag = true)
 
             assertThat(response.personalTitle).isEqualTo("속이 편안할 수 있도록 천천히 드세요!")
+            assertThat(response.category).isEqualTo("beverage")
             assertThat(response.items[0].body).isEqualTo("등록하신 커피류 트리거에 해당해요.")
             assertThat(response.cached).isTrue()
             assertThat(response.disclaimer).isEqualTo("본 앱은 진단·치료 서비스가 아닙니다.")
@@ -132,6 +134,7 @@ class JudgmentResponseAssemblerTest {
             val response = assembler.assembleUnknownFallback(context)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
+            assertThat(response.category).isEqualTo("beverage")
             assertThat(response.personalTitle).isEqualTo("이 음식은 정보가 충분하지 않아요")
             assertThat(response.items).hasSize(2)
             assertThat(response.substitutes).isEmpty()

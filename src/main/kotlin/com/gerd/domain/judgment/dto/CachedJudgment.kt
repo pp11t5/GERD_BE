@@ -8,6 +8,7 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 data class CachedJudgment(
     val foodExternalId: String,
     val foodName: String,
+    val category: String?,
     val grade: JudgmentGrade,
     val personalTitle: String,
     val items: List<JudgmentItemDTO>,
