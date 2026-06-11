@@ -74,7 +74,7 @@ class GeminiClientTest {
         fun `structured output을 LlmJudgmentDTO로 파싱한다`() {
             responseBody = envelope(
                 """
-                {"grade":"CAUTION","reasons":["카페인"],"items":[
+                {"grade":"CAUTION","personalTitle":"오늘은 천천히 즐겨보세요","reasons":["카페인"],"items":[
                   {"emphasis":"카페인이 들어 있어요","body":"천천히 드세요."},
                   {"emphasis":"알레르기 해당 없어요","body":"포함되지 않았어요."}
                 ]}
@@ -85,6 +85,7 @@ class GeminiClientTest {
 
             assertThat(judgment).isNotNull
             assertThat(judgment?.grade).isEqualTo(JudgmentGrade.CAUTION)
+            assertThat(judgment?.personalTitle).isEqualTo("오늘은 천천히 즐겨보세요")
             assertThat(judgment?.items).hasSize(2)
         }
 

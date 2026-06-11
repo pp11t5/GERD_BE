@@ -10,7 +10,7 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.SafetyOverrideRule.OverrideResult
 import org.springframework.stereotype.Component
 
-// 판정 응답 조립 — 등급별 제목 톤(spec §3)과 고정 폴백 카피를 담당한다
+// 판정 응답 조립 — LLM 제목 채택/폴백 판단(spec §3)과 고정 폴백 카피를 담당한다
 @Component
 class JudgmentResponseAssembler {
 
@@ -45,11 +45,18 @@ class JudgmentResponseAssembler {
             foodName = context.food.name,
             category = context.category,
             grade = override.grade,
-            personalTitle = TITLE_TEMPLATES.getValue(override.grade),
+            personalTitle = resolveTitle(llmJudgment, override),
             items = items,
             substitutes = substitutes,
         )
     }
+
+    // LLM 제목은 LLM이 판정한 등급의 톤으로 쓰였다 — 오버라이드로 등급이 바뀌면 톤이 어긋나므로 고정 제목으로 폴백.
+    // UNKNOWN은 items와 같은 이유(왜 모르는지 창작 금지)로 LLM 제목을 쓰지 않는다
+    private fun resolveTitle(llmJudgment: LlmJudgmentDTO, override: OverrideResult): String =
+        llmJudgment.personalTitle
+            ?.takeIf { it.isNotBlank() && llmJudgment.grade != JudgmentGrade.UNKNOWN && override.grade == llmJudgment.grade }
+            ?: FALLBACK_TITLES.getValue(override.grade)
 
     fun toResponse(cached: CachedJudgment, cachedFlag: Boolean): JudgmentResponseDTO =
         JudgmentResponseDTO(
@@ -72,7 +79,7 @@ class JudgmentResponseAssembler {
             foodName = context.food.name,
             category = context.category,
             grade = JudgmentGrade.UNKNOWN,
-            personalTitle = TITLE_TEMPLATES.getValue(JudgmentGrade.UNKNOWN),
+            personalTitle = FALLBACK_TITLES.getValue(JudgmentGrade.UNKNOWN),
             items = UNKNOWN_FALLBACK_ITEMS,
             stateRecords = emptyList(),
             substitutes = emptyList(),
@@ -86,7 +93,8 @@ class JudgmentResponseAssembler {
         // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약 (기획 PItem-1 / PItem-2)
         private const val ALLERGY_SLOT = 1
 
-        private val TITLE_TEMPLATES = mapOf(
+        // LLM 제목을 쓸 수 없는 경우(누락·공백·UNKNOWN·등급 강등)의 등급별 고정 제목
+        private val FALLBACK_TITLES = mapOf(
             JudgmentGrade.RECOMMEND to "좋은 선택이에요!",
             JudgmentGrade.CAUTION to "속이 편안할 수 있도록 천천히 드세요!",
             JudgmentGrade.RISK to "오늘은 다른 메뉴가 더 편할 거예요",

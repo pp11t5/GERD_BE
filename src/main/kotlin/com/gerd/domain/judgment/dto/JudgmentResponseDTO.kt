@@ -18,7 +18,7 @@ data class JudgmentResponseDTO(
     @field:Schema(description = "신호등 등급", example = "CAUTION")
     val grade: JudgmentGrade,
 
-    @field:Schema(description = "등급별 제목", example = "속이 편안할 수 있도록 천천히 드세요!")
+    @field:Schema(description = "개인화 제목 — LLM 생성, 등급 강등·UNKNOWN·생성 실패 시 등급별 고정 제목", example = "속이 편안할 수 있도록 천천히 드세요!")
     val personalTitle: String,
 
     @field:Schema(description = "분석 항목 2슬롯 고정 — [0]=트리거·증상, [1]=알레르기·복용약")

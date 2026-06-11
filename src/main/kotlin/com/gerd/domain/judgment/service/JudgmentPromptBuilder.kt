@@ -47,6 +47,11 @@ class JudgmentPromptBuilder(
             - UNKNOWN: 음식 정보(knownAttributes·triggerTags·allergenTags)만으로 판단 근거가 부족한 경우.
               근거가 부족하면 추측하지 말고 반드시 UNKNOWN을 출력하세요.
 
+            [personalTitle 작성 규칙]
+            - 결과 카드 상단에 표시되는 한 줄 제목 — 등급 톤에 맞춰 이 사용자의 상황(증상·트리거·알레르기)이 드러나게 작성하세요
+            - RECOMMEND는 안심·긍정, CAUTION은 조절 안내, RISK는 부드러운 회피 권유 톤
+            - 톤 예시: "좋은 선택이에요!", "속이 편안할 수 있도록 천천히 드세요!", "오늘은 다른 메뉴가 더 편할 거예요"
+
             [items 작성 규칙 — 정확히 2개]
             - items[0]: 음식의 트리거 성분과 사용자의 트리거·증상·기록 관점의 분석
             - items[1]: 알레르기·복용약 관점의 분석 (해당 없으면 "해당 없어요" 톤으로 안심시키기)
@@ -71,6 +76,7 @@ class JudgmentPromptBuilder(
                     "type" to "STRING",
                     "enum" to listOf("RECOMMEND", "CAUTION", "RISK", "UNKNOWN"),
                 ),
+                "personalTitle" to mapOf("type" to "STRING"),
                 "reasons" to mapOf(
                     "type" to "ARRAY",
                     "items" to mapOf("type" to "STRING"),
@@ -89,7 +95,7 @@ class JudgmentPromptBuilder(
                     ),
                 ),
             ),
-            "required" to listOf("grade", "reasons", "items"),
+            "required" to listOf("grade", "personalTitle", "reasons", "items"),
         )
     }
 }

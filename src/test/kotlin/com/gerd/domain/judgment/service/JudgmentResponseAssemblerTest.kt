@@ -59,16 +59,53 @@ class JudgmentResponseAssemblerTest {
         }
 
         @Test
-        fun `LLM이 UNKNOWN이면 items를 버리고 고정 폴백 카피를 쓴다`() {
+        fun `LLM이 UNKNOWN이면 items와 제목을 버리고 고정 폴백 카피를 쓴다`() {
             val cached = assembler.assembleCacheable(
                 context = context,
-                llmJudgment = LlmJudgmentDTO(JudgmentGrade.UNKNOWN, items = llmItems),
+                llmJudgment = LlmJudgmentDTO(JudgmentGrade.UNKNOWN, personalTitle = "잘 모르겠는 음식이에요", items = llmItems),
                 override = overrideOf(JudgmentGrade.UNKNOWN),
                 substitutes = emptyList(),
             )
 
             assertThat(cached.items[0].emphasis).isEqualTo("정보가 부족해요")
             assertThat(cached.items[1].emphasis).isEqualTo("알레르기 확인이 어려워요")
+            assertThat(cached.personalTitle).isEqualTo("이 음식은 정보가 충분하지 않아요")
+        }
+
+        @Test
+        fun `등급이 유지되면 LLM 제목을 그대로 쓴다`() {
+            val cached = assembler.assembleCacheable(
+                context = context,
+                llmJudgment = LlmJudgmentDTO(JudgmentGrade.CAUTION, personalTitle = "카페인이 있으니 오늘은 천천히 즐겨보세요", items = llmItems),
+                override = overrideOf(JudgmentGrade.CAUTION),
+                substitutes = emptyList(),
+            )
+
+            assertThat(cached.personalTitle).isEqualTo("카페인이 있으니 오늘은 천천히 즐겨보세요")
+        }
+
+        @Test
+        fun `오버라이드로 등급이 강등되면 LLM 제목 대신 고정 제목을 쓴다(톤 불일치 방지)`() {
+            val cached = assembler.assembleCacheable(
+                context = context,
+                llmJudgment = LlmJudgmentDTO(JudgmentGrade.RECOMMEND, personalTitle = "좋은 선택이에요!", items = llmItems),
+                override = overrideOf(JudgmentGrade.RISK, allergenMatches = listOf(TagDTO("milk", "우유"))),
+                substitutes = emptyList(),
+            )
+
+            assertThat(cached.personalTitle).isEqualTo("오늘은 다른 메뉴가 더 편할 거예요")
+        }
+
+        @Test
+        fun `LLM 제목이 누락되거나 공백이면 등급별 고정 제목으로 폴백한다`() {
+            val cached = assembler.assembleCacheable(
+                context = context,
+                llmJudgment = LlmJudgmentDTO(JudgmentGrade.CAUTION, personalTitle = " ", items = llmItems),
+                override = overrideOf(JudgmentGrade.CAUTION),
+                substitutes = emptyList(),
+            )
+
+            assertThat(cached.personalTitle).isEqualTo("속이 편안할 수 있도록 천천히 드세요!")
         }
 
         @Test

@@ -10,6 +10,8 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
  */
 data class LlmJudgmentDTO(
     val grade: JudgmentGrade,
+    // 결과 카드 상단 한 줄 제목 — 누락/공백이면 Assembler가 등급별 고정 제목으로 폴백한다
+    val personalTitle: String? = null,
     val reasons: List<String> = emptyList(),
     val items: List<LlmJudgmentItemDTO> = emptyList(),
 ) {

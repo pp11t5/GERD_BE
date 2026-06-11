@@ -40,6 +40,7 @@ class FoodJudgmentQueryServiceTest {
 
     private val llmJudgment = LlmJudgmentDTO(
         grade = JudgmentGrade.CAUTION,
+        personalTitle = "카페인이 있으니 천천히 즐겨보세요",
         reasons = listOf("카페인"),
         items = listOf(
             LlmJudgmentItemDTO("카페인이 들어 있어요", "등록하신 커피류 트리거에 해당해요."),
@@ -185,7 +186,7 @@ class FoodJudgmentQueryServiceTest {
         }
 
         @Test
-        fun `LLM items 본문을 가공 없이 그대로 응답에 담는다`() {
+        fun `LLM items 본문과 제목을 가공 없이 그대로 응답에 담는다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstitutes(any())).thenReturn(emptyList())
@@ -193,6 +194,8 @@ class FoodJudgmentQueryServiceTest {
             val response = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.items[0].body).isEqualTo("등록하신 커피류 트리거에 해당해요.")
+            // 등급이 유지됐으므로(CAUTION 그대로) LLM 제목이 그대로 노출된다
+            assertThat(response.personalTitle).isEqualTo("카페인이 있으니 천천히 즐겨보세요")
         }
     }
 }
