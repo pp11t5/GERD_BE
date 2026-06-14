@@ -5,6 +5,7 @@ import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
 import com.gerd.domain.notification.entity.enums.DailyNotificationTime
 import com.gerd.domain.notification.entity.enums.NotificationType
+import com.gerd.domain.notification.service.NotificationBatchPolicy.FCM_MULTICAST_BATCH_SIZE
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -24,7 +25,7 @@ class DailyRecordNotificationUseCase(
     fun send(time: DailyNotificationTime) {
         log.info { "매일 기록 알림 발송 시작: time=$time" }
         var cursor = 0L
-        val pageable = PageRequest.of(0, BATCH_SIZE)
+        val pageable = PageRequest.of(0, FCM_MULTICAST_BATCH_SIZE)
         var totalSent = 0
 
         do {
@@ -43,7 +44,6 @@ class DailyRecordNotificationUseCase(
     }
 
     companion object {
-        private const val BATCH_SIZE = 500
         private val PAYLOAD = FcmPayload(
             title = "오늘 식사 기록을 남겨보세요",
             body = "오늘 하루 드신 식사를 기록하면 증상 패턴을 파악할 수 있어요.",

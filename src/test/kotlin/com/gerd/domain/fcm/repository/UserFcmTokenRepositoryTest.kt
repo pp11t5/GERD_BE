@@ -44,6 +44,7 @@ class UserFcmTokenRepositoryTest @Autowired constructor(
         email: String,
         time: DailyNotificationTime = DailyNotificationTime.NIGHT_9,
         enabled: Boolean = true,
+        weeklyEnabled: Boolean = true,
         withToken: Boolean = true,
         withdrawn: Boolean = false,
     ): User {
@@ -55,6 +56,7 @@ class UserFcmTokenRepositoryTest @Autowired constructor(
                 user = saved,
                 dailyRecordNotificationEnabled = enabled,
                 dailyNotificationTime = time,
+                weeklyReportEnabled = weeklyEnabled,
             )
         )
         if (withToken) {
@@ -84,6 +86,19 @@ class UserFcmTokenRepositoryTest @Autowired constructor(
             assertThat(result).isNull()
         }
     }
+
+    private fun saveWeeklyUser(
+        email: String,
+        enabled: Boolean = true,
+        withToken: Boolean = true,
+        withdrawn: Boolean = false,
+    ): User =
+        saveDailyUser(
+            email = email,
+            weeklyEnabled = enabled,
+            withToken = withToken,
+            withdrawn = withdrawn,
+        )
 
     @Nested
     inner class `findByDailyRecordNotificationEnabledAndDailyNotificationTime` {
@@ -124,6 +139,40 @@ class UserFcmTokenRepositoryTest @Autowired constructor(
                 .findByDailyRecordNotificationEnabledAndDailyNotificationTime(
                     DailyNotificationTime.NIGHT_9, cursor, PageRequest.of(0, 2),
                 )
+            assertThat(page2.content.map { it.userId }).containsExactly(u3.id)
+            assertThat(page2.hasNext()).isFalse()
+        }
+    }
+
+    @Nested
+    inner class `findByWeeklyReportEnabled` {
+
+        @Test
+        fun `주간 리포트가 활성화된 미탈퇴·토큰보유 유저 토큰만 조회한다`() {
+            saveWeeklyUser("weekly-target@test.com")
+            saveWeeklyUser("weekly-disabled@test.com", enabled = false)
+            saveWeeklyUser("weekly-withdrawn@test.com", withdrawn = true)
+            saveWeeklyUser("weekly-no-token@test.com", withToken = false)
+
+            val slice = userFcmTokenRepository.findByWeeklyReportEnabled(0L, PageRequest.of(0, 10))
+
+            assertThat(slice.content.map { it.token }).containsExactly("token-weekly-target@test.com")
+        }
+
+        @Test
+        fun `userId 커서로 주간 리포트 대상 다음 페이지를 이어 조회한다`() {
+            val u1 = saveWeeklyUser("w1@test.com")
+            val u2 = saveWeeklyUser("w2@test.com")
+            val u3 = saveWeeklyUser("w3@test.com")
+
+            val page1 = userFcmTokenRepository.findByWeeklyReportEnabled(0L, PageRequest.of(0, 2))
+
+            assertThat(page1.content.map { it.userId }).containsExactly(u1.id, u2.id)
+            assertThat(page1.hasNext()).isTrue()
+
+            val cursor = page1.content.last().userId!!
+            val page2 = userFcmTokenRepository.findByWeeklyReportEnabled(cursor, PageRequest.of(0, 2))
+
             assertThat(page2.content.map { it.userId }).containsExactly(u3.id)
             assertThat(page2.hasNext()).isFalse()
         }
