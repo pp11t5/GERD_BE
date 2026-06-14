@@ -43,7 +43,7 @@ class OAuthServiceTest {
 
         private val idToken = "id.token"
         private val provider = AuthProvider.KAKAO
-        private val claims = OidcClaims(sub = "kakao-123", email = "user@test.com", nickname = "dev-user", picture = null)
+        private val claims = OidcClaims(sub = "kakao-123", email = "user@test.com", nickname = "qa_f_8c3e", picture = null)
 
         @Nested
         inner class `성공` {
@@ -117,7 +117,7 @@ class OAuthServiceTest {
 
             @Test
             fun `신규 유저에 email claim이 없으면 EMAIL_REQUIRED를 던진다`() {
-                val claimsWithoutEmail = OidcClaims(sub = "kakao-123", email = null, nickname = "dev-user", picture = null)
+                val claimsWithoutEmail = OidcClaims(sub = "kakao-123", email = null, nickname = "qa_f_8c3e", picture = null)
                 val oidcVerifier = mock<OidcVerifier>()
 
                 whenever(oidcVerifierRegistry.resolve(provider)).thenReturn(oidcVerifier)

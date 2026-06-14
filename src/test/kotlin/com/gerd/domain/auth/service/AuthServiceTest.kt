@@ -61,12 +61,12 @@ class AuthServiceTest {
             @Test
             fun `닉네임으로 사용자를 조회해 토큰을 발급한다`() {
                 val user = UserFixture.user()
-                whenever(userRepository.findByNickname("dev-user")).thenReturn(Optional.of(user))
+                whenever(userRepository.findByNickname("qa_f_8c3e")).thenReturn(Optional.of(user))
                 whenever(jwtProvider.createAccessToken(user)).thenReturn("access.token")
                 whenever(jwtProvider.createRefreshToken(user))
                     .thenReturn(JwtProvider.JwtToken("refresh.token", "refresh-jti"))
 
-                val result = authService.devLogin("dev-user")
+                val result = authService.devLogin("qa_f_8c3e")
 
                 assertThat(result.accessToken).isEqualTo("access.token")
                 assertThat(result.refreshToken).isEqualTo("refresh.token")
