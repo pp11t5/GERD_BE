@@ -5,7 +5,11 @@ import com.gerd.domain.onboarding.entity.UserConsent
 import com.gerd.domain.onboarding.entity.id.UserConsentId
 import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.UserConsentRepository
+import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.notification.entity.UserNotificationSetting
+import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.global.apiPayload.GeneralException
+import com.gerd.global.fixture.UserFixture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
@@ -16,16 +20,24 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDateTime
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class ConsentServiceTest {
 
     @Mock
     private lateinit var userConsentRepository: UserConsentRepository
+
+    @Mock
+    private lateinit var userNotificationSettingRepository: UserNotificationSettingRepository
+
+    @Mock
+    private lateinit var userRepository: UserRepository
 
     @InjectMocks
     private lateinit var consentService: ConsentService
@@ -39,6 +51,8 @@ class ConsentServiceTest {
             @Test
             fun `기존 동의가 없으면 4개 type을 신규 저장한다`() {
                 whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
+                whenever(userNotificationSettingRepository.findById(1L))
+                    .thenReturn(Optional.of(UserNotificationSetting(user = UserFixture.user())))
                 val request = ConsentRequestDTO(tos = true, privacy = true, healthSensitive = true, marketing = false)
 
                 consentService.submitConsent(1L, request)
@@ -56,6 +70,8 @@ class ConsentServiceTest {
             fun `기존 동의가 있으면 해당 행을 갱신한다`() {
                 val existing = UserConsent(UserConsentId(1L, "marketing"), agreed = true, agreedAt = LocalDateTime.now())
                 whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(listOf(existing))
+                whenever(userNotificationSettingRepository.findById(1L))
+                    .thenReturn(Optional.of(UserNotificationSetting(user = UserFixture.user())))
                 val request = ConsentRequestDTO(tos = true, privacy = true, healthSensitive = true, marketing = false)
 
                 consentService.submitConsent(1L, request)

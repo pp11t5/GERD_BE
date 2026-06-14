@@ -35,15 +35,4 @@ class FcmMessageFactoryTest {
             assertThat(message).isNotNull
         }
     }
-
-    @Nested
-    inner class `buildTopic` {
-
-        @Test
-        fun `토픽 메시지를 반환한다`() {
-            val message = factory.buildTopic("weekly-report", payload)
-
-            assertThat(message).isNotNull
-        }
-    }
 }

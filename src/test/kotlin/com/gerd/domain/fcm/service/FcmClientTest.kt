@@ -5,10 +5,12 @@ import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.entity.enums.DevicePlatform
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.notification.entity.enums.NotificationType
+import com.google.firebase.messaging.BatchResponse
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.Message
 import com.google.firebase.messaging.MessagingErrorCode
+import com.google.firebase.messaging.SendResponse
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -117,57 +119,35 @@ class FcmClientTest {
     }
 
     @Nested
-    inner class `sendToTopic` {
+    inner class `sendMulticast` {
 
         @Test
-        fun `토픽으로 메시지를 발송한다`() {
-            val message = mock<Message>()
-            whenever(fcmMessageFactory.buildTopic(any(), any())).thenReturn(message)
-            whenever(firebaseMessaging.send(message)).thenReturn("message-id")
+        fun `토큰 목록이 비어 있으면 발송하지 않는다`() {
+            fcmClient.sendMulticast(emptyList(), payload)
 
-            fcmClient.sendToTopic("weekly-report", payload)
-
-            verify(firebaseMessaging).send(message)
+            verify(firebaseMessaging, never()).sendEachForMulticast(any())
         }
 
         @Test
-        fun `발송 실패해도 예외를 전파하지 않는다`() {
-            val message = mock<Message>()
-            val exception = mock<FirebaseMessagingException>().also {
-                whenever(it.messagingErrorCode).thenReturn(MessagingErrorCode.INTERNAL)
+        fun `발송 후 UNREGISTERED 응답을 받은 토큰만 삭제한다`() {
+            val unregistered = mock<FirebaseMessagingException>().also {
+                whenever(it.messagingErrorCode).thenReturn(MessagingErrorCode.UNREGISTERED)
             }
-            whenever(fcmMessageFactory.buildTopic(any(), any())).thenReturn(message)
-            whenever(firebaseMessaging.send(message)).thenThrow(exception)
+            val success = mock<SendResponse>().also { whenever(it.isSuccessful).thenReturn(true) }
+            val expired = mock<SendResponse>().also {
+                whenever(it.isSuccessful).thenReturn(false)
+                whenever(it.exception).thenReturn(unregistered)
+            }
+            val batchResponse = mock<BatchResponse>().also {
+                whenever(it.responses).thenReturn(listOf(success, expired))
+            }
+            whenever(firebaseMessaging.sendEachForMulticast(any())).thenReturn(batchResponse)
+            doNothing().whenever(fcmTokenService).deleteByToken(any())
 
-            fcmClient.sendToTopic("weekly-report", payload)
+            fcmClient.sendMulticast(listOf("alive-token", "dead-token"), payload)
 
-            verify(firebaseMessaging).send(message)
-        }
-    }
-
-    @Nested
-    inner class `subscribeToTopic` {
-
-        @Test
-        fun `토픽을 구독한다`() {
-            whenever(firebaseMessaging.subscribeToTopic(any(), any())).thenReturn(mock())
-
-            fcmClient.subscribeToTopic("fcm-token", "weekly-report")
-
-            verify(firebaseMessaging).subscribeToTopic(listOf("fcm-token"), "weekly-report")
-        }
-    }
-
-    @Nested
-    inner class `unsubscribeFromTopic` {
-
-        @Test
-        fun `토픽 구독을 해제한다`() {
-            whenever(firebaseMessaging.unsubscribeFromTopic(any(), any())).thenReturn(mock())
-
-            fcmClient.unsubscribeFromTopic("fcm-token", "weekly-report")
-
-            verify(firebaseMessaging).unsubscribeFromTopic(listOf("fcm-token"), "weekly-report")
+            verify(fcmTokenService).deleteByToken("dead-token")
+            verify(fcmTokenService, never()).deleteByToken("alive-token")
         }
     }
 }
