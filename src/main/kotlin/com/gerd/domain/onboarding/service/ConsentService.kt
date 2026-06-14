@@ -1,5 +1,8 @@
 package com.gerd.domain.onboarding.service
 
+import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.notification.entity.UserNotificationSetting
+import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.domain.onboarding.dto.ConsentRequestDTO
 import com.gerd.domain.onboarding.entity.UserConsent
 import com.gerd.domain.onboarding.entity.enums.ConsentType
@@ -21,6 +24,8 @@ import java.time.LocalDateTime
 @Transactional(readOnly = true)
 class ConsentService(
     private val userConsentRepository: UserConsentRepository,
+    private val userNotificationSettingRepository: UserNotificationSettingRepository,
+    private val userRepository: UserRepository,
 ) {
 
     @Transactional
@@ -37,6 +42,29 @@ class ConsentService(
             ConsentType.HEALTH_SENSITIVE to request.healthSensitive,
             ConsentType.MARKETING to request.marketing,
         )
+
+        // 마케팅·푸시 동의 여부를 알림 설정에 반영 — 동의 시 알림 켜짐, 미동의 시 꺼짐
+        val enabled = request.marketing
+        val setting = userNotificationSettingRepository.findById(userId).orElse(null)
+        if (setting == null) {
+            // @MapsId 공유 PK — getReferenceById로 SELECT 없이 FK만 확정
+            userNotificationSettingRepository.save(
+                UserNotificationSetting(
+                    user = userRepository.getReferenceById(userId),
+                    postMealNotificationEnabled = enabled,
+                    dailyRecordNotificationEnabled = enabled,
+                    weeklyReportEnabled = enabled,
+                ),
+            )
+        } else {
+            setting.update(
+                postMealNotificationEnabled = enabled,
+                dailyRecordNotificationEnabled = enabled,
+                dailyNotificationTime = setting.dailyNotificationTime,
+                weeklyReportEnabled = enabled,
+            )
+        }
+
         val existingByCode = userConsentRepository.findByIdUserId(userId)
             .associateBy { it.id.consentType }
 
