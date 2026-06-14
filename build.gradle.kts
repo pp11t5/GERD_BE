@@ -92,12 +92,11 @@ dependencies {
     implementation("software.amazon.awssdk:s3:2.25.4")
     implementation("software.amazon.awssdk:auth:2.25.4")
 
-    // prod-db
+    // db
     runtimeOnly("org.postgresql:postgresql")
 
-    // dev-db
-    runtimeOnly("com.h2database:h2")
-    testImplementation("com.h2database:h2")
+    // test-db: Testcontainers PostgreSQL (운영과 동일 DB)
+    testImplementation("org.testcontainers:postgresql:1.21.3")
 
     // test
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
