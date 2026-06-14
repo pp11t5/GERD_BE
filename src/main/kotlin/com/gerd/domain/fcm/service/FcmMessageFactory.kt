@@ -25,12 +25,6 @@ class FcmMessageFactory {
             DevicePlatform.IOS -> buildIos(token, payload)
         }
 
-    // 토픽에 다라서 빌드
-    fun buildTopic(topic: String, payload: FcmPayload): Message =
-        baseBuilder(payload)
-            .setTopic(topic)
-            .build()
-
     private fun baseBuilder(payload: FcmPayload): Message.Builder =
         Message.builder()
             .setNotification(

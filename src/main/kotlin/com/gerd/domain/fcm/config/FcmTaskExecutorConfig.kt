@@ -29,7 +29,7 @@ class FcmTaskExecutorConfig {
         initialize()
     }
 
-    // 푸시 예약용 스케줄러 — 식후 6시간 지연 푸시 예약에 사용
+    // 푸시 예약용 스케줄러 — 식후 2시간 지연 푸시 예약에 사용
     @Bean
     fun taskScheduler(): TaskScheduler = ThreadPoolTaskScheduler().apply {
         poolSize = 2
