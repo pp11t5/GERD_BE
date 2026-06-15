@@ -36,7 +36,7 @@ class MealRecordAssembler(
     fun toSummaries(records: List<MealRecord>): List<MealRecordSummaryDTO> {
         if (records.isEmpty()) return emptyList()
         val foodIds = records.map { it.foodId }.distinct()
-        val foods = foodRepository.findAllByIdsIncludingDeleted(foodIds).associateBy { it.id }
+        val foods = loadFoodsIncludingDeleted(foodIds).associateBy { it.id }
         val categories = foodCategoryReader.loadPrimaryByFoodIds(foodIds)
         return records.map { record ->
             val food = foods[record.foodId]
@@ -53,7 +53,7 @@ class MealRecordAssembler(
 
     // 상세 — 삭제 food 포함 단건 조회 + description
     fun toDetail(record: MealRecord): MealRecordDetailDTO {
-        val food = foodRepository.findAllByIdsIncludingDeleted(listOf(record.foodId)).firstOrNull()
+        val food = loadFoodsIncludingDeleted(listOf(record.foodId)).firstOrNull()
             ?: error("meal record ${record.id} references missing food ${record.foodId}")
         val category = foodCategoryReader.loadPrimaryByFoodIds(listOf(record.foodId))[record.foodId]
         return MealRecordDetailDTO(
@@ -111,6 +111,10 @@ class MealRecordAssembler(
 
     fun toDayRange(date: LocalDate): Pair<LocalDateTime, LocalDateTime> =
         date.atStartOfDay() to date.plusDays(1).atStartOfDay()
+
+    // PostgreSQL native IN () 구문 오류 방지 — 빈 컬렉션은 DB 조회 없이 빈 리스트로 단락
+    private fun loadFoodsIncludingDeleted(ids: Collection<Long>): List<Food> =
+        if (ids.isEmpty()) emptyList() else foodRepository.findAllByIdsIncludingDeleted(ids)
 
     private fun formatEatenAt(eatenAt: LocalDateTime): String =
         eatenAt.atZone(SEOUL).toOffsetDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)

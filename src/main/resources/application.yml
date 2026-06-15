@@ -33,6 +33,13 @@ gemini:
   connect-timeout-ms: ${GEMINI_CONNECT_TIMEOUT_MS:3000}
   read-timeout-ms: ${GEMINI_READ_TIMEOUT_MS:15000}
 
+spring:
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Seoul
+
 sentry:
   dsn: ${SENTRY_DSN:}
   exception-resolver-order: -2147483647

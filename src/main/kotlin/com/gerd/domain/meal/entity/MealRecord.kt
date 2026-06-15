@@ -64,8 +64,8 @@ class MealRecord(
     val id: Long? = null,
 ) : BaseEntity() {
 
-    // 수정 화면의 유일한 편집 필드 — null/빈 문자열은 메모 삭제로 취급 (D7)
+    // 수정 화면의 유일한 편집 필드 — null/공백 문자열은 메모 삭제로 취급 (D7)
     fun updateMemo(memo: String?) {
-        this.memo = memo?.takeUnless { it.isEmpty() }
+        this.memo = memo?.trim()?.takeUnless { it.isEmpty() }
     }
 }

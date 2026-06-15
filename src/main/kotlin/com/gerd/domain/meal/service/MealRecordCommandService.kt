@@ -56,11 +56,11 @@ class MealRecordCommandService(
     @Transactional
     fun updateMemo(mealId: String, request: UpdateMealMemoRequestDTO, userId: Long): MealRecordDetailDTO {
         val record = resolveOwnedRecord(mealId, userId)
-        val memo = request.memo
-        if (memo != null && memo.length > MEMO_MAX_LENGTH) {
+        val trimmedMemo = request.memo?.trim()
+        if (trimmedMemo != null && trimmedMemo.length > MEMO_MAX_LENGTH) {
             throw GeneralException(MealErrorCode.MEMO_TOO_LONG)
         }
-        record.updateMemo(memo)
+        record.updateMemo(trimmedMemo)
         return mealRecordAssembler.toDetail(record)
     }
 

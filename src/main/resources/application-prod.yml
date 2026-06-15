@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require&TimeZone=Asia/Seoul
     driver-class-name: org.postgresql.Driver
     username: ${PGUSER}
     password: ${PGPASSWORD}
