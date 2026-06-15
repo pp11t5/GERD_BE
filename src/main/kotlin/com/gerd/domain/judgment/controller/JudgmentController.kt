@@ -17,13 +17,11 @@ class JudgmentController(
     override fun getJudgment(
         @CurrentUser userDetails: CustomUserDetails,
         foodExternalId: String,
-    ): ResponseEntity<ApiResponse<JudgmentResponseDTO>> =
-        ResponseEntity
+    ): ResponseEntity<ApiResponse<JudgmentResponseDTO>> {
+        val (response, isCached) = foodJudgmentQueryService.getJudgment(foodExternalId, userDetails.userId)
+        return ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
-            .body(
-                ApiResponse.onSuccess(
-                    foodJudgmentQueryService.getJudgment(foodExternalId, userDetails.userId),
-                    CommonSuccessCode.OK,
-                ),
-            )
+            .header("X-Cache", if (isCached) "HIT" else "MISS")
+            .body(ApiResponse.onSuccess(response, CommonSuccessCode.OK))
+    }
 }

@@ -77,10 +77,6 @@ class JudgmentPromptBuilder(
                     "enum" to listOf("RECOMMEND", "CAUTION", "RISK", "UNKNOWN"),
                 ),
                 "personalTitle" to mapOf("type" to "STRING"),
-                "reasons" to mapOf(
-                    "type" to "ARRAY",
-                    "items" to mapOf("type" to "STRING"),
-                ),
                 "items" to mapOf(
                     "type" to "ARRAY",
                     "minItems" to 2,
@@ -95,7 +91,7 @@ class JudgmentPromptBuilder(
                     ),
                 ),
             ),
-            "required" to listOf("grade", "personalTitle", "reasons", "items"),
+            "required" to listOf("grade", "personalTitle", "items"),
         )
     }
 }

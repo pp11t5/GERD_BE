@@ -4,6 +4,7 @@ import com.gerd.domain.judgment.dto.CachedJudgment
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO.StateRecordsDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
@@ -58,7 +59,7 @@ class JudgmentResponseAssembler {
             ?.takeIf { it.isNotBlank() && llmJudgment.grade != JudgmentGrade.UNKNOWN && override.grade == llmJudgment.grade }
             ?: FALLBACK_TITLES.getValue(override.grade)
 
-    fun toResponse(cached: CachedJudgment, cachedFlag: Boolean): JudgmentResponseDTO =
+    fun toResponse(cached: CachedJudgment): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = cached.foodExternalId,
             foodName = cached.foodName,
@@ -66,10 +67,8 @@ class JudgmentResponseAssembler {
             grade = cached.grade,
             personalTitle = cached.personalTitle,
             items = cached.items,
-            stateRecords = emptyList(),
+            stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
             substitutes = cached.substitutes,
-            disclaimer = DISCLAIMER,
-            cached = cachedFlag,
         )
 
     // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 UNKNOWN 폴백 — 캐시하지 않는다
@@ -81,15 +80,11 @@ class JudgmentResponseAssembler {
             grade = JudgmentGrade.UNKNOWN,
             personalTitle = FALLBACK_TITLES.getValue(JudgmentGrade.UNKNOWN),
             items = UNKNOWN_FALLBACK_ITEMS,
-            stateRecords = emptyList(),
+            stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
             substitutes = emptyList(),
-            disclaimer = DISCLAIMER,
-            cached = false,
         )
 
     companion object {
-        const val DISCLAIMER = "본 앱은 진단·치료 서비스가 아닙니다."
-
         // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약 (기획 PItem-1 / PItem-2)
         private const val ALLERGY_SLOT = 1
 

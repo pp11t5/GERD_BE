@@ -30,12 +30,12 @@ class FoodJudgmentQueryService(
     private val judgmentResponseAssembler: JudgmentResponseAssembler,
 ) {
 
-    fun getJudgment(foodExternalId: String, userId: Long): JudgmentResponseDTO {
+    fun getJudgment(foodExternalId: String, userId: Long): Pair<JudgmentResponseDTO, Boolean> {
         val context = judgmentContextReader.load(foodExternalId, userId)
 
         // ⓪ 출처 게이트: 유저 입력 음식은 검수 라벨·grounding이 없어 LLM에 줄 근거가 없다 → 환각 방지 위해 즉시 ⚪ (ADR-0003)
         if (context.food.source == FoodSource.USER) {
-            return judgmentResponseAssembler.assembleUnknownFallback(context)
+            return judgmentResponseAssembler.assembleUnknownFallback(context) to false
         }
 
         val snapshot = judgmentSnapshotFactory.create(context)
@@ -46,9 +46,9 @@ class FoodJudgmentQueryService(
         val cached = judgmentCache.get(key) {
             loaderRan = true
             judge(context, snapshot)
-        } ?: return judgmentResponseAssembler.assembleUnknownFallback(context)
+        } ?: return judgmentResponseAssembler.assembleUnknownFallback(context) to false
 
-        return judgmentResponseAssembler.toResponse(cached, cachedFlag = !loaderRan)
+        return judgmentResponseAssembler.toResponse(cached) to !loaderRan
     }
 
     // ① LLM → ② 안전 오버라이드 → ③ 조립. 실패는 null로 반환해 캐시에 남기지 않는다

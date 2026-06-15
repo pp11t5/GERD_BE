@@ -41,7 +41,6 @@ class FoodJudgmentQueryServiceTest {
     private val llmJudgment = LlmJudgmentDTO(
         grade = JudgmentGrade.CAUTION,
         personalTitle = "카페인이 있으니 천천히 즐겨보세요",
-        reasons = listOf("카페인"),
         items = listOf(
             LlmJudgmentItemDTO("카페인이 들어 있어요", "등록하신 커피류 트리거에 해당해요."),
             LlmJudgmentItemDTO("알레르기 해당 없어요", "알레르기 성분이 포함되지 않았어요."),
@@ -95,10 +94,10 @@ class FoodJudgmentQueryServiceTest {
         fun `유저 입력 음식은 LLM 호출 없이 UNKNOWN 폴백을 반환한다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(userFoodContext())
 
-            val response = service.getJudgment(foodExternalId, userId)
+            val (response, isCached) = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
-            assertThat(response.cached).isFalse()
+            assertThat(isCached).isFalse()
             verify(geminiClient, never()).generateJudgment(any(), any(), any())
         }
     }
@@ -107,16 +106,16 @@ class FoodJudgmentQueryServiceTest {
     inner class `캐시` {
 
         @Test
-        fun `같은 입력의 재호출은 LLM 없이 캐시로 응답한다(cached=true)`() {
+        fun `같은 입력의 재호출은 LLM 없이 캐시로 응답한다(X-Cache HIT)`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
 
-            val first = service.getJudgment(foodExternalId, userId)
-            val second = service.getJudgment(foodExternalId, userId)
+            val (first, firstCached) = service.getJudgment(foodExternalId, userId)
+            val (second, secondCached) = service.getJudgment(foodExternalId, userId)
 
-            assertThat(first.cached).isFalse()
-            assertThat(second.cached).isTrue()
+            assertThat(firstCached).isFalse()
+            assertThat(secondCached).isTrue()
             assertThat(second.grade).isEqualTo(JudgmentGrade.CAUTION)
             verify(geminiClient, times(1)).generateJudgment(any(), any(), any())
         }
@@ -126,11 +125,11 @@ class FoodJudgmentQueryServiceTest {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(null)
 
-            val first = service.getJudgment(foodExternalId, userId)
-            val second = service.getJudgment(foodExternalId, userId)
+            val (first, _) = service.getJudgment(foodExternalId, userId)
+            val (second, secondCached) = service.getJudgment(foodExternalId, userId)
 
             assertThat(first.grade).isEqualTo(JudgmentGrade.UNKNOWN)
-            assertThat(second.cached).isFalse()
+            assertThat(secondCached).isFalse()
             // 실패가 캐시되지 않았으므로 재호출 시 LLM을 다시 시도한다
             verify(geminiClient, times(2)).generateJudgment(any(), any(), any())
         }
@@ -145,7 +144,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(geminiClient.generateJudgment(any(), any(), any()))
                 .thenReturn(LlmJudgmentDTO(JudgmentGrade.UNKNOWN))
 
-            val response = service.getJudgment(foodExternalId, userId)
+            val (response, _) = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(response.items[0].emphasis).isEqualTo("정보가 부족해요")
@@ -162,7 +161,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(judgmentContextReader.loadSubstituteCandidates(any()))
                 .thenReturn(listOf(SubstituteCandidateDTO(foodExternalId, "디카페인 아메리카노", emptySet())))
 
-            val response = service.getJudgment(foodExternalId, userId)
+            val (response, _) = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.RISK)
             assertThat(response.items[1].emphasis).isEqualTo("알레르기 성분이 들어 있어요")
@@ -184,7 +183,7 @@ class FoodJudgmentQueryServiceTest {
                 ),
             )
 
-            val response = service.getJudgment(foodExternalId, userId)
+            val (response, _) = service.getJudgment(foodExternalId, userId)
 
             // milk(알레르기)·caffeine(트리거) 보유 후보는 제외, 사용자와 무관한 egg와 클린 후보만 남는다
             assertThat(response.substitutes.map { it.name }).containsExactly("달걀찜", "율무차")
@@ -199,7 +198,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(geminiClient.generateJudgment(any(), any(), any()))
                 .thenReturn(llmJudgment.copy(grade = JudgmentGrade.RECOMMEND))
 
-            val response = service.getJudgment(foodExternalId, userId)
+            val (response, _) = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.RECOMMEND)
             assertThat(response.substitutes).isEmpty()
@@ -212,7 +211,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
 
-            val response = service.getJudgment(foodExternalId, userId)
+            val (response, _) = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.items[0].body).isEqualTo("등록하신 커피류 트리거에 해당해요.")
             // 등급이 유지됐으므로(CAUTION 그대로) LLM 제목이 그대로 노출된다

@@ -24,17 +24,11 @@ data class JudgmentResponseDTO(
     @field:Schema(description = "분석 항목 2슬롯 고정 — [0]=트리거·증상, [1]=알레르기·복용약")
     val items: List<JudgmentItemDTO>,
 
-    @field:Schema(description = "연관 상태 기록 리스트 (식사기록 도메인 연동 전까지 항상 빈 배열)")
-    val stateRecords: List<StateRecordDTO>,
+    @field:Schema(description = "연관 상태 기록 — 최대 3개 노출, total은 전체 개수")
+    val stateRecords: StateRecordsDTO,
 
     @field:Schema(description = "안심되는 대체 식단 — CAUTION/RISK일 때만, 아니면 빈 배열")
     val substitutes: List<SubstituteDTO>,
-
-    @field:Schema(description = "고정 면책 문구", example = "본 앱은 진단·치료 서비스가 아닙니다.")
-    val disclaimer: String,
-
-    @field:Schema(description = "캐시 응답 여부 (디버그/관측용)", example = "true")
-    val cached: Boolean,
 ) {
 
     data class JudgmentItemDTO(
@@ -43,6 +37,14 @@ data class JudgmentResponseDTO(
 
         @field:Schema(description = "본문", example = "평소 민감하셨다면 천천히 드시는 게 좋아요.")
         val body: String,
+    )
+
+    data class StateRecordsDTO(
+        @field:Schema(description = "전체 상태 기록 개수")
+        val total: Int,
+
+        @field:Schema(description = "최근 상태 기록 최대 3개")
+        val records: List<StateRecordDTO>,
     )
 
     data class StateRecordDTO(

@@ -4,6 +4,7 @@ import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO.StateRecordsDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
@@ -42,10 +43,8 @@ class JudgmentControllerTest @Autowired constructor(
             JudgmentItemDTO("카페인이 들어 있어요", "등록하신 커피류 트리거에 해당해요."),
             JudgmentItemDTO("알레르기 해당 없어요", "알레르기 성분이 포함되지 않았어요."),
         ),
-        stateRecords = emptyList(),
+        stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
         substitutes = listOf(SubstituteDTO(foodExternalId, "디카페인 아메리카노")),
-        disclaimer = "본 앱은 진단·치료 서비스가 아닙니다.",
-        cached = true,
     )
 
     @Nested
@@ -57,7 +56,7 @@ class JudgmentControllerTest @Autowired constructor(
             @Test
             @WithCustomUser
             fun `신호등 판정을 반환한다`() {
-                whenever(foodJudgmentQueryService.getJudgment(any(), any())).thenReturn(response)
+                whenever(foodJudgmentQueryService.getJudgment(any(), any())).thenReturn(response to true)
 
                 mockMvc.get("/api/v1/foods/$foodExternalId/judgment").andExpect {
                     status { isOk() }
@@ -68,8 +67,9 @@ class JudgmentControllerTest @Autowired constructor(
                     jsonPath("$.result.grade") { value("CAUTION") }
                     jsonPath("$.result.items.length()") { value(2) }
                     jsonPath("$.result.substitutes[0].name") { value("디카페인 아메리카노") }
-                    jsonPath("$.result.stateRecords.length()") { value(0) }
-                    jsonPath("$.result.cached") { value(true) }
+                    jsonPath("$.result.stateRecords.total") { value(0) }
+                    jsonPath("$.result.stateRecords.records.length()") { value(0) }
+                    header { string("X-Cache", "HIT") }
                 }
             }
         }

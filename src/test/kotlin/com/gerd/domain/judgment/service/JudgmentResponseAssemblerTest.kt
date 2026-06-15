@@ -129,7 +129,7 @@ class JudgmentResponseAssemblerTest {
     inner class `toResponse` {
 
         @Test
-        fun `등급별 제목과 면책 문구를 내려준다`() {
+        fun `등급별 제목과 stateRecords 더미를 내려준다`() {
             val cached = assembler.assembleCacheable(
                 context = context,
                 llmJudgment = LlmJudgmentDTO(JudgmentGrade.CAUTION, items = llmItems),
@@ -137,14 +137,13 @@ class JudgmentResponseAssemblerTest {
                 substitutes = emptyList(),
             )
 
-            val response = assembler.toResponse(cached, cachedFlag = true)
+            val response = assembler.toResponse(cached)
 
             assertThat(response.personalTitle).isEqualTo("속이 편안할 수 있도록 천천히 드세요!")
             assertThat(response.category).isEqualTo("beverage")
             assertThat(response.items[0].body).isEqualTo("등록하신 커피류 트리거에 해당해요.")
-            assertThat(response.cached).isTrue()
-            assertThat(response.disclaimer).isEqualTo("본 앱은 진단·치료 서비스가 아닙니다.")
-            assertThat(response.stateRecords).isEmpty()
+            assertThat(response.stateRecords.total).isEqualTo(0)
+            assertThat(response.stateRecords.records).isEmpty()
         }
 
         @Test
@@ -156,10 +155,9 @@ class JudgmentResponseAssemblerTest {
                 substitutes = emptyList(),
             )
 
-            val response = assembler.toResponse(cached, cachedFlag = false)
+            val response = assembler.toResponse(cached)
 
             assertThat(response.personalTitle).isEqualTo("좋은 선택이에요!")
-            assertThat(response.cached).isFalse()
         }
     }
 
@@ -167,7 +165,7 @@ class JudgmentResponseAssemblerTest {
     inner class `assembleUnknownFallback` {
 
         @Test
-        fun `UNKNOWN 폴백 응답을 조립한다(대체식단 없음, 캐시 아님)`() {
+        fun `UNKNOWN 폴백 응답을 조립한다(대체식단 없음)`() {
             val response = assembler.assembleUnknownFallback(context)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
@@ -175,7 +173,7 @@ class JudgmentResponseAssemblerTest {
             assertThat(response.personalTitle).isEqualTo("이 음식은 정보가 충분하지 않아요")
             assertThat(response.items).hasSize(2)
             assertThat(response.substitutes).isEmpty()
-            assertThat(response.cached).isFalse()
+            assertThat(response.stateRecords.total).isEqualTo(0)
         }
     }
 }

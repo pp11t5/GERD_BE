@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 
-@Tag(name = "Judgment", description = "음식 신호등 판정 API")
+@Tag(name = "음식 판정", description = "음식 신호등 판정 API")
 @RequestMapping("/api/v1/foods")
 interface JudgmentApi {
 
@@ -28,7 +28,7 @@ interface JudgmentApi {
             - items: 항상 2슬롯 — [0]=트리거·증상 분석, [1]=알레르기·복용약 분석
             - substitutes: CAUTION/RISK일 때만 대체 식단 노출(없으면 빈 배열). 사용자가 등록한 트리거·알레르기 성분을 가진 음식은 제외됩니다.
             - 본인이 직접 추가한 음식(source=user)은 검수 정보가 없어 항상 UNKNOWN입니다.
-            - 동일한 (음식 × 사용자 상태)는 24시간 캐시돼 재호출 없이 재사용됩니다(cached=true).
+            - 동일한 (음식 × 사용자 상태)는 24시간 캐시됩니다. 캐시 히트 여부는 X-Cache: HIT/MISS 헤더로 확인할 수 있습니다.
         """,
     )
     @ApiErrorExample(FoodErrorCode::class, "FOOD_NOT_FOUND")
