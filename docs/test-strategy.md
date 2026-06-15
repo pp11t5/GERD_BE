@@ -10,7 +10,7 @@
 |---|---|---|
 | Controller | 입출력/상태코드/응답 구조 | `@WebMvcTest`, MockMvc |
 | Service | 비즈니스 로직, 예외 흐름 | JUnit5, Mockito |
-| Repository | 쿼리/조회 정확성 | `@DataJpaTest`, H2 |
+| Repository | 쿼리/조회 정확성 | `@DataJpaTest`, Testcontainers PostgreSQL |
 | 통합 | 전체 흐름 검증 | `@SpringBootTest` |
 
 ## 3. 기본 원칙
@@ -18,7 +18,7 @@
 - 테스트는 CI 파이프라인에서 자동 실행 (`./gradlew test`)
 - 하나의 테스트는 하나의 동작만 검증
 - 테스트 메서드명은 `given_when_then` 또는 의도를 드러내는 한국어 사용
-- DB가 필요한 통합 테스트는 H2 in-memory 사용
+- DB가 필요한 통합 테스트는 Testcontainers PostgreSQL 사용
 - 외부 인프라 의존 빈은 프로필 분리 또는 테스트 대체 빈으로 격리해 `@SpringBootTest` 컨텍스트 로딩이 깨지지 않도록 한다
 
 ## 4. Controller 테스트

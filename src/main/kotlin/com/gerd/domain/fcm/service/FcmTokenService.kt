@@ -27,7 +27,6 @@ class FcmTokenService(
         val existing = userFcmTokenRepository.findById(userId).orElse(null)
 
         if (existing != null) {
-            // 도메인 메서드로 갱신 — dirty checking으로 save 불필요
             existing.updateToken(request.token, request.platform)
         } else {
             val user = userRepository.findById(userId)

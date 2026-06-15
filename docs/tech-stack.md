@@ -43,18 +43,18 @@
 |---|---|---|
 | ORM | Spring Data JPA + Hibernate | — |
 | 동적 쿼리 | QueryDSL 5.0 (Jakarta) | 복잡 조건 조회 전용 |
-| 로컬 DB | H2 (in-memory, MODE=PostgreSQL) | 기본 `application.yml` |
-| 테스트 DB | H2 (in-memory, MODE=PostgreSQL) | `application-test.yml` |
+| 로컬 DB | PostgreSQL | `application-local.yml`, docker-compose |
+| 테스트 DB | PostgreSQL | Testcontainers |
 | 운영 DB | PostgreSQL | `prod` 프로파일 |
 
 **QueryDSL 도입 기준**
 - 동적 조건 3개 이상 조합, 복잡 정렬·페이징·조인이 필요한 경우에 한해 사용
 - 단순 단건/고정 조건 조회는 Spring Data JPA 메서드 또는 `@Query`로 처리
 
-**H2 주의사항**
-- `MODE=PostgreSQL` 설정으로 차이를 줄이지만 100% 동일하지 않음
-- 운영과 다른 동작이 의심될 경우 로컬에서 PostgreSQL 직접 구동 후 검증
-- 저장소의 `docker-compose.yml`은 PostgreSQL/H2 컨테이너를 띄우기 위한 보조 수단이며, 현재 기본 실행/테스트 설정과 자동 연결되지는 않음
+**DB 검증 기준**
+- 로컬과 운영은 PostgreSQL 계열로 통일한다
+- 테스트는 Testcontainers PostgreSQL로 실행해 H2 방언 차이를 피한다
+- 저장소의 `docker-compose.yml`은 로컬 PostgreSQL 실행용이다
 
 ---
 
@@ -131,7 +131,7 @@
 |---|---|
 | 단위 테스트 | JUnit5 + Mockito |
 | 컨트롤러 테스트 | `@WebMvcTest` + `spring-security-test` |
-| JPA 계층 테스트 | `@DataJpaTest` + H2 |
+| JPA 계층 테스트 | `@DataJpaTest` + Testcontainers PostgreSQL |
 | 테스트 Security | `TestSecurityConfig` (`@Import`로 JWT 필터 우회) |
 
 ---
@@ -172,6 +172,6 @@
 
 | 프로파일         | DB | Sentry | JWT 기본값 |
 |--------------|---|---|---|
-| `local` (로컬) | H2 in-memory | 비활성 | 플레이스홀더 허용 |
-| `test`       | H2 in-memory | 비활성 | 테스트 전용 고정값 사용 |
+| `local` (로컬) | PostgreSQL | 비활성 | 플레이스홀더 허용 |
+| `test`       | Testcontainers PostgreSQL | 비활성 | 테스트 전용 고정값 사용 |
 | `prod`       | PostgreSQL | 활성 | 환경변수 필수 (기본값 없음) |

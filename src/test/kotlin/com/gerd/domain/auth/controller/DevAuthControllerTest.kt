@@ -14,12 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 
 @WebMvcTest(controllers = [DevAuthController::class])
 @AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class DevAuthControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,
@@ -39,9 +41,9 @@ class DevAuthControllerTest @Autowired constructor(
 
             @Test
             fun `유효한 닉네임으로 요청하면 토큰을 반환한다`() {
-                val request = DevLoginRequestDTO(nickname = "dev-user")
+                val request = DevLoginRequestDTO(nickname = "qa_f_8c3e")
                 val response = AuthTokenFixture.userTokenResponse()
-                whenever(authService.devLogin("dev-user")).thenReturn(response)
+                whenever(authService.devLogin("qa_f_8c3e")).thenReturn(response)
 
                 mockMvc.post("/api/v1/auth/dev-login") {
                     contentType = MediaType.APPLICATION_JSON

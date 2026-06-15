@@ -1,9 +1,8 @@
 spring:
+  # Testcontainers가 jdbc:tc 드라이버로 PostgreSQL 컨테이너를 자동 기동/공유한다 (JVM당 1개)
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:tc:postgresql:16:///testdb
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -11,9 +10,10 @@ spring:
       hibernate:
         format_sql: true
     open-in-view: false
-  h2:
-    console:
-      enabled: false
+  # @DataJpaTest가 임베디드 H2로 대체하지 않고 위 datasource를 그대로 쓰게 한다
+  test:
+    database:
+      replace: none
 
 jwt:
   secret: dGVzdC1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtMzItYnl0ZXMhIQ==

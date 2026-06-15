@@ -2,7 +2,13 @@ package com.gerd.global.config
 
 import com.gerd.global.annotation.ApiErrorExample
 import com.gerd.global.annotation.CurrentUser
+import com.gerd.domain.auth.exception.AuthErrorCode
+import com.gerd.domain.fcm.exception.FcmErrorCode
+import com.gerd.domain.food.exception.FoodErrorCode
+import com.gerd.domain.notification.exception.NotificationErrorCode
+import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.global.apiPayload.code.BaseErrorCode
+import com.gerd.global.apiPayload.code.CommonErrorCode
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.examples.Example
@@ -37,7 +43,7 @@ class SwaggerConfig {
             .info(
                 Info()
                     .title("Backend API")
-                    .description("Backend API 명세서")
+                    .description("Backend API 명세서" + buildErrorCodeReference())
                     .version("1.0.0"),
             )
             .components(
@@ -58,6 +64,45 @@ class SwaggerConfig {
                     .addResponses("409", errorResponse("리소스 충돌이 발생했습니다."))
                     .addResponses("500", errorResponse("서버 내부 오류가 발생했습니다.")),
             )
+
+    private fun buildErrorCodeReference(): String {
+        val errorEnums: List<Class<out BaseErrorCode>> = listOf(
+            CommonErrorCode::class.java,
+            AuthErrorCode::class.java,
+            FoodErrorCode::class.java,
+            FcmErrorCode::class.java,
+            OnboardingErrorCode::class.java,
+            NotificationErrorCode::class.java,
+        )
+
+        return buildString {
+            appendLine()
+            appendLine("---")
+            appendLine("### 도메인별 에러코드")
+            appendLine()
+
+            errorEnums.forEach { errorEnum ->
+                appendLine("<details>")
+                appendLine("<summary><b>${errorEnum.simpleName}</b></summary>")
+                appendLine()
+                appendLine("| Code | HTTP | Message |")
+                appendLine("|------|:----:|---------|")
+
+                errorEnum.enumConstants.forEach { errorCode ->
+                    appendLine(
+                        "| `${errorCode.code}` | ${errorCode.httpStatus.value()} | ${errorCode.message.escapeMarkdownTableCell()} |",
+                    )
+                }
+
+                appendLine()
+                appendLine("</details>")
+                appendLine()
+            }
+        }
+    }
+
+    private fun String.escapeMarkdownTableCell(): String =
+        replace("|", "\\|")
 
     // 모든 Operation 공통 에러 응답 자동 추가
     @Bean
