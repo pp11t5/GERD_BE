@@ -32,6 +32,7 @@ interface JudgmentApi {
             - substitutes: CAUTION/RISK일 때만 대체 식단 노출(없으면 빈 배열). 사용자가 등록한 트리거·알레르기 성분을 가진 음식은 제외됩니다.
             - 본인이 직접 추가한 음식(source=user)은 검수 정보가 없어 항상 UNKNOWN입니다.
             - 동일한 (음식 × 사용자 상태)는 24시간 캐시됩니다. 캐시 히트 여부는 X-Cache: HIT/MISS 헤더로 확인할 수 있습니다.
+            - 증상 기록은 최대 3개까지 미리보기 표시됩니다. 
         """,
     )
     @ApiErrorExample(FoodErrorCode::class, "FOOD_NOT_FOUND")
@@ -52,6 +53,7 @@ interface JudgmentApi {
             - items: 항상 2슬롯 — [0]=트리거·증상 분석, [1]=알레르기·복용약 분석 (LLM이 알레르기 포함 여부를 추론)
             - substitutes: 텍스트 입력은 DB 음식 엔티티가 없어 항상 빈 배열입니다.
             - 동일한 (음식명 × 사용자 상태)는 24시간 캐시됩니다. 캐시 히트 여부는 X-Cache: HIT/MISS 헤더로 확인할 수 있습니다.
+            - 증상 기록은 최대 3개까지 미리보기 표시됩니다. 
         """,
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "판정 성공"))
