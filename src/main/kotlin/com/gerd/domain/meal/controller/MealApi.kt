@@ -1,6 +1,7 @@
 package com.gerd.domain.meal.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
+import com.gerd.domain.meal.dto.CreateMealRecordByTextRequestDTO
 import com.gerd.domain.meal.dto.CreateMealRecordRequestDTO
 import com.gerd.domain.meal.dto.MealGroupDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
@@ -45,6 +46,22 @@ interface MealApi {
     fun create(
         @CurrentUser userDetails: CustomUserDetails,
         @RequestBody request: CreateMealRecordRequestDTO,
+    ): ResponseEntity<ApiResponse<MealRecordSummaryDTO>>
+
+    @Operation(
+        summary = "텍스트로 식사 기록 생성",
+        description = """
+            DB에 없는 음식을 이름으로 직접 기록합니다.
+            - foodTextInput: 동일 이름의 본인 USER 음식이 있으면 재사용, 없으면 자동 생성.
+            - eatenAt·mealGroupId·judgedGrade는 기존 생성과 동일.
+        """,
+    )
+    @ApiErrorExample(MealErrorCode::class, "INVALID_DATE_TIME", "MEAL_GROUP_NOT_FOUND")
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "생성 성공"))
+    @PostMapping("/text")
+    fun createByText(
+        @CurrentUser userDetails: CustomUserDetails,
+        @RequestBody request: CreateMealRecordByTextRequestDTO,
     ): ResponseEntity<ApiResponse<MealRecordSummaryDTO>>
 
     @Operation(

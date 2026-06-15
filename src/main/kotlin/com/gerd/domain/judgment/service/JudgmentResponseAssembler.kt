@@ -3,6 +3,8 @@ package com.gerd.domain.judgment.service
 import com.gerd.domain.judgment.dto.CachedJudgment
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
+import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
+import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.StateRecordsDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
@@ -61,7 +63,7 @@ class JudgmentResponseAssembler {
 
     fun toResponse(cached: CachedJudgment): JudgmentResponseDTO =
         JudgmentResponseDTO(
-            foodExternalId = cached.foodExternalId,
+            foodExternalId = requireNotNull(cached.foodExternalId) { "ID 판정 캐시는 foodExternalId를 가진다" },
             foodName = cached.foodName,
             category = cached.category,
             grade = cached.grade,
@@ -81,6 +83,47 @@ class JudgmentResponseAssembler {
             personalTitle = FALLBACK_TITLES.getValue(JudgmentGrade.UNKNOWN),
             items = UNKNOWN_FALLBACK_ITEMS,
             stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
+            substitutes = emptyList(),
+        )
+
+    fun assembleTextCacheable(
+        foodName: String,
+        llmJudgment: LlmJudgmentDTO,
+        override: OverrideResult,
+    ): CachedJudgment {
+        val baseItems = if (llmJudgment.grade == JudgmentGrade.UNKNOWN) {
+            UNKNOWN_FALLBACK_ITEMS
+        } else {
+            llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
+        }
+        return CachedJudgment(
+            foodExternalId = null,
+            foodName = foodName,
+            category = null,
+            grade = override.grade,
+            personalTitle = resolveTitle(llmJudgment, override),
+            items = baseItems,
+            substitutes = emptyList(),
+        )
+    }
+
+    fun toTextResponse(cached: CachedJudgment): TextJudgmentResponseDTO =
+        TextJudgmentResponseDTO(
+            foodName = cached.foodName,
+            grade = cached.grade,
+            personalTitle = cached.personalTitle,
+            items = cached.items,
+            stateRecords = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),
+            substitutes = emptyList(),
+        )
+
+    fun assembleTextUnknownFallback(foodName: String): TextJudgmentResponseDTO =
+        TextJudgmentResponseDTO(
+            foodName = foodName,
+            grade = JudgmentGrade.UNKNOWN,
+            personalTitle = FALLBACK_TITLES.getValue(JudgmentGrade.UNKNOWN),
+            items = UNKNOWN_FALLBACK_ITEMS,
+            stateRecords = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),
             substitutes = emptyList(),
         )
 

@@ -5,6 +5,7 @@ import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.meal.dto.CreateMealRecordByTextRequestDTO
 import com.gerd.domain.meal.dto.CreateMealRecordRequestDTO
 import com.gerd.domain.meal.dto.UpdateMealMemoRequestDTO
 import com.gerd.domain.meal.entity.MealRecord
@@ -149,6 +150,55 @@ class MealRecordCommandServiceTest {
     }
 
     @Nested
+    inner class `텍스트 생성` {
+
+        @Test
+        fun `동일 이름의 본인 USER 음식이 있으면 재사용한다`() {
+            val existingFood = FoodFixture.food(id = 20L, name = "감자탕", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
+            whenever(foodRepository.findByNameAndOwnerUserIdAndSource("감자탕", userId, FoodSource.USER)).thenReturn(existingFood)
+            whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
+            whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
+            whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
+
+            service.createByText(textRequest(foodTextInput = "감자탕"), userId)
+
+            verify(foodRepository, never()).save(any())
+            val captor = argumentCaptor<MealRecord>()
+            verify(mealRecordRepository).save(captor.capture())
+            assertThat(captor.firstValue.foodId).isEqualTo(20L)
+        }
+
+        @Test
+        fun `동일 이름의 USER 음식이 없으면 새로 생성하고 기록한다`() {
+            val newFood = FoodFixture.food(id = 21L, name = "감자탕", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
+            whenever(foodRepository.findByNameAndOwnerUserIdAndSource("감자탕", userId, FoodSource.USER)).thenReturn(null)
+            whenever(foodRepository.save(any<com.gerd.domain.food.entity.Food>())).thenReturn(newFood)
+            whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
+            whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
+            whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
+
+            service.createByText(textRequest(foodTextInput = "감자탕"), userId)
+
+            val captor = argumentCaptor<MealRecord>()
+            verify(mealRecordRepository).save(captor.capture())
+            assertThat(captor.firstValue.foodId).isEqualTo(21L)
+        }
+
+        @Test
+        fun `앞뒤 공백은 제거하고 동일 이름 기준으로 음식을 조회한다`() {
+            val existingFood = FoodFixture.food(id = 22L, name = "감자탕", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
+            whenever(foodRepository.findByNameAndOwnerUserIdAndSource("감자탕", userId, FoodSource.USER)).thenReturn(existingFood)
+            whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
+            whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
+            whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
+
+            service.createByText(textRequest(foodTextInput = "  감자탕  "), userId)
+
+            verify(foodRepository).findByNameAndOwnerUserIdAndSource("감자탕", userId, FoodSource.USER)
+        }
+    }
+
+    @Nested
     inner class `메모 수정` {
 
         @Test
@@ -210,6 +260,13 @@ class MealRecordCommandServiceTest {
             verify(mealRecordRepository).delete(record)
         }
     }
+
+    private fun textRequest(
+        foodTextInput: String = "감자탕",
+        eatenAt: String? = null,
+        mealGroupId: String? = null,
+        judgedGrade: JudgmentGrade? = null,
+    ) = CreateMealRecordByTextRequestDTO(foodTextInput, eatenAt, mealGroupId, judgedGrade)
 
     private fun request(
         foodExternalId: String = this.foodExternalId.toString(),

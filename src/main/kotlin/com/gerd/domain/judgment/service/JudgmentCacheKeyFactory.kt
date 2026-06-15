@@ -24,4 +24,7 @@ class JudgmentCacheKeyFactory {
 
     fun createKey(foodId: Long, snapshot: LlmInputSnapshotDTO): String =
         "$foodId:${HashUtils.sha256(canonicalMapper.writeValueAsString(snapshot))}"
+
+    fun createTextKey(snapshot: LlmInputSnapshotDTO): String =
+        "text:${HashUtils.sha256(canonicalMapper.writeValueAsString(snapshot))}"
 }

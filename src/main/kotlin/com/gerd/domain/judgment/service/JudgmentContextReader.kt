@@ -10,6 +10,7 @@ import com.gerd.domain.food.service.FoodAccessPolicy
 import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
+import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
@@ -77,6 +78,13 @@ class JudgmentContextReader(
             symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
         )
     }
+
+    fun loadUserContext(userId: Long): UserContext = UserContext(
+        userTriggers = userTriggerRepository.findTriggerLabelsByUserId(userId).map { TagDTO(it.code, it.displayName) },
+        userAllergens = userAllergenRepository.findAllergensByUserId(userId).map { TagDTO(it.code, it.displayName) },
+        medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },
+        symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
+    )
 
     // LLM 호출 이후 별도 짧은 트랜잭션으로 조회 — 캐시 loader 안의 커넥션 점유 시간을 최소화.
     // 후보의 트리거·알레르겐 코드를 함께 실어 서비스가 사용자별 안전 필터를 적용할 수 있게 한다

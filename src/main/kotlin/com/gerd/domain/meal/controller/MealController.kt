@@ -1,6 +1,7 @@
 package com.gerd.domain.meal.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
+import com.gerd.domain.meal.dto.CreateMealRecordByTextRequestDTO
 import com.gerd.domain.meal.dto.CreateMealRecordRequestDTO
 import com.gerd.domain.meal.dto.MealGroupDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
@@ -31,6 +32,19 @@ class MealController(
             .body(
                 ApiResponse.onSuccess(
                     mealRecordCommandService.create(request, userDetails.userId),
+                    CommonSuccessCode.OK,
+                ),
+            )
+
+    override fun createByText(
+        @CurrentUser userDetails: CustomUserDetails,
+        @Valid @RequestBody request: CreateMealRecordByTextRequestDTO,
+    ): ResponseEntity<ApiResponse<MealRecordSummaryDTO>> =
+        ResponseEntity
+            .status(CommonSuccessCode.OK.httpStatus)
+            .body(
+                ApiResponse.onSuccess(
+                    mealRecordCommandService.createByText(request, userDetails.userId),
                     CommonSuccessCode.OK,
                 ),
             )

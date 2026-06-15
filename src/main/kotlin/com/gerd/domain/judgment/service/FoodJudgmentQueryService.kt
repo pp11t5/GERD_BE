@@ -7,6 +7,8 @@ import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO
+import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
+import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import org.springframework.stereotype.Service
 
@@ -49,6 +51,39 @@ class FoodJudgmentQueryService(
         } ?: return judgmentResponseAssembler.assembleUnknownFallback(context) to false
 
         return judgmentResponseAssembler.toResponse(cached) to !loaderRan
+    }
+
+    fun getJudgmentByText(foodText: String, userId: Long): Pair<TextJudgmentResponseDTO, Boolean> {
+        val userContext = judgmentContextReader.loadUserContext(userId)
+        val snapshot = judgmentSnapshotFactory.createForText(foodText, userContext)
+        val key = judgmentCacheKeyFactory.createTextKey(snapshot)
+
+        var loaderRan = false
+        val cached = judgmentCache.get(key) {
+            loaderRan = true
+            judgeText(foodText, snapshot, userContext)
+        } ?: return judgmentResponseAssembler.assembleTextUnknownFallback(foodText) to false
+
+        return judgmentResponseAssembler.toTextResponse(cached) to !loaderRan
+    }
+
+    private fun judgeText(foodText: String, snapshot: LlmInputSnapshotDTO, userContext: UserContext): CachedJudgment? {
+        val llmJudgment = geminiClient.generateJudgment(
+            systemInstruction = judgmentPromptBuilder.buildSystemInstruction(),
+            userContent = judgmentPromptBuilder.buildUserContent(snapshot),
+            responseSchema = judgmentPromptBuilder.buildResponseSchema(),
+        ) ?: return null
+
+        // 텍스트 입력은 DB 음식 태그가 없어 foodAllergens/foodTriggers 모두 empty — 알레르겐 오버라이드 미발동
+        val override = safetyOverrideRule.apply(
+            llmGrade = llmJudgment.grade,
+            foodTriggers = emptyList(),
+            foodAllergens = emptyList(),
+            userTriggers = userContext.userTriggers,
+            userAllergens = userContext.userAllergens,
+        )
+
+        return judgmentResponseAssembler.assembleTextCacheable(foodText, llmJudgment, override)
     }
 
     // ① LLM → ② 안전 오버라이드 → ③ 조립. 실패는 null로 반환해 캐시에 남기지 않는다

@@ -142,6 +142,56 @@ class MealControllerTest @Autowired constructor(
     }
 
     @Nested
+    inner class `텍스트 생성` {
+
+        @Test
+        @WithCustomUser
+        fun `텍스트로 식사 기록을 생성하고 요약을 반환한다`() {
+            whenever(mealRecordCommandService.createByText(any(), any())).thenReturn(summary())
+
+            mockMvc.post("/api/v1/meals/text") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"foodTextInput":"감자탕","judgedGrade":"RECOMMEND"}"""
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.isSuccess") { value(true) }
+                jsonPath("$.result.mealId") { value(mealId) }
+                jsonPath("$.result.food.category") { value("soup_stew") }
+            }
+        }
+
+        @Test
+        @WithCustomUser
+        fun `끼니가 없으면 MEAL404_2`() {
+            whenever(mealRecordCommandService.createByText(any(), any()))
+                .thenThrow(GeneralException(MealErrorCode.MEAL_GROUP_NOT_FOUND))
+
+            mockMvc.post("/api/v1/meals/text") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"foodTextInput":"감자탕","mealGroupId":"$groupId"}"""
+            }.andExpect {
+                status { isNotFound() }
+                jsonPath("$.code") { value("MEAL404_2") }
+            }
+        }
+
+        @Test
+        @WithCustomUser
+        fun `eatenAt 형식이 잘못되면 MEAL400_2`() {
+            whenever(mealRecordCommandService.createByText(any(), any()))
+                .thenThrow(GeneralException(MealErrorCode.INVALID_DATE_TIME))
+
+            mockMvc.post("/api/v1/meals/text") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"foodTextInput":"감자탕","eatenAt":"2026-06-11 12:30"}"""
+            }.andExpect {
+                status { isBadRequest() }
+                jsonPath("$.code") { value("MEAL400_2") }
+            }
+        }
+    }
+
+    @Nested
     inner class `단건 조회` {
 
         @Test
