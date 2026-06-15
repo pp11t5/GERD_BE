@@ -6,6 +6,11 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: gerd
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Seoul
 
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long}
@@ -25,6 +30,13 @@ kakao:
   iss: ${KAKAO_ISS:}
   jwks-url: ${KAKAO_JWKS_URL:}
   admin-key: ${KAKAO_ADMIN_KEY:}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash-lite}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+  connect-timeout-ms: ${GEMINI_CONNECT_TIMEOUT_MS:3000}
+  read-timeout-ms: ${GEMINI_READ_TIMEOUT_MS:15000}
 
 sentry:
   dsn: ${SENTRY_DSN:}

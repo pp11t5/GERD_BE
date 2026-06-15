@@ -1,10 +1,7 @@
 package com.gerd.domain.food.service
 
 import com.gerd.domain.food.dto.RecentFoodDTO
-import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.entity.FoodSearchHistory
-import com.gerd.domain.food.entity.enums.FoodSource
-import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.food.repository.FoodSearchHistoryRepository
@@ -42,7 +39,7 @@ class RecentFoodService(
         // 형식이 잘못된 UUID는 존재할 수 없는 음식과 동일하게 취급(열거 단서 차단)
         val externalId = parseUuid(foodExternalId) ?: throw GeneralException(FoodErrorCode.FOOD_NOT_FOUND)
         val food = foodRepository.findByExternalId(externalId)
-            ?.takeIf { it.isVisibleTo(userId) }
+            ?.takeIf { FoodAccessPolicy.isVisibleTo(it, userId) }
             ?: throw GeneralException(FoodErrorCode.FOOD_NOT_FOUND)
 
         val now = LocalDateTime.now()
@@ -86,11 +83,6 @@ class RecentFoodService(
             null
         }
 
-    // 노출 범위: 공개 카탈로그 ∪ 본인 비공개 음식
-    private fun Food.isVisibleTo(userId: Long): Boolean =
-        (source in PUBLIC_SOURCES && visibility == FoodVisibility.PUBLIC) ||
-            (visibility == FoodVisibility.PRIVATE && ownerUserId == userId)
-
     private fun FoodSearchHistory.toDTO(category: String?) =
         RecentFoodDTO(
             foodExternalId = food.externalId.toString(),
@@ -103,6 +95,5 @@ class RecentFoodService(
         const val DEFAULT_SIZE = 10
         const val MAX_SIZE = 50
         const val RETENTION_LIMIT = 10
-        private val PUBLIC_SOURCES = setOf(FoodSource.SEED, FoodSource.CURATED)
     }
 }
