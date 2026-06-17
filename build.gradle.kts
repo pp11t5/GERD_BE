@@ -45,6 +45,9 @@ dependencies {
     // cache
     implementation("com.github.ben-manes.caffeine:caffeine")
 
+    // retry
+    implementation("org.springframework.retry:spring-retry:2.0.12")
+
 // web
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

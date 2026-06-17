@@ -7,7 +7,11 @@ import com.gerd.global.config.properties.GeminiProperties
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.http.client.JdkClientHttpRequestFactory
+import org.springframework.retry.annotation.Backoff
+import org.springframework.retry.annotation.Recover
+import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Component
+import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestClient
 import tools.jackson.databind.ObjectMapper
 import java.net.http.HttpClient
@@ -39,6 +43,11 @@ class GeminiClient(
         )
         .build()
 
+    @Retryable(
+        retryFor = [HttpServerErrorException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delayExpression = "#{@geminiProperties.retryDelayMs}", multiplier = 2.0),
+    )
     fun generateJudgment(
         systemInstruction: String,
         userContent: String,
@@ -60,11 +69,24 @@ class GeminiClient(
                 .body(GeminiGenerateResponseDTO::class.java)
 
             response?.let { parseJudgment(it) }
+        } catch (e: HttpServerErrorException) {
+            throw e  // @Retryable이 처리 — 재시도 후 소진 시 recoverJudgment로 위임
         } catch (e: Exception) {
             // Error까지 삼키지 않도록 Exception만 잡는다. 프롬프트/응답 본문은 건강정보라 로그에 남기지 않는다
             log.warn("Gemini 판정 호출 실패: {} - {}", e.javaClass.simpleName, e.message)
             null
         }
+    }
+
+    @Recover
+    fun recoverJudgment(
+        e: HttpServerErrorException,
+        systemInstruction: String,
+        userContent: String,
+        responseSchema: Map<String, Any>,
+    ): LlmJudgmentDTO? {
+        log.warn("Gemini 판정 재시도 소진: {} - {}", e.javaClass.simpleName, e.message)
+        return null
     }
 
     private fun buildRequestBody(
