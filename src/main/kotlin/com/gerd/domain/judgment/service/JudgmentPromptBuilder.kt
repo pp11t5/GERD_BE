@@ -44,8 +44,9 @@ class JudgmentPromptBuilder(
             - RECOMMEND: 사용자의 트리거·알레르기·기록에 비추어 부담 없이 권할 수 있는 음식
             - CAUTION: 먹을 수는 있으나 양·속도·시점 조절이 필요한 음식
             - RISK: 사용자의 트리거·알레르기·기록상 오늘은 피하는 편이 나은 음식
-            - UNKNOWN: 음식 정보(knownAttributes·triggerTags·allergenTags)만으로 판단 근거가 부족한 경우.
-              근거가 부족하면 추측하지 말고 반드시 UNKNOWN을 출력하세요.
+            - UNKNOWN: 음식 이름과 카테고리만으로도 어떤 음식인지 전혀 특정할 수 없거나,
+              GERD 관점에서 일반적으로도 알려진 정보가 전혀 없는 경우에만 사용하세요.
+              triggerTags·allergenTags·knownAttributes가 비어있어도 음식 이름으로 판단 가능하면 일반 식품 지식을 활용해 판정하세요.
 
             [personalTitle 작성 규칙]
             - 결과 카드 상단에 표시되는 한 줄 제목 — 등급 톤에 맞춰 이 사용자의 상황(증상·트리거·알레르기)이 드러나게 작성하세요
@@ -54,7 +55,8 @@ class JudgmentPromptBuilder(
 
             [items 작성 규칙 — 정확히 2개]
             - items[0]: 음식의 트리거 성분과 사용자의 트리거·증상·기록 관점의 분석
-            - items[1]: 알레르기·복용약 관점의 분석 (해당 없으면 "해당 없어요" 톤으로 안심시키기)
+            - items[1]: 알레르기·복용약 관점의 분석. allergenTags가 비어있으면 음식 이름 기반으로 주요 알레르겐을 안내하되,
+              불확실한 경우 "성분표를 확인해 보세요" 톤으로 작성하세요. 해당 없으면 안심시키기
             - emphasis는 핵심 한 줄, body는 1~2문장의 근거 설명
 
             [말투 규칙]
