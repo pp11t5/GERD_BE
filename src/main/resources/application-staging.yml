@@ -1,0 +1,59 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require&TimeZone=Asia/Seoul
+    driver-class-name: org.postgresql.Driver
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+firebase:
+  service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON}
+  project-id: ${FIREBASE_PROJECT_ID}
+
+notification:
+  scheduler:
+    enabled: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:259200000}
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: staging
+  release: ${SENTRY_RELEASE:${RAILWAY_GIT_COMMIT_SHA:unknown}}
+  exception-resolver-order: -2147483647
+  max-request-body-size: always
+  send-default-pii: false
+  traces-sample-rate: 0.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+  health:
+    diskspace:
+      enabled: true
+    ping:
+      enabled: true
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

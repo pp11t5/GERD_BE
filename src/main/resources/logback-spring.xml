@@ -19,8 +19,8 @@
         <logger name="org.hibernate.SQL" level="DEBUG"/>
     </springProfile>
 
-    <!-- prod: JSON 구조 로그 (CloudWatch / Datadog 등 수집 용이) -->
-    <springProfile name="prod">
+    <!-- prod/staging: JSON 구조 로그 (CloudWatch / Datadog 등 수집 용이) -->
+    <springProfile name="prod,staging">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
                 <customFields>{"app":"${spring.application.name:-gerd}"}</customFields>
