@@ -8,6 +8,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.springframework.web.client.HttpServerErrorException
 import tools.jackson.databind.json.JsonMapper
 import java.net.InetSocketAddress
 
@@ -101,11 +103,11 @@ class GeminiClientTest {
     inner class 실패 {
 
         @Test
-        fun `HTTP 5xx면 null을 반환한다`() {
-            responseStatus = 500
-            responseBody = """{"error":"internal"}"""
+        fun `HTTP 5xx면 예외를 전파한다(재시도·폴백은 스프링 프록시가 처리한다)`() {
+            responseStatus = 503
+            responseBody = """{"error":"unavailable"}"""
 
-            assertThat(call()).isNull()
+            assertThrows<HttpServerErrorException> { call() }
         }
 
         @Test

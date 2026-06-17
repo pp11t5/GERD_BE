@@ -1,36 +1,49 @@
 package com.gerd.domain.meal.repository
 
+import com.gerd.domain.auth.entity.User
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.global.config.QuerydslTestConfig
 import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.ActiveProfiles
 import java.time.LocalDateTime
 import java.util.UUID
 
 @DataJpaTest
+@ActiveProfiles("test")
 @Import(QuerydslTestConfig::class)
 class MealRecordRepositoryTest @Autowired constructor(
     private val mealRecordRepository: MealRecordRepository,
     private val em: EntityManager,
 ) {
 
-    private val userId = 1L
-    private val otherUserId = 2L
+    private lateinit var user: User
+    private lateinit var otherUser: User
+
+    @BeforeEach
+    fun setUp() {
+        user = User(email = "user@test.com")
+        otherUser = User(email = "other@test.com")
+        em.persist(user)
+        em.persist(otherUser)
+        em.flush()
+    }
 
     private fun newRecord(
         eatenAt: LocalDateTime,
-        userId: Long = this.userId,
+        user: User = this.user,
         mealGroupId: UUID = UUID.randomUUID(),
         judgedGrade: JudgmentGrade? = JudgmentGrade.RECOMMEND,
         foodId: Long = 10L,
     ) = MealRecord(
-        userId = userId,
+        user = user,
         foodId = foodId,
         mealGroupId = mealGroupId,
         eatenAt = eatenAt,
@@ -46,13 +59,13 @@ class MealRecordRepositoryTest @Autowired constructor(
             mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 0, 0, 0)))
             mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 12, 0, 0, 0))) // 익일 00:00 제외
             mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 10, 23, 59, 59))) // 전날 제외
-            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 12, 0, 0), userId = otherUserId)) // 타 유저 제외
+            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 12, 0, 0), user = otherUser)) // 타 유저 제외
             em.flush()
             em.clear()
 
             val from = LocalDateTime.of(2026, 6, 11, 0, 0, 0)
             val to = LocalDateTime.of(2026, 6, 12, 0, 0, 0)
-            val result = mealRecordRepository.findDailyRecords(userId, from, to)
+            val result = mealRecordRepository.findDailyRecords(user.id!!, from, to)
 
             assertThat(result.map { it.eatenAt }).containsExactly(
                 LocalDateTime.of(2026, 6, 11, 0, 0, 0),
@@ -65,7 +78,7 @@ class MealRecordRepositoryTest @Autowired constructor(
             val from = LocalDateTime.of(2026, 6, 11, 0, 0, 0)
             val to = LocalDateTime.of(2026, 6, 12, 0, 0, 0)
 
-            assertThat(mealRecordRepository.findDailyRecords(userId, from, to)).isEmpty()
+            assertThat(mealRecordRepository.findDailyRecords(user.id!!, from, to)).isEmpty()
         }
     }
 
@@ -79,8 +92,8 @@ class MealRecordRepositoryTest @Autowired constructor(
             val externalId = saved.externalId!!
             em.clear()
 
-            assertThat(mealRecordRepository.findByExternalIdAndUserId(externalId, userId)).isNotNull()
-            assertThat(mealRecordRepository.findByExternalIdAndUserId(externalId, otherUserId)).isNull()
+            assertThat(mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)).isNotNull()
+            assertThat(mealRecordRepository.findByExternalIdAndUser_Id(externalId, otherUser.id!!)).isNull()
         }
 
         @Test
@@ -90,9 +103,9 @@ class MealRecordRepositoryTest @Autowired constructor(
             em.flush()
             em.clear()
 
-            assertThat(mealRecordRepository.existsByUserIdAndMealGroupId(userId, groupId)).isTrue()
-            assertThat(mealRecordRepository.existsByUserIdAndMealGroupId(otherUserId, groupId)).isFalse()
-            assertThat(mealRecordRepository.existsByUserIdAndMealGroupId(userId, UUID.randomUUID())).isFalse()
+            assertThat(mealRecordRepository.existsByUser_IdAndMealGroupId(user.id!!, groupId)).isTrue()
+            assertThat(mealRecordRepository.existsByUser_IdAndMealGroupId(otherUser.id!!, groupId)).isFalse()
+            assertThat(mealRecordRepository.existsByUser_IdAndMealGroupId(user.id!!, UUID.randomUUID())).isFalse()
         }
     }
 
@@ -109,7 +122,7 @@ class MealRecordRepositoryTest @Autowired constructor(
             em.flush()
             em.clear()
 
-            assertThat(mealRecordRepository.findByExternalIdAndUserId(externalId, userId)).isNull()
+            assertThat(mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)).isNull()
         }
     }
 
@@ -125,7 +138,7 @@ class MealRecordRepositoryTest @Autowired constructor(
             val externalId = saved.externalId!!
             em.clear()
 
-            val found = mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
+            val found = mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)
             assertThat(found?.judgedGrade).isEqualTo(JudgmentGrade.CAUTION)
         }
 
@@ -138,7 +151,7 @@ class MealRecordRepositoryTest @Autowired constructor(
             val externalId = saved.externalId!!
             em.clear()
 
-            val found = mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
+            val found = mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)
             assertThat(found?.judgedGrade).isNull()
         }
     }

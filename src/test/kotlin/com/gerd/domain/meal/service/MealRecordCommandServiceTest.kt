@@ -1,5 +1,7 @@
 package com.gerd.domain.meal.service
 
+import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
@@ -42,6 +44,9 @@ class MealRecordCommandServiceTest {
     @Mock
     private lateinit var mealRecordAssembler: MealRecordAssembler
 
+    @Mock
+    private lateinit var userRepository: UserRepository
+
     private lateinit var service: MealRecordCommandService
 
     private val userId = 1L
@@ -51,7 +56,7 @@ class MealRecordCommandServiceTest {
 
     @org.junit.jupiter.api.BeforeEach
     fun setUp() {
-        service = MealRecordCommandService(mealRecordRepository, foodRepository, mealRecordAssembler)
+        service = MealRecordCommandService(mealRecordRepository, foodRepository, mealRecordAssembler, userRepository)
     }
 
     @Nested
@@ -92,6 +97,7 @@ class MealRecordCommandServiceTest {
         @Test
         fun `끼니 미전달이면 새 끼니 키를 발급하고 등급 스냅샷을 저장한다`() {
             stubVisibleFood()
+            stubUser()
             whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
             whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
             whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
@@ -103,15 +109,16 @@ class MealRecordCommandServiceTest {
             assertThat(captor.firstValue.mealGroupId).isNotNull()
             assertThat(captor.firstValue.judgedGrade).isEqualTo(JudgmentGrade.CAUTION)
             assertThat(captor.firstValue.eatenAt).isEqualTo(eatenAt)
-            verify(mealRecordRepository, never()).existsByUserIdAndMealGroupId(any(), any())
+            verify(mealRecordRepository, never()).existsByUser_IdAndMealGroupId(any(), any())
         }
 
         @Test
         fun `끼니 전달 시 본인 소유면 같은 끼니로 저장한다`() {
             val groupId = MealRecordFixture.MEAL_GROUP_ID
             stubVisibleFood()
+            stubUser()
             whenever(mealRecordAssembler.parseUuid(groupId.toString())).thenReturn(groupId)
-            whenever(mealRecordRepository.existsByUserIdAndMealGroupId(userId, groupId)).thenReturn(true)
+            whenever(mealRecordRepository.existsByUser_IdAndMealGroupId(userId, groupId)).thenReturn(true)
             whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
             whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
             whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
@@ -129,7 +136,7 @@ class MealRecordCommandServiceTest {
             stubVisibleFood()
             whenever(mealRecordAssembler.parseUuid(groupId.toString())).thenReturn(groupId)
             whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
-            whenever(mealRecordRepository.existsByUserIdAndMealGroupId(userId, groupId)).thenReturn(false)
+            whenever(mealRecordRepository.existsByUser_IdAndMealGroupId(userId, groupId)).thenReturn(false)
 
             assertThatThrownBy { service.create(request(mealGroupId = groupId.toString()), userId) }
                 .isInstanceOf(GeneralException::class.java)
@@ -156,6 +163,7 @@ class MealRecordCommandServiceTest {
         fun `동일 이름의 본인 USER 음식이 있으면 재사용한다`() {
             val existingFood = FoodFixture.food(id = 20L, name = "감자탕", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
             whenever(foodRepository.findByNameAndOwnerUserIdAndSource("감자탕", userId, FoodSource.USER)).thenReturn(existingFood)
+            whenever(userRepository.getReferenceById(userId)).thenReturn(User(email = "test@test.com"))
             whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
             whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
             whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
@@ -173,6 +181,7 @@ class MealRecordCommandServiceTest {
             val newFood = FoodFixture.food(id = 21L, name = "감자탕", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
             whenever(foodRepository.findByNameAndOwnerUserIdAndSource("감자탕", userId, FoodSource.USER)).thenReturn(null)
             whenever(foodRepository.save(any<com.gerd.domain.food.entity.Food>())).thenReturn(newFood)
+            whenever(userRepository.getReferenceById(userId)).thenReturn(User(email = "test@test.com"))
             whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
             whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
             whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
@@ -188,6 +197,7 @@ class MealRecordCommandServiceTest {
         fun `앞뒤 공백은 제거하고 동일 이름 기준으로 음식을 조회한다`() {
             val existingFood = FoodFixture.food(id = 22L, name = "감자탕", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
             whenever(foodRepository.findByNameAndOwnerUserIdAndSource("감자탕", userId, FoodSource.USER)).thenReturn(existingFood)
+            whenever(userRepository.getReferenceById(userId)).thenReturn(User(email = "test@test.com"))
             whenever(mealRecordAssembler.parseEatenAt(anyOrNull())).thenReturn(eatenAt)
             whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
             whenever(mealRecordAssembler.toSummary(any(), any())).thenReturn(summaryStub())
@@ -205,7 +215,7 @@ class MealRecordCommandServiceTest {
         fun `기록이 없거나 타인 소유면 MEAL_NOT_FOUND`() {
             whenever(mealRecordAssembler.parseUuid(MealRecordFixture.MEAL_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_EXTERNAL_ID)
-            whenever(mealRecordRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_EXTERNAL_ID, userId))
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_EXTERNAL_ID, userId))
                 .thenReturn(null)
 
             assertThatThrownBy { service.updateMemo(MealRecordFixture.MEAL_EXTERNAL_ID.toString(), UpdateMealMemoRequestDTO("메모"), userId) }
@@ -242,7 +252,7 @@ class MealRecordCommandServiceTest {
         fun `기록이 없으면 MEAL_NOT_FOUND`() {
             whenever(mealRecordAssembler.parseUuid(MealRecordFixture.MEAL_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_EXTERNAL_ID)
-            whenever(mealRecordRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_EXTERNAL_ID, userId))
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_EXTERNAL_ID, userId))
                 .thenReturn(null)
 
             assertThatThrownBy { service.delete(MealRecordFixture.MEAL_EXTERNAL_ID.toString(), userId) }
@@ -280,11 +290,15 @@ class MealRecordCommandServiceTest {
         whenever(foodRepository.findByExternalId(foodExternalId)).thenReturn(FoodFixture.food(id = 10L))
     }
 
+    private fun stubUser() {
+        whenever(userRepository.getReferenceById(userId)).thenReturn(User(email = "test@test.com"))
+    }
+
     private fun stubOwnedRecord(): MealRecord {
-        val record = MealRecordFixture.mealRecord(id = 1L, userId = userId)
+        val record = MealRecordFixture.mealRecord(id = 1L)
         whenever(mealRecordAssembler.parseUuid(MealRecordFixture.MEAL_EXTERNAL_ID.toString()))
             .thenReturn(MealRecordFixture.MEAL_EXTERNAL_ID)
-        whenever(mealRecordRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_EXTERNAL_ID, userId))
+        whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_EXTERNAL_ID, userId))
             .thenReturn(record)
         return record
     }

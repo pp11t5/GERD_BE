@@ -11,4 +11,5 @@ data class GeminiProperties(
     var baseUrl: String = "https://generativelanguage.googleapis.com",
     var connectTimeoutMs: Long = 3000,
     var readTimeoutMs: Long = 15000,
+    var retryDelayMs: Long = 1000,
 )

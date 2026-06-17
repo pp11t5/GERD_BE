@@ -24,7 +24,7 @@ class MealRecordQueryService(
     fun getDetail(mealId: String, userId: Long): MealRecordDetailDTO {
         val externalId = mealRecordAssembler.parseUuid(mealId)
             ?: throw GeneralException(MealErrorCode.MEAL_NOT_FOUND)
-        val record = mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
+        val record = mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_NOT_FOUND)
         return mealRecordAssembler.toDetail(record)
     }
