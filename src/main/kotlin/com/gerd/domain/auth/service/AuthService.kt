@@ -30,9 +30,9 @@ class AuthService(
 
     @Transactional
     fun devLogin(nickname: String): AuthTokenResponseDTO {
-        val user = userRepository.findByNickname(nickname)
-            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-        // @SQLRestriction으로 DELETED 유저는 조회되지 않으므로 INACTIVE만 체크
+        val user = userRepository.findByNickname(nickname).orElseGet {
+            userRepository.save(User(email = "dev-$nickname@gerd.local", nickname = nickname))
+        }
         if (user.status == UserStatus.INACTIVE) throw GeneralException(AuthErrorCode.ACCOUNT_INACTIVE)
         user.updateLastLoginAt()
         return issueTokens(user)
