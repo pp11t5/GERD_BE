@@ -1,5 +1,6 @@
 package com.gerd.global.fixture
 
+import com.gerd.domain.auth.entity.User
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.entity.MealRecord
 import org.springframework.test.util.ReflectionTestUtils
@@ -16,7 +17,7 @@ object MealRecordFixture {
     // 끼니/등급/메모 분기를 표현 가능한 식사 기록 — id·externalId는 주입
     fun mealRecord(
         id: Long = 1L,
-        userId: Long = 1L,
+        user: User = User(email = "fixture@test.com"),
         foodId: Long = 1L,
         mealGroupId: UUID = MEAL_GROUP_ID,
         eatenAt: LocalDateTime = EATEN_AT,
@@ -24,7 +25,7 @@ object MealRecordFixture {
         memo: String? = null,
         externalId: UUID = MEAL_EXTERNAL_ID,
     ): MealRecord = MealRecord(
-        userId = userId,
+        user = user,
         foodId = foodId,
         mealGroupId = mealGroupId,
         eatenAt = eatenAt,

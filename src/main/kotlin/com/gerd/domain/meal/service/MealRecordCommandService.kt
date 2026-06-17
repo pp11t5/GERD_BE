@@ -1,5 +1,6 @@
 package com.gerd.domain.meal.service
 
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
@@ -32,6 +33,7 @@ class MealRecordCommandService(
     private val mealRecordRepository: MealRecordRepository,
     private val foodRepository: FoodRepository,
     private val mealRecordAssembler: MealRecordAssembler,
+    private val userRepository: UserRepository,
 ) {
 
     @Transactional
@@ -87,9 +89,10 @@ class MealRecordCommandService(
     ): MealRecordSummaryDTO {
         val eatenAt = mealRecordAssembler.parseEatenAt(rawEatenAt)
         val mealGroupId = resolveMealGroupId(rawMealGroupId, userId)
+        val user = userRepository.getReferenceById(userId)
         val saved = mealRecordRepository.save(
             MealRecord(
-                userId = userId,
+                user = user,
                 foodId = food.id!!,
                 mealGroupId = mealGroupId,
                 eatenAt = eatenAt,
@@ -104,7 +107,7 @@ class MealRecordCommandService(
         if (rawMealGroupId == null) return UUID.randomUUID()
         val mealGroupId = mealRecordAssembler.parseUuid(rawMealGroupId)
             ?: throw GeneralException(MealErrorCode.MEAL_GROUP_NOT_FOUND)
-        if (!mealRecordRepository.existsByUserIdAndMealGroupId(userId, mealGroupId)) {
+        if (!mealRecordRepository.existsByUser_IdAndMealGroupId(userId, mealGroupId)) {
             throw GeneralException(MealErrorCode.MEAL_GROUP_NOT_FOUND)
         }
         return mealGroupId
@@ -113,7 +116,7 @@ class MealRecordCommandService(
     private fun resolveOwnedRecord(mealId: String, userId: Long): MealRecord {
         val externalId = mealRecordAssembler.parseUuid(mealId)
             ?: throw GeneralException(MealErrorCode.MEAL_NOT_FOUND)
-        return mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
+        return mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_NOT_FOUND)
     }
 

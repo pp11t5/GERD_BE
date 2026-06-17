@@ -52,7 +52,7 @@ class MealRecordQueryServiceTest {
         @Test
         fun `기록이 없거나 타인 소유면 MEAL_NOT_FOUND`() {
             whenever(mealRecordAssembler.parseUuid(mealId.toString())).thenReturn(mealId)
-            whenever(mealRecordRepository.findByExternalIdAndUserId(mealId, userId)).thenReturn(null)
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(mealId, userId)).thenReturn(null)
 
             assertThatThrownBy { service.getDetail(mealId.toString(), userId) }
                 .isInstanceOf(GeneralException::class.java)
@@ -61,9 +61,9 @@ class MealRecordQueryServiceTest {
 
         @Test
         fun `본인 기록이면 상세를 반환한다`() {
-            val record = MealRecordFixture.mealRecord(userId = userId)
+            val record = MealRecordFixture.mealRecord()
             whenever(mealRecordAssembler.parseUuid(mealId.toString())).thenReturn(mealId)
-            whenever(mealRecordRepository.findByExternalIdAndUserId(mealId, userId)).thenReturn(record)
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(mealId, userId)).thenReturn(record)
             whenever(mealRecordAssembler.toDetail(record)).thenReturn(detailStub())
 
             val result = service.getDetail(mealId.toString(), userId)
@@ -80,7 +80,7 @@ class MealRecordQueryServiceTest {
             val day = LocalDate.of(2026, 6, 11)
             val from = LocalDateTime.of(2026, 6, 11, 0, 0)
             val to = LocalDateTime.of(2026, 6, 12, 0, 0)
-            val records = listOf(MealRecordFixture.mealRecord(userId = userId))
+            val records = listOf(MealRecordFixture.mealRecord())
             val groups = listOf(groupStub())
             whenever(mealRecordAssembler.parseDate("2026-06-11")).thenReturn(day)
             whenever(mealRecordAssembler.toDayRange(day)).thenReturn(from to to)
