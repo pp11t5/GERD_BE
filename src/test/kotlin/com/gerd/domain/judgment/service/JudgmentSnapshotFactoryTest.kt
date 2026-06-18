@@ -1,5 +1,6 @@
 package com.gerd.domain.judgment.service
 
+import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.global.fixture.FoodFixture
@@ -101,7 +102,7 @@ class JudgmentSnapshotFactoryTest {
         userTriggers: List<TagDTO> = emptyList(),
         userAllergens: List<TagDTO> = emptyList(),
         description: String? = null,
-    ) = com.gerd.domain.judgment.dto.JudgmentContext(
+    ) = JudgmentContext(
         food = FoodFixture.food(name = "된장찌개", description = description),
         category = "soup_stew",
         foodTriggers = foodTriggers,

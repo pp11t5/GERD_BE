@@ -13,7 +13,7 @@ object FoodFixture {
     // 검색/최근 음식 테스트가 공유하는 고정 externalId — 응답은 food.externalId와 대조하므로 값 자체는 무관
     val EXTERNAL_ID: UUID = UUID.fromString("9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
 
-    // 노출 범위 분기(source/visibility/owner)까지 표현 가능한 음식 — id는 setField로 주입
+    // 노출 범위 분기(source/visibility/owner)까지 표현 가능한 음식
     fun food(
         id: Long = 1L,
         name: String = "된장찌개",
@@ -22,8 +22,7 @@ object FoodFixture {
         ownerUserId: Long? = null,
         externalId: UUID = EXTERNAL_ID,
         description: String? = null,
-    ): Food = Food(name = name, source = source, visibility = visibility, ownerUserId = ownerUserId, description = description).apply {
-        ReflectionTestUtils.setField(this, "id", id)
+    ): Food = Food(id = id, name = name, source = source, visibility = visibility, ownerUserId = ownerUserId, description = description).apply {
         this.externalId = externalId // BaseEntity의 public var로 직접 할당
     }
 
