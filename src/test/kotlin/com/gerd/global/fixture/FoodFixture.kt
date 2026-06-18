@@ -21,7 +21,8 @@ object FoodFixture {
         visibility: FoodVisibility = FoodVisibility.PUBLIC,
         ownerUserId: Long? = null,
         externalId: UUID = EXTERNAL_ID,
-    ): Food = Food(name = name, source = source, visibility = visibility, ownerUserId = ownerUserId).apply {
+        description: String? = null,
+    ): Food = Food(name = name, source = source, visibility = visibility, ownerUserId = ownerUserId, description = description).apply {
         ReflectionTestUtils.setField(this, "id", id)
         this.externalId = externalId // BaseEntity의 public var로 직접 할당
     }
