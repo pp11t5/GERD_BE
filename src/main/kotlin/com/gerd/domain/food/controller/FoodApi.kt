@@ -2,6 +2,7 @@ package com.gerd.domain.food.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.food.dto.AddRecentRequestDTO
+import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.exception.FoodErrorCode
@@ -25,6 +26,16 @@ import org.springframework.web.bind.annotation.RequestParam
 @Tag(name = "Food", description = "음식 검색 API")
 @RequestMapping("/api/v1/foods")
 interface FoodApi {
+
+    @Operation(
+        summary = "음식 분류 목록 조회",
+        description = "전체 음식 분류를 sortOrder 순으로 반환. 아이콘 표시 시 code를 키로 사용",
+    )
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
+    @GetMapping("/categories")
+    fun getCategories(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<List<FoodCategoryDTO>>>
 
     @Operation(
         summary = "음식 검색",

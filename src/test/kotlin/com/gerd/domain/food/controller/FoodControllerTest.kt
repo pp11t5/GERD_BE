@@ -5,6 +5,7 @@ import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.auth.security.JwtProvider
+import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.food.service.FoodSearchService
 import com.gerd.domain.food.service.RecentFoodService
 import com.gerd.global.apiPayload.GeneralException
@@ -38,6 +39,9 @@ class FoodControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var recentFoodService: RecentFoodService
+
+    @MockitoBean
+    private lateinit var foodCategoryReader: FoodCategoryReader
 
     // 보안 필터 체인(JwtAuthenticationFilter)이 컨텍스트에서 요구하는 빈 — addFilters=false라 동작은 안 하지만 빈은 필요
     @MockitoBean
