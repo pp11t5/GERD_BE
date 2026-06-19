@@ -27,8 +27,13 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface MealRecordApi {
 
     @Operation(
-        summary = "식사 음식 추가",
-        description = "mealRecordId 없으면 새 끼니 생성, 있으면 기존 끼니에 추가. eatenAt 미전달 시 서버 현재 시각(Asia/Seoul)",
+        summary = "같이 먹은 식사 음식 추가",
+        description = """
+            - 진입점 - 타임라인에서의 같이 먹은 음식 추가 버튼
+            - mealRecordId(끼니ID) 필수
+            - 기존 끼니에 같이 추가하는 방식
+            - eatenAt 미전달 시 서버 현재 시각(Asia/Seoul)"
+        """
     )
     @ApiErrorExample(MealErrorCode::class, "INVALID_DATE_TIME", "MEAL_RECORD_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "생성 성공"))
@@ -80,7 +85,7 @@ interface MealRecordApi {
 
     @Operation(
         summary = "끼니 상세 조회",
-        description = "끼니 대표 시각과 연결된 증상 기록을 조회합니다. 음식별 상세/분석은 식사 음식 단건 조회 API에서 확인합니다.",
+        description = "끼니에 연결된 음식 기록, 증상 기록을 조회합니다.",
     )
     @ApiErrorExample(MealErrorCode::class, "MEAL_RECORD_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
