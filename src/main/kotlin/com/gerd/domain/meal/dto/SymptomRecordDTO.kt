@@ -1,7 +1,6 @@
 package com.gerd.domain.meal.dto
 
 import com.gerd.domain.symptom.entity.enums.SymptomState
-import com.gerd.domain.symptom.entity.enums.SymptomType
 import io.swagger.v3.oas.annotations.media.Schema
 
 /**

@@ -59,20 +59,30 @@ class MealRecordQueryServiceTest {
         fun `본인 끼니면 증상과 함께 변환한다`() {
             val mealRecord = MealRecordFixture.mealRecord()
             val detail = com.gerd.domain.meal.dto.MealRecordDetailDTO(
-                mealId = MealRecordFixture.MEAL_RECORD_ID.toString(),
-                mealGroupId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+                mealRecordId = MealRecordFixture.MEAL_RECORD_ID.toString(),
                 eatenAt = "2026-06-11T12:30:00+09:00",
-                memo = null,
+                meals = listOf(
+                    com.gerd.domain.meal.dto.MealRecordDetailDTO.MealFoodDetailDTO(
+                        mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
+                        name = "된장찌개",
+                        category = "soup_stew",
+                        eatenAt = "2026-06-11T12:30:00+09:00",
+                    ),
+                ),
                 stateRecords = null,
             )
+            val foods = listOf(MealRecordFixture.mealFood())
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_ID.toString())).thenReturn(MealRecordFixture.MEAL_RECORD_ID)
             whenever(mealRecordRepository.findByIdAndUserId(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
+            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(foods)
             whenever(symptomRepository.findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(emptyList())
-            whenever(mealRecordConverter.toGroupDetail(mealRecord, emptyList())).thenReturn(detail)
+            whenever(mealRecordConverter.toGroupDetail(mealRecord, foods, emptyList())).thenReturn(detail)
 
             val result = service.getGroupDetail(MealRecordFixture.MEAL_RECORD_ID.toString(), userId)
 
-            assertThat(result.mealId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID.toString())
+            assertThat(result.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID.toString())
+            assertThat(result.meals).hasSize(1)
+            verify(mealFoodRepository).findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)
             verify(symptomRepository).findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)
         }
     }

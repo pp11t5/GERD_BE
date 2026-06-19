@@ -224,7 +224,7 @@ class MealRecordCommandServiceTest {
         mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
         eatenAt = "2026-06-11T12:30:00+09:00",
         food = com.gerd.domain.meal.dto.MealFoodRecordDetailDTO.FoodInfoDTO(
-            mealRecordExternalId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
+            mealRecordExternalId = MealRecordFixture.MEAL_RECORD_ID.toString(),
             name = "된장찌개",
             category = "soup_stew",
         ),

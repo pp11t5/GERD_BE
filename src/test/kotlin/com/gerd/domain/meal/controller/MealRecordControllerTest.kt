@@ -100,7 +100,9 @@ class MealRecordControllerTest @Autowired constructor(
             mockMvc.get("/api/v1/meal-records/${MealRecordFixture.MEAL_RECORD_ID}")
                 .andExpect {
                     status { isOk() }
-                    jsonPath("$.result.mealId") { value(MealRecordFixture.MEAL_RECORD_ID.toString()) }
+                    jsonPath("$.result.mealRecordId") { value(MealRecordFixture.MEAL_RECORD_ID.toString()) }
+                    jsonPath("$.result.meals[0].mealFoodId") { value(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()) }
+                    jsonPath("$.result.meals[0].name") { value("된장찌개") }
                 }
         }
 
@@ -163,7 +165,7 @@ class MealRecordControllerTest @Autowired constructor(
         mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
         eatenAt = "2026-06-11T12:30:00+09:00",
         food = MealFoodRecordDetailDTO.FoodInfoDTO(
-            mealRecordExternalId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
+            mealRecordExternalId = MealRecordFixture.MEAL_RECORD_ID.toString(),
             name = "된장찌개",
             category = "soup_stew",
         ),
@@ -172,10 +174,16 @@ class MealRecordControllerTest @Autowired constructor(
     )
 
     private fun mealRecordDetail() = MealRecordDetailDTO(
-        mealId = MealRecordFixture.MEAL_RECORD_ID.toString(),
-        mealGroupId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+        mealRecordId = MealRecordFixture.MEAL_RECORD_ID.toString(),
         eatenAt = "2026-06-11T12:30:00+09:00",
-        memo = null,
+        meals = listOf(
+            MealRecordDetailDTO.MealFoodDetailDTO(
+                mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
+                name = "된장찌개",
+                category = "soup_stew",
+                eatenAt = "2026-06-11T12:30:00+09:00",
+            ),
+        ),
         stateRecords = null,
     )
 }

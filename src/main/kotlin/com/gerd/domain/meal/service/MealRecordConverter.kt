@@ -36,7 +36,7 @@ class MealRecordConverter(
             mealFoodId = mealFood.externalId.toString(),
             eatenAt = formatEatenAt(mealFood.eatenAt),
             food = MealFoodRecordDetailDTO.FoodInfoDTO(
-                mealRecordExternalId = mealFood.externalId.toString(),
+                mealRecordExternalId = mealFood.mealRecordId.toString(),
                 name = food.name,
                 category = category,
             ),
@@ -53,7 +53,7 @@ class MealRecordConverter(
             mealFoodId = mealFood.externalId.toString(),
             eatenAt = formatEatenAt(mealFood.eatenAt),
             food = MealFoodRecordDetailDTO.FoodInfoDTO(
-                mealRecordExternalId = mealFood.externalId.toString(),
+                mealRecordExternalId = mealFood.mealRecordId.toString(),
                 name = food.name,
                 category = category,
             ),
@@ -62,7 +62,10 @@ class MealRecordConverter(
         )
     }
 
-    fun toGroupDetail(mealRecord: MealRecord, symptoms: List<Symptom>): MealRecordDetailDTO {
+    fun toGroupDetail(mealRecord: MealRecord, foods: List<MealFood>, symptoms: List<Symptom>): MealRecordDetailDTO {
+        val foodIds = foods.map { it.foodId }.distinct()
+        val foodMap = loadFoodsIncludingDeleted(foodIds).associateBy { it.id }
+        val categories = foodCategoryReader.loadPrimaryByFoodIds(foodIds)
         val stateRecord = symptoms.firstOrNull()?.let { symptom ->
             val externalId = symptom.externalId ?: return@let null
             StateRecordDTO(
@@ -73,10 +76,18 @@ class MealRecordConverter(
             )
         }
         return MealRecordDetailDTO(
-            mealId = mealRecord.id.toString(),
-            mealGroupId = mealRecord.id.toString(),
+            mealRecordId = mealRecord.id.toString(),
             eatenAt = formatEatenAt(mealRecord.eatenAt),
-            memo = null,
+            meals = foods.sortedBy { it.eatenAt }.map { mealFood ->
+                val food = foodMap[mealFood.foodId]
+                    ?: error("meal food ${mealFood.id} references missing food ${mealFood.foodId}")
+                MealRecordDetailDTO.MealFoodDetailDTO(
+                    mealFoodId = mealFood.externalId.toString(),
+                    name = food.name,
+                    category = categories[mealFood.foodId],
+                    eatenAt = formatEatenAt(mealFood.eatenAt),
+                )
+            },
             stateRecords = stateRecord,
         )
     }
@@ -114,8 +125,7 @@ class MealRecordConverter(
         json?.let { runCatching { objectMapper.readValue(it, MealAnalysisSnapshotDTO::class.java) }.getOrNull() }
 
     private fun formatSymptomDate(occurredAt: LocalDateTime): String {
-        val zoned = occurredAt.atZone(SEOUL)
-        return "${zoned.monthValue}월 ${zoned.dayOfMonth}일"
+        return occurredAt.atZone(SEOUL).toLocalDate().toString()
     }
 
     fun parseEatenAt(raw: String?): LocalDateTime =

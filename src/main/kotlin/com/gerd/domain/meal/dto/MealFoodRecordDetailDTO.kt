@@ -24,7 +24,7 @@ data class MealFoodRecordDetailDTO(
 ) {
 
     data class FoodInfoDTO(
-        @field:Schema(description = "식사 음식 기록 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        @field:Schema(description = "부모 끼니 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         val mealRecordExternalId: String,
 
         @field:Schema(description = "음식 이름", example = "된장찌개")

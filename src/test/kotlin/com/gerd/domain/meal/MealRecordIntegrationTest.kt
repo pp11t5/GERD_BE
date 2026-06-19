@@ -118,6 +118,16 @@ class MealRecordIntegrationTest @Autowired constructor(
                     jsonPath("$.result.analysis.personalTitle") { value("속이 불편할 수 있어요") }
                     jsonPath("$.result.stateRecord") { value(nullValue()) }
                 }
+
+            mockMvc.get("/api/v1/meal-records/{mealRecordId}", mealFood.mealRecordId)
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.result.mealRecordId") { value(mealFood.mealRecordId.toString()) }
+                    jsonPath("$.result.meals[0].mealFoodId") { value(mealFood.externalId.toString()) }
+                    jsonPath("$.result.meals[0].name") { value("통합 된장찌개") }
+                    jsonPath("$.result.meals[0].category") { value("soup_stew") }
+                    jsonPath("$.result.stateRecords") { value(nullValue()) }
+                }
         }
     }
 

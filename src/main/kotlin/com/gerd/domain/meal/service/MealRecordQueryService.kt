@@ -39,8 +39,9 @@ class MealQueryService(
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         val mealRecord = mealRecordRepository.findByIdAndUserId(id, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
+        val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(id)
         val symptoms = symptomRepository.findByMealRecordId(id)
-        return mealRecordConverter.toGroupDetail(mealRecord, symptoms)
+        return mealRecordConverter.toGroupDetail(mealRecord, foods, symptoms)
     }
 
     // 최근 24시간 내 기록 중 증상과 연결되지 않은 음식 기록 그룹 후보 조회
