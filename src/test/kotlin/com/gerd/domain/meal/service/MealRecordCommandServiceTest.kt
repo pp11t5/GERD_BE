@@ -6,6 +6,7 @@ import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
 import com.gerd.domain.meal.dto.MealRecordAppendRequestDTO
 import com.gerd.domain.meal.entity.MealFood
@@ -25,6 +26,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -59,6 +61,7 @@ class MealRecordCommandServiceTest {
 
     private lateinit var service: MealCommandService
 
+    private val objectMapper = ObjectMapper()
     private val userId = 1L
     private val foodExternalId = FoodFixture.EXTERNAL_ID
 
@@ -70,7 +73,7 @@ class MealRecordCommandServiceTest {
             foodRepository = foodRepository,
             mealRecordConverter = mealRecordConverter,
             foodJudgmentQueryService = foodJudgmentQueryService,
-            objectMapper = ObjectMapper(),
+            objectMapper = objectMapper,
             transactionManager = transactionManager,
         )
     }
@@ -108,7 +111,12 @@ class MealRecordCommandServiceTest {
             verify(mealFoodRepository).save(captor.capture())
             assertThat(captor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(captor.firstValue.judgedGrade).isEqualTo(JudgmentGrade.CAUTION)
-            assertThat(captor.firstValue.analysisJson).contains("속이 불편할 수 있어요")
+            val analysis = objectMapper.readValue(captor.firstValue.analysisJson, MealAnalysisSnapshotDTO::class.java)
+            assertThat(analysis.judgmentGrade).isEqualTo(JudgmentGrade.CAUTION)
+            assertThat(analysis.triggerAnalysis.ment).isEqualTo("맵고 짤 수 있어요")
+            assertThat(analysis.triggerAnalysis.content).isEqualTo("천천히 드세요")
+            assertThat(analysis.allergyAnalysis.ment).isEqualTo("자극 가능성이 있어요")
+            assertThat(analysis.allergyAnalysis.content).isEqualTo("식후 바로 눕지 마세요")
             assertThat(result.mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
 
             val definitions = argumentCaptor<TransactionDefinition>()
@@ -149,32 +157,37 @@ class MealRecordCommandServiceTest {
     inner class `단일 음식 삭제` {
 
         @Test
-        fun `마지막 음식이면 부모 끼니도 삭제한다`() {
+        fun `삭제 후 남은 음식이 없으면 부모 끼니도 삭제한다`() {
             val mealFood = MealRecordFixture.mealFood()
             val mealRecord = MealRecordFixture.mealRecord()
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID)
             whenever(mealFoodRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
-            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(1)
+            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(0)
             whenever(mealRecordRepository.findByIdAndUserId(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
 
             service.delete(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(), userId)
 
-            verify(mealFoodRepository).delete(mealFood)
-            verify(mealRecordRepository).delete(mealRecord)
+            inOrder(mealFoodRepository, mealRecordRepository) {
+                verify(mealFoodRepository).delete(mealFood)
+                verify(mealFoodRepository).flush()
+                verify(mealFoodRepository).countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)
+                verify(mealRecordRepository).delete(mealRecord)
+            }
         }
 
         @Test
-        fun `다른 음식이 남아 있으면 부모 끼니는 유지한다`() {
+        fun `삭제 후 다른 음식이 남아 있으면 부모 끼니는 유지한다`() {
             val mealFood = MealRecordFixture.mealFood()
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID)
             whenever(mealFoodRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
-            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(2)
+            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(1)
 
             service.delete(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(), userId)
 
             verify(mealFoodRepository).delete(mealFood)
+            verify(mealFoodRepository).flush()
             verify(mealRecordRepository, never()).delete(any())
         }
     }
@@ -186,11 +199,13 @@ class MealRecordCommandServiceTest {
         fun `본인 끼니와 소속 음식을 함께 삭제한다`() {
             val mealRecord = MealRecordFixture.mealRecord()
             val foods = listOf(MealRecordFixture.mealFood())
-            whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_ID.toString())).thenReturn(MealRecordFixture.MEAL_RECORD_ID)
-            whenever(mealRecordRepository.findByIdAndUserId(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
+            whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()))
+                .thenReturn(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID)
+            whenever(mealRecordRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+                .thenReturn(mealRecord)
             whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(foods)
 
-            service.deleteMealRecord(MealRecordFixture.MEAL_RECORD_ID.toString(), userId)
+            service.deleteMealRecord(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(), userId)
 
             verify(mealFoodRepository).deleteAll(foods)
             verify(mealRecordRepository).delete(mealRecord)
@@ -224,7 +239,7 @@ class MealRecordCommandServiceTest {
         mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
         eatenAt = "2026-06-11T12:30:00+09:00",
         food = com.gerd.domain.meal.dto.MealFoodRecordDetailDTO.FoodInfoDTO(
-            mealRecordExternalId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+            mealRecordExternalId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
             name = "된장찌개",
             category = "soup_stew",
         ),

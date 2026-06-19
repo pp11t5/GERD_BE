@@ -23,8 +23,6 @@ import org.hibernate.annotations.OnDeleteAction
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
 import java.time.LocalDateTime
-import java.util.UUID
-
 
 @Entity
 @Table(
@@ -55,7 +53,7 @@ class Symptom(
     val occurredAt: LocalDateTime,
 
     @Column(name = "meal_record_id")
-    val mealRecordId: UUID? = null,
+    val mealRecordId: Long? = null,
 
     @Column(length = 200)
     var memo: String? = null,

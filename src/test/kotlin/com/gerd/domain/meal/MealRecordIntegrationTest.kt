@@ -105,7 +105,10 @@ class MealRecordIntegrationTest @Autowired constructor(
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.result.food.name") { value("통합 된장찌개") }
-                jsonPath("$.result.analysis.personalTitle") { value("속이 불편할 수 있어요") }
+                jsonPath("$.result.analysis.judgmentGrade") { value("CAUTION") }
+                jsonPath("$.result.analysis.triggerAnalysis.ment") { value("맵고 짤 수 있어요") }
+                jsonPath("$.result.analysis.triggerAnalysis.content") { value("자극적인 국물은 역류 증상을 유발할 수 있어요.") }
+                jsonPath("$.result.analysis.allergyAnalysis.ment") { value("정확한 성분은 성분표를 확인해 보세요") }
                 jsonPath("$.result.stateRecord") { value(nullValue()) }
             }
 
@@ -115,14 +118,17 @@ class MealRecordIntegrationTest @Autowired constructor(
                     status { isOk() }
                     jsonPath("$.result.mealFoodId") { value(mealFood.externalId.toString()) }
                     jsonPath("$.result.food.name") { value("통합 된장찌개") }
-                    jsonPath("$.result.analysis.personalTitle") { value("속이 불편할 수 있어요") }
+                    jsonPath("$.result.analysis.judgmentGrade") { value("CAUTION") }
+                    jsonPath("$.result.analysis.triggerAnalysis.ment") { value("맵고 짤 수 있어요") }
+                    jsonPath("$.result.analysis.allergyAnalysis.content") { value("알레르겐 정보가 부족하면 성분표 확인이 필요해요.") }
                     jsonPath("$.result.stateRecord") { value(nullValue()) }
                 }
 
-            mockMvc.get("/api/v1/meal-records/{mealRecordId}", mealFood.mealRecordId)
+            val mealRecord = mealRecordRepository.findById(mealFood.mealRecordId).orElseThrow()
+            mockMvc.get("/api/v1/meal-records/{mealRecordId}", mealRecord.externalId)
                 .andExpect {
                     status { isOk() }
-                    jsonPath("$.result.mealRecordId") { value(mealFood.mealRecordId.toString()) }
+                    jsonPath("$.result.mealRecordId") { value(mealRecord.externalId.toString()) }
                     jsonPath("$.result.meals[0].mealFoodId") { value(mealFood.externalId.toString()) }
                     jsonPath("$.result.meals[0].name") { value("통합 된장찌개") }
                     jsonPath("$.result.meals[0].category") { value("soup_stew") }

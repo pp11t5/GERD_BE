@@ -4,6 +4,7 @@ import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.food.service.FoodAccessPolicy
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
 import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
@@ -22,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDateTime
-import java.util.UUID
 
 @Service
 class MealCommandService(
@@ -58,9 +58,10 @@ class MealCommandService(
     @Transactional
     fun delete(mealFoodId: String, userId: Long) {
         val mealFood = resolveOwnedFood(mealFoodId, userId)
-        val shouldDeleteMealRecord = mealFoodRepository.countByMealRecordId(mealFood.mealRecordId) == 1L
         mealFoodRepository.delete(mealFood)
-        if (shouldDeleteMealRecord) {
+        mealFoodRepository.flush()
+        val remainingFoodCount = mealFoodRepository.countByMealRecordId(mealFood.mealRecordId)
+        if (remainingFoodCount == 0L) {
             mealRecordRepository.findByIdAndUserId(mealFood.mealRecordId, userId)
                 ?.let(mealRecordRepository::delete)
         }
@@ -69,11 +70,11 @@ class MealCommandService(
     // 음식 기록 그룹 삭제
     @Transactional
     fun deleteMealRecord(mealRecordId: String, userId: Long) {
-        val id = mealRecordConverter.parseUuid(mealRecordId)
+        val externalId = mealRecordConverter.parseUuid(mealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealRecord = mealRecordRepository.findByIdAndUserId(id, userId)
+        val mealRecord = mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(id)
+        val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecord.id!!)
         mealFoodRepository.deleteAll(foods)
         mealRecordRepository.delete(mealRecord)
     }
@@ -103,14 +104,13 @@ class MealCommandService(
     }
 
     // 사용자 소유 기록 끼니 ID인지 검증
-    private fun resolveMealRecordId(rawMealRecordId: String?, userId: Long, eatenAt: LocalDateTime): UUID {
-        if (rawMealRecordId == null) return mealRecordRepository.save(MealRecord(userId = userId, eatenAt = eatenAt)).id
-        val mealRecordId = mealRecordConverter.parseUuid(rawMealRecordId)
+    private fun resolveMealRecordId(rawMealRecordId: String?, userId: Long, eatenAt: LocalDateTime): Long {
+        if (rawMealRecordId == null) return mealRecordRepository.save(MealRecord(userId = userId, eatenAt = eatenAt)).id!!
+        val mealRecordExternalId = mealRecordConverter.parseUuid(rawMealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        if (!mealRecordRepository.existsByIdAndUserId(mealRecordId, userId)) {
-            throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        }
-        return mealRecordId
+        val mealRecord = mealRecordRepository.findByExternalIdAndUserId(mealRecordExternalId, userId)
+            ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
+        return mealRecord.id!!
     }
 
     // 사용자 소유 음식 기록인지 검증
@@ -127,10 +127,24 @@ class MealCommandService(
             MealJudgmentSnapshot(
                 grade = judgment.grade,
                 analysisJson = objectMapper.writeValueAsString(
-                    MealAnalysisSnapshotDTO(judgment.personalTitle, judgment.items, judgment.substitutes),
+                    MealAnalysisSnapshotDTO(
+                        judgmentGrade = judgment.grade,
+                        triggerAnalysis = judgment.items.toAnalysisItem(index = 0),
+                        allergyAnalysis = judgment.items.toAnalysisItem(index = 1),
+                    ),
                 ),
             )
         } ?: error("meal judgment transaction returned null")
+
+    private fun List<JudgmentItemDTO>.toAnalysisItem(
+        index: Int,
+    ): MealAnalysisSnapshotDTO.AnalysisItemDTO {
+        val item = getOrNull(index)
+        return MealAnalysisSnapshotDTO.AnalysisItemDTO(
+            ment = item?.emphasis.orEmpty(),
+            content = item?.body.orEmpty(),
+        )
+    }
 
     private data class MealJudgmentSnapshot(
         val grade: JudgmentGrade,

@@ -11,6 +11,7 @@ import com.gerd.domain.meal.dto.StateRecordDTO
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.exception.MealErrorCode
+import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.entity.Symptom
 import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Component
@@ -27,6 +28,7 @@ import java.util.UUID
 class MealRecordConverter(
     private val foodRepository: FoodRepository,
     private val foodCategoryReader: FoodCategoryReader,
+    private val mealRecordRepository: MealRecordRepository,
     private val objectMapper: ObjectMapper,
 ) {
 
@@ -36,7 +38,7 @@ class MealRecordConverter(
             mealFoodId = mealFood.externalId.toString(),
             eatenAt = formatEatenAt(mealFood.eatenAt),
             food = MealFoodRecordDetailDTO.FoodInfoDTO(
-                mealRecordExternalId = mealFood.mealRecordId.toString(),
+                mealRecordExternalId = loadMealRecordExternalId(mealFood.mealRecordId),
                 name = food.name,
                 category = category,
             ),
@@ -53,7 +55,7 @@ class MealRecordConverter(
             mealFoodId = mealFood.externalId.toString(),
             eatenAt = formatEatenAt(mealFood.eatenAt),
             food = MealFoodRecordDetailDTO.FoodInfoDTO(
-                mealRecordExternalId = mealFood.mealRecordId.toString(),
+                mealRecordExternalId = loadMealRecordExternalId(mealFood.mealRecordId),
                 name = food.name,
                 category = category,
             ),
@@ -76,7 +78,7 @@ class MealRecordConverter(
             )
         }
         return MealRecordDetailDTO(
-            mealRecordId = mealRecord.id.toString(),
+            mealRecordId = mealRecord.externalId.toString(),
             eatenAt = formatEatenAt(mealRecord.eatenAt),
             meals = foods.sortedBy { it.eatenAt }.map { mealFood ->
                 val food = foodMap[mealFood.foodId]
@@ -108,7 +110,7 @@ class MealRecordConverter(
                         val recordFoods = (foodsByRecord[record.id] ?: emptyList()).sortedBy { it.eatenAt }
                         val firstFood = recordFoods.firstOrNull()?.let { foodMap[it.foodId] }
                         MealCandidatesDTO.MealCandidateItem(
-                            mealRecordId = record.id.toString(),
+                            mealRecordId = record.externalId.toString(),
                             eatenAt = formatEatenAt(record.eatenAt),
                             representativeFood = MealCandidatesDTO.RepresentativeFood(
                                 name = firstFood?.name ?: "",
@@ -148,6 +150,12 @@ class MealRecordConverter(
 
     private fun loadFoodsIncludingDeleted(ids: Collection<Long>): List<Food> =
         if (ids.isEmpty()) emptyList() else foodRepository.findAllByIdsIncludingDeleted(ids)
+
+    private fun loadMealRecordExternalId(mealRecordId: Long): String =
+        mealRecordRepository.findById(mealRecordId)
+            .orElseThrow { error("meal food references missing meal record $mealRecordId") }
+            .externalId
+            .toString()
 
     fun formatEatenAt(eatenAt: LocalDateTime): String =
         eatenAt.atZone(SEOUL).toOffsetDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)

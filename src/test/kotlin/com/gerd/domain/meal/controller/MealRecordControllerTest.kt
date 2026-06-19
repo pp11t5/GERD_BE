@@ -2,6 +2,8 @@ package com.gerd.domain.meal.controller
 
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.food.exception.FoodErrorCode
+import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
@@ -58,6 +60,11 @@ class MealRecordControllerTest @Autowired constructor(
                 jsonPath("$.code") { value("COMMON200") }
                 jsonPath("$.result.mealFoodId") { value(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()) }
                 jsonPath("$.result.food.name") { value("된장찌개") }
+                jsonPath("$.result.analysis.judgmentGrade") { value("CAUTION") }
+                jsonPath("$.result.analysis.triggerAnalysis.ment") { value("맵고 짤 수 있어요") }
+                jsonPath("$.result.analysis.triggerAnalysis.content") { value("천천히 드세요") }
+                jsonPath("$.result.analysis.allergyAnalysis.ment") { value("알레르기 성분을 확인해 주세요") }
+                jsonPath("$.result.analysis.allergyAnalysis.content") { value("성분표 확인이 필요해요") }
             }
         }
 
@@ -88,7 +95,12 @@ class MealRecordControllerTest @Autowired constructor(
             mockMvc.get("/api/v1/meal-records/foods/${MealRecordFixture.MEAL_FOOD_EXTERNAL_ID}")
                 .andExpect {
                     status { isOk() }
+                    jsonPath("$.isSuccess") { value(true) }
+                    jsonPath("$.code") { value("COMMON200") }
                     jsonPath("$.result.mealFoodId") { value(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()) }
+                    jsonPath("$.result.analysis.judgmentGrade") { value("CAUTION") }
+                    jsonPath("$.result.analysis.triggerAnalysis.ment") { value("맵고 짤 수 있어요") }
+                    jsonPath("$.result.analysis.allergyAnalysis.content") { value("성분표 확인이 필요해요") }
                 }
         }
 
@@ -97,10 +109,10 @@ class MealRecordControllerTest @Autowired constructor(
         fun `끼니 상세를 조회한다`() {
             whenever(mealQueryService.getGroupDetail(any(), any())).thenReturn(mealRecordDetail())
 
-            mockMvc.get("/api/v1/meal-records/${MealRecordFixture.MEAL_RECORD_ID}")
+            mockMvc.get("/api/v1/meal-records/${MealRecordFixture.MEAL_RECORD_EXTERNAL_ID}")
                 .andExpect {
                     status { isOk() }
-                    jsonPath("$.result.mealRecordId") { value(MealRecordFixture.MEAL_RECORD_ID.toString()) }
+                    jsonPath("$.result.mealRecordId") { value(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()) }
                     jsonPath("$.result.meals[0].mealFoodId") { value(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()) }
                     jsonPath("$.result.meals[0].name") { value("된장찌개") }
                 }
@@ -115,7 +127,7 @@ class MealRecordControllerTest @Autowired constructor(
                         date = "2026-06-11",
                         meals = listOf(
                             MealCandidatesDTO.MealCandidateItem(
-                                mealRecordId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+                                mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
                                 representativeFood = MealCandidatesDTO.RepresentativeFood("된장찌개", "soup_stew"),
                                 otherFoodCount = 1,
                                 eatenAt = "2026-06-11T12:30:00+09:00",
@@ -128,7 +140,7 @@ class MealRecordControllerTest @Autowired constructor(
             mockMvc.get("/api/v1/meal-records/candidates")
                 .andExpect {
                     status { isOk() }
-                    jsonPath("$.result[0].meals[0].mealRecordId") { value(MealRecordFixture.MEAL_RECORD_ID.toString()) }
+                    jsonPath("$.result[0].meals[0].mealRecordId") { value(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()) }
                     jsonPath("$.result[0].meals[0].otherFoodCount") { value(1) }
                 }
         }
@@ -153,7 +165,7 @@ class MealRecordControllerTest @Autowired constructor(
             whenever(mealCommandService.deleteMealRecord(any(), any()))
                 .thenThrow(GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND))
 
-            mockMvc.delete("/api/v1/meal-records/${MealRecordFixture.MEAL_RECORD_ID}")
+            mockMvc.delete("/api/v1/meal-records/${MealRecordFixture.MEAL_RECORD_EXTERNAL_ID}")
                 .andExpect {
                     status { isNotFound() }
                     jsonPath("$.code") { value("MEAL404_2") }
@@ -165,16 +177,28 @@ class MealRecordControllerTest @Autowired constructor(
         mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
         eatenAt = "2026-06-11T12:30:00+09:00",
         food = MealFoodRecordDetailDTO.FoodInfoDTO(
-            mealRecordExternalId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+            mealRecordExternalId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
             name = "된장찌개",
             category = "soup_stew",
         ),
-        analysis = null,
+        analysis = mealAnalysis(),
         stateRecord = null,
     )
 
+    private fun mealAnalysis() = MealAnalysisSnapshotDTO(
+        judgmentGrade = JudgmentGrade.CAUTION,
+        triggerAnalysis = MealAnalysisSnapshotDTO.AnalysisItemDTO(
+            ment = "맵고 짤 수 있어요",
+            content = "천천히 드세요",
+        ),
+        allergyAnalysis = MealAnalysisSnapshotDTO.AnalysisItemDTO(
+            ment = "알레르기 성분을 확인해 주세요",
+            content = "성분표 확인이 필요해요",
+        ),
+    )
+
     private fun mealRecordDetail() = MealRecordDetailDTO(
-        mealRecordId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+        mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
         eatenAt = "2026-06-11T12:30:00+09:00",
         meals = listOf(
             MealRecordDetailDTO.MealFoodDetailDTO(

@@ -59,7 +59,7 @@ class MealRecordQueryServiceTest {
         fun `본인 끼니면 증상과 함께 변환한다`() {
             val mealRecord = MealRecordFixture.mealRecord()
             val detail = com.gerd.domain.meal.dto.MealRecordDetailDTO(
-                mealRecordId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+                mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
                 eatenAt = "2026-06-11T12:30:00+09:00",
                 meals = listOf(
                     com.gerd.domain.meal.dto.MealRecordDetailDTO.MealFoodDetailDTO(
@@ -72,15 +72,17 @@ class MealRecordQueryServiceTest {
                 stateRecords = null,
             )
             val foods = listOf(MealRecordFixture.mealFood())
-            whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_ID.toString())).thenReturn(MealRecordFixture.MEAL_RECORD_ID)
-            whenever(mealRecordRepository.findByIdAndUserId(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
+            whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()))
+                .thenReturn(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID)
+            whenever(mealRecordRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+                .thenReturn(mealRecord)
             whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(foods)
             whenever(symptomRepository.findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(emptyList())
             whenever(mealRecordConverter.toGroupDetail(mealRecord, foods, emptyList())).thenReturn(detail)
 
-            val result = service.getGroupDetail(MealRecordFixture.MEAL_RECORD_ID.toString(), userId)
+            val result = service.getGroupDetail(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(), userId)
 
-            assertThat(result.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID.toString())
+            assertThat(result.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString())
             assertThat(result.meals).hasSize(1)
             verify(mealFoodRepository).findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)
             verify(symptomRepository).findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)
@@ -103,18 +105,18 @@ class MealRecordQueryServiceTest {
 
         @Test
         fun `증상에 연결되지 않은 끼니만 후보로 변환한다`() {
-            val linked = MealRecordFixture.mealRecord(id = java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))
+            val linked = MealRecordFixture.mealRecord(id = 11L)
             val unlinked = MealRecordFixture.mealRecord()
             val foods = listOf(MealRecordFixture.mealFood())
             whenever(mealRecordRepository.findByUserIdAndEatenAtAfter(any(), any())).thenReturn(listOf(linked, unlinked))
-            whenever(symptomRepository.findLinkedMealRecordIdsByUserId(userId)).thenReturn(listOf(linked.id))
-            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id)))
+            whenever(symptomRepository.findLinkedMealRecordIdsByUserId(userId)).thenReturn(listOf(linked.id!!))
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id!!)))
                 .thenReturn(foods)
             whenever(mealRecordConverter.toCandidates(listOf(unlinked), foods)).thenReturn(emptyList())
 
             service.getCandidates(userId)
 
-            verify(mealFoodRepository).findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id))
+            verify(mealFoodRepository).findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id!!))
         }
     }
 }

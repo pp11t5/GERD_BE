@@ -40,7 +40,7 @@ interface MealRecordApi {
 
     @Operation(
         summary = "식사 음식 단건 조회",
-        description = "soft-delete된 음식도 기록은 그대로 반환",
+        description = "끼니 조회에서 연결, mealFoodId로 단건 조회",
     )
     @ApiErrorExample(MealErrorCode::class, "MEAL_FOOD_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
@@ -51,7 +51,12 @@ interface MealRecordApi {
         @PathVariable mealFoodId: String,
     ): ResponseEntity<ApiResponse<MealFoodRecordDetailDTO>>
 
-    @Operation(summary = "식사 음식 삭제")
+    @Operation(
+        summary = "식사 음식 삭제",
+        description = """
+            mealFoodId로 단건 삭제, 끼니에 음식이 1개만 남으면 끼니도 함께 삭제됩니다. 
+        """
+    )
     @ApiErrorExample(MealErrorCode::class, "MEAL_FOOD_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "삭제 성공"))
     @DeleteMapping("/foods/{mealFoodId}")
@@ -63,7 +68,7 @@ interface MealRecordApi {
 
     @Operation(
         summary = "증상 미연결 끼니 목록 조회",
-        description = "최근 24시간 이내 식사 중 증상 기록이 연결되지 않은 끼니를 날짜별로 반환. 증상 기록 시 원인 식사 선택에 사용",
+        description = "최근 24시간 이내 식사 중 증상 기록이 연결되지 않은 끼니를 날짜별로 반환, 증상 기록 시 원인 식사 선택에 사용",
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공(없으면 빈 배열)"))
     @GetMapping("/candidates")

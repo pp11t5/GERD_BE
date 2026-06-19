@@ -35,12 +35,13 @@ class MealQueryService(
 
     // 음식 기록 그룹 상세 조회
     fun getGroupDetail(mealRecordId: String, userId: Long): MealRecordDetailDTO {
-        val id = mealRecordConverter.parseUuid(mealRecordId)
+        val externalId = mealRecordConverter.parseUuid(mealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealRecord = mealRecordRepository.findByIdAndUserId(id, userId)
+        val mealRecord = mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(id)
-        val symptoms = symptomRepository.findByMealRecordId(id)
+        val internalMealRecordId = mealRecord.id!!
+        val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(internalMealRecordId)
+        val symptoms = symptomRepository.findByMealRecordId(internalMealRecordId)
         return mealRecordConverter.toGroupDetail(mealRecord, foods, symptoms)
     }
 
@@ -52,7 +53,7 @@ class MealQueryService(
         val linkedIds = symptomRepository.findLinkedMealRecordIdsByUserId(userId).toSet()
         val candidates = mealRecords.filter { it.id !in linkedIds }
         if (candidates.isEmpty()) return emptyList()
-        val foods = mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(candidates.map { it.id })
+        val foods = mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(candidates.map { it.id!! })
         return mealRecordConverter.toCandidates(candidates, foods)
     }
 }

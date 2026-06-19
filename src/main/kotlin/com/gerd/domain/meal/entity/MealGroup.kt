@@ -1,15 +1,16 @@
 package com.gerd.domain.meal.entity
 
-import com.gerd.global.common.entity.BaseTimeEntity
+import com.gerd.global.common.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
 import java.time.LocalDateTime
-import java.util.UUID
 
 /**
  * 식사 그룹 기록
@@ -32,6 +33,6 @@ class MealRecord(
     var deletedAt: LocalDateTime? = null,
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
-    val id: UUID = UUID.randomUUID(),
-) : BaseTimeEntity()
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long? = null,
+) : BaseEntity()

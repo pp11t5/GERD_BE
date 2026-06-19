@@ -5,8 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.time.LocalDateTime
 import java.util.UUID
 
-interface MealRecordRepository : JpaRepository<MealRecord, UUID> {
-    fun existsByIdAndUserId(id: UUID, userId: Long): Boolean
-    fun findByIdAndUserId(id: UUID, userId: Long): MealRecord?
+interface MealRecordRepository : JpaRepository<MealRecord, Long> {
+    fun existsByExternalIdAndUserId(externalId: UUID, userId: Long): Boolean
+    fun findByExternalIdAndUserId(externalId: UUID, userId: Long): MealRecord?
+    fun findByIdAndUserId(id: Long, userId: Long): MealRecord?
     fun findByUserIdAndEatenAtAfter(userId: Long, cutoff: LocalDateTime): List<MealRecord>
 }

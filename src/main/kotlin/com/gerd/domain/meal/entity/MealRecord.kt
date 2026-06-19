@@ -14,7 +14,6 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
 import java.time.LocalDateTime
-import java.util.UUID
 
 /**
  * 식사 음식 단일 기록
@@ -37,7 +36,7 @@ class MealFood(
     val foodId: Long,
 
     @Column(name = "meal_record_id", nullable = false)
-    val mealRecordId: UUID,
+    val mealRecordId: Long,
 
     @Column(name = "eaten_at", nullable = false)
     val eatenAt: LocalDateTime,

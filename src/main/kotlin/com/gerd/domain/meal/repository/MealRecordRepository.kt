@@ -8,10 +8,10 @@ interface MealFoodRepository : JpaRepository<MealFood, Long> {
 
     fun findByExternalIdAndUserId(externalId: UUID, userId: Long): MealFood?
 
-    fun findByMealRecordIdOrderByEatenAtAsc(mealRecordId: UUID): List<MealFood>
+    fun findByMealRecordIdOrderByEatenAtAsc(mealRecordId: Long): List<MealFood>
 
-    fun findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(mealRecordIds: List<UUID>): List<MealFood>
+    fun findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(mealRecordIds: List<Long>): List<MealFood>
 
-    fun countByMealRecordId(mealRecordId: UUID): Long
+    fun countByMealRecordId(mealRecordId: Long): Long
 
 }

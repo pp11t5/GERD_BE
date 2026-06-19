@@ -12,7 +12,6 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
 import java.time.LocalDateTime
-import java.util.UUID
 
 @ActiveProfiles("test")
 @DataJpaTest
@@ -27,7 +26,7 @@ class MealRecordRepositoryTest @Autowired constructor(
 
         @Test
         fun `mealRecordId로 소속 음식을 먹은 시각 오름차순 조회한다`() {
-            val recordId = mealRecordRepository.save(mealRecord()).id
+            val recordId = mealRecordRepository.save(mealRecord()).id!!
             val later = mealFood(mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 13, 0))
             val earlier = mealFood(mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 12, 0))
             mealFoodRepository.saveAll(listOf(later, earlier))
@@ -42,7 +41,7 @@ class MealRecordRepositoryTest @Autowired constructor(
 
         @Test
         fun `mealRecordId 기준 음식 개수를 센다`() {
-            val recordId = mealRecordRepository.save(mealRecord()).id
+            val recordId = mealRecordRepository.save(mealRecord()).id!!
             mealFoodRepository.saveAll(
                 listOf(
                     mealFood(mealRecordId = recordId),
@@ -57,15 +56,14 @@ class MealRecordRepositoryTest @Autowired constructor(
     }
 
     private fun mealRecord(
-        id: UUID = UUID.randomUUID(),
         userId: Long = 1L,
         eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
-    ) = MealRecord(id = id, userId = userId, eatenAt = eatenAt)
+    ) = MealRecord(userId = userId, eatenAt = eatenAt)
 
     private fun mealFood(
         userId: Long = 1L,
         foodId: Long = 1L,
-        mealRecordId: UUID,
+        mealRecordId: Long,
         eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
     ) = MealFood(
         userId = userId,
