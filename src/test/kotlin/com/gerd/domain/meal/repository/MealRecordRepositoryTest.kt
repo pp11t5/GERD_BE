@@ -1,12 +1,10 @@
 package com.gerd.domain.meal.repository
 
-import com.gerd.domain.auth.entity.User
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.global.config.QuerydslTestConfig
-import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -16,143 +14,64 @@ import org.springframework.test.context.ActiveProfiles
 import java.time.LocalDateTime
 import java.util.UUID
 
-@DataJpaTest
 @ActiveProfiles("test")
+@DataJpaTest
 @Import(QuerydslTestConfig::class)
 class MealRecordRepositoryTest @Autowired constructor(
+    private val mealFoodRepository: MealFoodRepository,
     private val mealRecordRepository: MealRecordRepository,
-    private val em: EntityManager,
 ) {
 
-    private lateinit var user: User
-    private lateinit var otherUser: User
-
-    @BeforeEach
-    fun setUp() {
-        user = User(email = "user@test.com")
-        otherUser = User(email = "other@test.com")
-        em.persist(user)
-        em.persist(otherUser)
-        em.flush()
-    }
-
-    private fun newRecord(
-        eatenAt: LocalDateTime,
-        user: User = this.user,
-        mealGroupId: UUID = UUID.randomUUID(),
-        judgedGrade: JudgmentGrade? = JudgmentGrade.RECOMMEND,
-        foodId: Long = 10L,
-    ) = MealRecord(
-        user = user,
-        foodId = foodId,
-        mealGroupId = mealGroupId,
-        eatenAt = eatenAt,
-        judgedGrade = judgedGrade,
-    )
-
     @Nested
-    inner class `findDailyRecords` {
+    inner class `MealFood 조회` {
 
         @Test
-        fun `KST 자정 경계 안의 본인 기록만 eatenAt 오름차순으로 조회한다`() {
-            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 23, 59, 59)))
-            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 0, 0, 0)))
-            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 12, 0, 0, 0))) // 익일 00:00 제외
-            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 10, 23, 59, 59))) // 전날 제외
-            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 12, 0, 0), user = otherUser)) // 타 유저 제외
-            em.flush()
-            em.clear()
+        fun `mealRecordId로 소속 음식을 먹은 시각 오름차순 조회한다`() {
+            val recordId = mealRecordRepository.save(mealRecord()).id
+            val later = mealFood(mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 13, 0))
+            val earlier = mealFood(mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 12, 0))
+            mealFoodRepository.saveAll(listOf(later, earlier))
 
-            val from = LocalDateTime.of(2026, 6, 11, 0, 0, 0)
-            val to = LocalDateTime.of(2026, 6, 12, 0, 0, 0)
-            val result = mealRecordRepository.findDailyRecords(user.id!!, from, to)
+            val result = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(recordId)
 
             assertThat(result.map { it.eatenAt }).containsExactly(
-                LocalDateTime.of(2026, 6, 11, 0, 0, 0),
-                LocalDateTime.of(2026, 6, 11, 23, 59, 59),
+                LocalDateTime.of(2026, 6, 11, 12, 0),
+                LocalDateTime.of(2026, 6, 11, 13, 0),
             )
         }
 
         @Test
-        fun `해당 날짜에 기록이 없으면 빈 리스트를 반환한다`() {
-            val from = LocalDateTime.of(2026, 6, 11, 0, 0, 0)
-            val to = LocalDateTime.of(2026, 6, 12, 0, 0, 0)
-
-            assertThat(mealRecordRepository.findDailyRecords(user.id!!, from, to)).isEmpty()
-        }
-    }
-
-    @Nested
-    inner class `단건 조회와 소유 검증` {
-
-        @Test
-        fun `본인 기록은 externalId로 조회되고 타인 기록은 조회되지 않는다`() {
-            val saved = mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 12, 30)))
-            em.flush()
-            val externalId = saved.externalId!!
-            em.clear()
-
-            assertThat(mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)).isNotNull()
-            assertThat(mealRecordRepository.findByExternalIdAndUser_Id(externalId, otherUser.id!!)).isNull()
-        }
-
-        @Test
-        fun `끼니 키 존재 여부를 본인 소유 기준으로 판단한다`() {
-            val groupId = UUID.randomUUID()
-            mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 12, 30), mealGroupId = groupId))
-            em.flush()
-            em.clear()
-
-            assertThat(mealRecordRepository.existsByUser_IdAndMealGroupId(user.id!!, groupId)).isTrue()
-            assertThat(mealRecordRepository.existsByUser_IdAndMealGroupId(otherUser.id!!, groupId)).isFalse()
-            assertThat(mealRecordRepository.existsByUser_IdAndMealGroupId(user.id!!, UUID.randomUUID())).isFalse()
-        }
-    }
-
-    @Nested
-    inner class `soft delete` {
-
-        @Test
-        fun `삭제하면 조회에서 제외된다`() {
-            val saved = mealRecordRepository.save(newRecord(LocalDateTime.of(2026, 6, 11, 12, 30)))
-            em.flush()
-            val externalId = saved.externalId!!
-
-            mealRecordRepository.delete(saved)
-            em.flush()
-            em.clear()
-
-            assertThat(mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)).isNull()
-        }
-    }
-
-    @Nested
-    inner class `judgedGrade 스냅샷` {
-
-        @Test
-        fun `등급 enum을 저장하고 복원한다`() {
-            val saved = mealRecordRepository.save(
-                newRecord(LocalDateTime.of(2026, 6, 11, 12, 30), judgedGrade = JudgmentGrade.CAUTION),
+        fun `mealRecordId 기준 음식 개수를 센다`() {
+            val recordId = mealRecordRepository.save(mealRecord()).id
+            mealFoodRepository.saveAll(
+                listOf(
+                    mealFood(mealRecordId = recordId),
+                    mealFood(mealRecordId = recordId, foodId = 2L),
+                ),
             )
-            em.flush()
-            val externalId = saved.externalId!!
-            em.clear()
 
-            val found = mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)
-            assertThat(found?.judgedGrade).isEqualTo(JudgmentGrade.CAUTION)
-        }
+            val count = mealFoodRepository.countByMealRecordId(recordId)
 
-        @Test
-        fun `등급이 null이어도 저장된다`() {
-            val saved = mealRecordRepository.save(
-                newRecord(LocalDateTime.of(2026, 6, 11, 12, 30), judgedGrade = null),
-            )
-            em.flush()
-            val externalId = saved.externalId!!
-            em.clear()
-
-            val found = mealRecordRepository.findByExternalIdAndUser_Id(externalId, user.id!!)
-            assertThat(found?.judgedGrade).isNull()
+            assertThat(count).isEqualTo(2)
         }
     }
+
+    private fun mealRecord(
+        id: UUID = UUID.randomUUID(),
+        userId: Long = 1L,
+        eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
+    ) = MealRecord(id = id, userId = userId, eatenAt = eatenAt)
+
+    private fun mealFood(
+        userId: Long = 1L,
+        foodId: Long = 1L,
+        mealRecordId: UUID,
+        eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
+    ) = MealFood(
+        userId = userId,
+        foodId = foodId,
+        mealRecordId = mealRecordId,
+        eatenAt = eatenAt,
+        judgedGrade = JudgmentGrade.RECOMMEND,
+    )
 }

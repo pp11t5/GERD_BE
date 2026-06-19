@@ -1,0 +1,162 @@
+package com.gerd.domain.meal
+
+import com.gerd.domain.food.entity.Food
+import com.gerd.domain.food.entity.FoodCategory
+import com.gerd.domain.food.entity.FoodCategoryMap
+import com.gerd.domain.food.entity.enums.FoodSource
+import com.gerd.domain.food.entity.enums.FoodVisibility
+import com.gerd.domain.food.repository.FoodCategoryMapRepository
+import com.gerd.domain.food.repository.FoodCategoryRepository
+import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.judgment.client.GeminiClient
+import com.gerd.domain.judgment.dto.LlmJudgmentDTO
+import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.meal.repository.MealFoodRepository
+import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.global.security.WithCustomUser
+import org.hamcrest.Matchers.nullValue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.MediaType
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
+
+@ActiveProfiles("test")
+@SpringBootTest
+@AutoConfigureMockMvc(addFilters = false)
+class MealRecordIntegrationTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val foodRepository: FoodRepository,
+    private val foodCategoryRepository: FoodCategoryRepository,
+    private val foodCategoryMapRepository: FoodCategoryMapRepository,
+    private val mealFoodRepository: MealFoodRepository,
+    private val mealRecordRepository: MealRecordRepository,
+) {
+
+    @MockitoBean
+    private lateinit var geminiClient: GeminiClient
+
+    @AfterEach
+    fun tearDown() {
+        mealFoodRepository.deleteAll()
+        mealRecordRepository.deleteAll()
+        foodCategoryMapRepository.deleteAll()
+        foodCategoryRepository.deleteAll()
+        foodRepository.deleteAll()
+    }
+
+    @Nested
+    inner class `검색-분석-기록-조회 흐름` {
+
+        @Test
+        @WithCustomUser(userId = USER_ID)
+        fun `음식 검색 후 분석 결과가 캐싱되고 식사 기록 조회 시 증상이 없으면 null을 반환한다`() {
+            val food = seedFood()
+            whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment())
+
+            mockMvc.get("/api/v1/foods/search") {
+                param("q", "통합")
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.isSuccess") { value(true) }
+                jsonPath("$.result[0].externalId") { value(food.externalId.toString()) }
+                jsonPath("$.result[0].name") { value("통합 된장찌개") }
+                jsonPath("$.result[0].category") { value("soup_stew") }
+            }
+
+            mockMvc.get("/api/v1/foods/{foodExternalId}/judgment", food.externalId)
+                .andExpect {
+                    status { isOk() }
+                    header { string("X-Cache", "MISS") }
+                    jsonPath("$.result.grade") { value("CAUTION") }
+                    jsonPath("$.result.personalTitle") { value("속이 불편할 수 있어요") }
+                    jsonPath("$.result.items[0].emphasis") { value("맵고 짤 수 있어요") }
+                }
+
+            mockMvc.get("/api/v1/foods/{foodExternalId}/judgment", food.externalId)
+                .andExpect {
+                    status { isOk() }
+                    header { string("X-Cache", "HIT") }
+                    jsonPath("$.result.grade") { value("CAUTION") }
+                    jsonPath("$.result.personalTitle") { value("속이 불편할 수 있어요") }
+                }
+
+            verify(geminiClient, times(1)).generateJudgment(any(), any(), any())
+
+            mockMvc.post("/api/v1/meal-records") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """
+                    {
+                      "foodExternalId": "${food.externalId}",
+                      "eatenAt": "2026-06-11T12:30:00+09:00"
+                    }
+                """.trimIndent()
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.result.food.name") { value("통합 된장찌개") }
+                jsonPath("$.result.analysis.personalTitle") { value("속이 불편할 수 있어요") }
+                jsonPath("$.result.stateRecord") { value(nullValue()) }
+            }
+
+            val mealFood = mealFoodRepository.findAll().single()
+            mockMvc.get("/api/v1/meal-records/foods/{mealFoodId}", mealFood.externalId)
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.result.mealFoodId") { value(mealFood.externalId.toString()) }
+                    jsonPath("$.result.food.name") { value("통합 된장찌개") }
+                    jsonPath("$.result.analysis.personalTitle") { value("속이 불편할 수 있어요") }
+                    jsonPath("$.result.stateRecord") { value(nullValue()) }
+                }
+        }
+    }
+
+    private fun seedFood(): Food {
+        val food = foodRepository.save(
+            Food(
+                name = "통합 된장찌개",
+                source = FoodSource.SEED,
+                visibility = FoodVisibility.PUBLIC,
+                description = "맵고 짠 국물 음식",
+            ),
+        )
+        val category = foodCategoryRepository.save(
+            FoodCategory(
+                code = "soup_stew",
+                displayName = "국/찌개",
+                sortOrder = 1,
+            ),
+        )
+        foodCategoryMapRepository.save(FoodCategoryMap(food = food, foodCategory = category))
+        return foodRepository.findById(food.id!!).orElseThrow()
+    }
+
+    private fun llmJudgment() = LlmJudgmentDTO(
+        grade = JudgmentGrade.CAUTION,
+        personalTitle = "속이 불편할 수 있어요",
+        items = listOf(
+            LlmJudgmentDTO.LlmJudgmentItemDTO(
+                emphasis = "맵고 짤 수 있어요",
+                body = "자극적인 국물은 역류 증상을 유발할 수 있어요.",
+            ),
+            LlmJudgmentDTO.LlmJudgmentItemDTO(
+                emphasis = "정확한 성분은 성분표를 확인해 보세요",
+                body = "알레르겐 정보가 부족하면 성분표 확인이 필요해요.",
+            ),
+        ),
+    )
+
+    companion object {
+        private const val USER_ID = 1L
+    }
+}

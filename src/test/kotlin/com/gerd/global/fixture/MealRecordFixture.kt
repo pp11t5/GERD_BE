@@ -1,7 +1,7 @@
 package com.gerd.global.fixture
 
-import com.gerd.domain.auth.entity.User
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDateTime
@@ -9,30 +9,38 @@ import java.util.UUID
 
 object MealRecordFixture {
 
-    // 기록 단건 식별자 / 끼니 묶음 키 — 응답은 record 필드와 대조하므로 값 자체는 무관
-    val MEAL_EXTERNAL_ID: UUID = UUID.fromString("7f3a0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
-    val MEAL_GROUP_ID: UUID = UUID.fromString("c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+    val MEAL_FOOD_EXTERNAL_ID: UUID = UUID.fromString("7f3a0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+    val MEAL_RECORD_ID: UUID = UUID.fromString("c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
     val EATEN_AT: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30, 0)
 
-    // 끼니/등급/메모 분기를 표현 가능한 식사 기록 — id·externalId는 주입
     fun mealRecord(
+        id: UUID = MEAL_RECORD_ID,
+        userId: Long = 1L,
+        eatenAt: LocalDateTime = EATEN_AT,
+    ): MealRecord = MealRecord(
+        id = id,
+        userId = userId,
+        eatenAt = eatenAt,
+    )
+
+    fun mealFood(
         id: Long = 1L,
-        user: User = User(email = "fixture@test.com"),
+        userId: Long = 1L,
         foodId: Long = 1L,
-        mealGroupId: UUID = MEAL_GROUP_ID,
+        mealRecordId: UUID = MEAL_RECORD_ID,
         eatenAt: LocalDateTime = EATEN_AT,
         judgedGrade: JudgmentGrade? = JudgmentGrade.RECOMMEND,
-        memo: String? = null,
-        externalId: UUID = MEAL_EXTERNAL_ID,
-    ): MealRecord = MealRecord(
-        user = user,
+        analysisJson: String? = null,
+        externalId: UUID = MEAL_FOOD_EXTERNAL_ID,
+    ): MealFood = MealFood(
+        userId = userId,
         foodId = foodId,
-        mealGroupId = mealGroupId,
+        mealRecordId = mealRecordId,
         eatenAt = eatenAt,
         judgedGrade = judgedGrade,
-        memo = memo,
+        analysisJson = analysisJson,
     ).apply {
         ReflectionTestUtils.setField(this, "id", id)
-        this.externalId = externalId // BaseEntity의 public var로 직접 할당
+        this.externalId = externalId
     }
 }

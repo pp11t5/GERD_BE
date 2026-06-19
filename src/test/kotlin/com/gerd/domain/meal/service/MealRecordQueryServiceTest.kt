@@ -1,8 +1,9 @@
 package com.gerd.domain.meal.service
 
-import com.gerd.domain.meal.dto.MealGroupDTO
 import com.gerd.domain.meal.exception.MealErrorCode
+import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.MealRecordFixture
 import org.assertj.core.api.Assertions.assertThat
@@ -13,116 +14,97 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
 class MealRecordQueryServiceTest {
 
     @Mock
+    private lateinit var mealFoodRepository: MealFoodRepository
+
+    @Mock
     private lateinit var mealRecordRepository: MealRecordRepository
 
     @Mock
-    private lateinit var mealRecordAssembler: MealRecordAssembler
+    private lateinit var symptomRepository: SymptomRepository
 
-    private lateinit var service: MealRecordQueryService
+    @Mock
+    private lateinit var mealRecordConverter: MealRecordConverter
 
-    private val userId = 1L
-    private val mealId = MealRecordFixture.MEAL_EXTERNAL_ID
-
-    @org.junit.jupiter.api.BeforeEach
-    fun setUp() {
-        service = MealRecordQueryService(mealRecordRepository, mealRecordAssembler)
+    private val service by lazy {
+        MealQueryService(mealFoodRepository, mealRecordRepository, symptomRepository, mealRecordConverter)
     }
 
+    private val userId = 1L
+
     @Nested
-    inner class `단건 조회` {
+    inner class `음식 기록 상세 조회` {
 
         @Test
-        fun `형식이 잘못된 mealId면 MEAL_NOT_FOUND`() {
-            whenever(mealRecordAssembler.parseUuid("bad")).thenReturn(null)
+        fun `형식이 잘못된 mealFoodId면 MEAL_FOOD_NOT_FOUND`() {
+            whenever(mealRecordConverter.parseUuid("bad")).thenReturn(null)
 
             assertThatThrownBy { service.getDetail("bad", userId) }
                 .isInstanceOf(GeneralException::class.java)
-                .extracting("errorCode").isEqualTo(MealErrorCode.MEAL_NOT_FOUND)
-        }
-
-        @Test
-        fun `기록이 없거나 타인 소유면 MEAL_NOT_FOUND`() {
-            whenever(mealRecordAssembler.parseUuid(mealId.toString())).thenReturn(mealId)
-            whenever(mealRecordRepository.findByExternalIdAndUser_Id(mealId, userId)).thenReturn(null)
-
-            assertThatThrownBy { service.getDetail(mealId.toString(), userId) }
-                .isInstanceOf(GeneralException::class.java)
-                .extracting("errorCode").isEqualTo(MealErrorCode.MEAL_NOT_FOUND)
-        }
-
-        @Test
-        fun `본인 기록이면 상세를 반환한다`() {
-            val record = MealRecordFixture.mealRecord()
-            whenever(mealRecordAssembler.parseUuid(mealId.toString())).thenReturn(mealId)
-            whenever(mealRecordRepository.findByExternalIdAndUser_Id(mealId, userId)).thenReturn(record)
-            whenever(mealRecordAssembler.toDetail(record)).thenReturn(detailStub())
-
-            val result = service.getDetail(mealId.toString(), userId)
-
-            assertThat(result.mealId).isEqualTo(mealId.toString())
+                .extracting("errorCode").isEqualTo(MealErrorCode.MEAL_FOOD_NOT_FOUND)
         }
     }
 
     @Nested
-    inner class `날짜별 조회` {
+    inner class `끼니 상세 조회` {
 
         @Test
-        fun `날짜 경계로 조회해 끼니 단위로 그룹핑한다`() {
-            val day = LocalDate.of(2026, 6, 11)
-            val from = LocalDateTime.of(2026, 6, 11, 0, 0)
-            val to = LocalDateTime.of(2026, 6, 12, 0, 0)
-            val records = listOf(MealRecordFixture.mealRecord())
-            val groups = listOf(groupStub())
-            whenever(mealRecordAssembler.parseDate("2026-06-11")).thenReturn(day)
-            whenever(mealRecordAssembler.toDayRange(day)).thenReturn(from to to)
-            whenever(mealRecordRepository.findDailyRecords(userId, from, to)).thenReturn(records)
-            whenever(mealRecordAssembler.toSummaries(records)).thenReturn(emptyList())
-            whenever(mealRecordAssembler.toGroups(any())).thenReturn(groups)
+        fun `본인 끼니면 증상과 함께 변환한다`() {
+            val mealRecord = MealRecordFixture.mealRecord()
+            val detail = com.gerd.domain.meal.dto.MealRecordDetailDTO(
+                mealId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+                mealGroupId = MealRecordFixture.MEAL_RECORD_ID.toString(),
+                eatenAt = "2026-06-11T12:30:00+09:00",
+                memo = null,
+                stateRecords = null,
+            )
+            whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_ID.toString())).thenReturn(MealRecordFixture.MEAL_RECORD_ID)
+            whenever(mealRecordRepository.findByIdAndUserId(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
+            whenever(symptomRepository.findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(emptyList())
+            whenever(mealRecordConverter.toGroupDetail(mealRecord, emptyList())).thenReturn(detail)
 
-            val result = service.getDaily("2026-06-11", userId)
+            val result = service.getGroupDetail(MealRecordFixture.MEAL_RECORD_ID.toString(), userId)
 
-            assertThat(result).isEqualTo(groups)
-        }
-
-        @Test
-        fun `date 미전달이면 오늘 범위를 사용한다`() {
-            val today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
-            val from = today.atStartOfDay()
-            val to = today.plusDays(1).atStartOfDay()
-            whenever(mealRecordAssembler.parseDate(null)).thenReturn(today)
-            whenever(mealRecordAssembler.toDayRange(today)).thenReturn(from to to)
-            whenever(mealRecordRepository.findDailyRecords(eq(userId), eq(from), eq(to))).thenReturn(emptyList())
-            whenever(mealRecordAssembler.toSummaries(emptyList())).thenReturn(emptyList())
-            whenever(mealRecordAssembler.toGroups(emptyList())).thenReturn(emptyList())
-
-            val result = service.getDaily(null, userId)
-
-            assertThat(result).isEmpty()
+            assertThat(result.mealId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID.toString())
+            verify(symptomRepository).findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)
         }
     }
 
-    private fun groupStub() = MealGroupDTO(
-        mealGroupId = MealRecordFixture.MEAL_GROUP_ID.toString(),
-        eatenAt = "2026-06-11T12:30:00+09:00",
-        records = emptyList(),
-    )
+    @Nested
+    inner class `후보 조회` {
 
-    private fun detailStub() = com.gerd.domain.meal.dto.MealRecordDetailDTO(
-        mealId = mealId.toString(),
-        mealGroupId = MealRecordFixture.MEAL_GROUP_ID.toString(),
-        eatenAt = "2026-06-11T12:30:00+09:00",
-        memo = null,
-        judgedGrade = null,
-        food = com.gerd.domain.meal.dto.MealRecordDetailDTO.MealFoodDetailDTO("x", "음식", "cat", null),
-        stateRecords = emptyList(),
-    )
+        @Test
+        fun `최근 끼니가 없으면 빈 배열을 반환하고 추가 조회하지 않는다`() {
+            whenever(mealRecordRepository.findByUserIdAndEatenAtAfter(any(), any())).thenReturn(emptyList())
+
+            val result = service.getCandidates(userId)
+
+            assertThat(result).isEmpty()
+            verify(symptomRepository, never()).findLinkedMealRecordIdsByUserId(any())
+            verify(mealFoodRepository, never()).findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())
+        }
+
+        @Test
+        fun `증상에 연결되지 않은 끼니만 후보로 변환한다`() {
+            val linked = MealRecordFixture.mealRecord(id = java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))
+            val unlinked = MealRecordFixture.mealRecord()
+            val foods = listOf(MealRecordFixture.mealFood())
+            whenever(mealRecordRepository.findByUserIdAndEatenAtAfter(any(), any())).thenReturn(listOf(linked, unlinked))
+            whenever(symptomRepository.findLinkedMealRecordIdsByUserId(userId)).thenReturn(listOf(linked.id))
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id)))
+                .thenReturn(foods)
+            whenever(mealRecordConverter.toCandidates(listOf(unlinked), foods)).thenReturn(emptyList())
+
+            service.getCandidates(userId)
+
+            verify(mealFoodRepository).findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id))
+        }
+    }
 }
