@@ -1,6 +1,7 @@
 package com.gerd.domain.auth.service
 
 import com.gerd.domain.auth.entity.RefreshToken
+import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.UserStatus
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.RefreshTokenRepository
@@ -77,16 +78,22 @@ class AuthServiceTest {
         }
 
         @Nested
-        inner class `실패` {
+        inner class `신규 생성` {
 
             @Test
-            fun `닉네임에 해당하는 사용자가 없으면 USER_NOT_FOUND를 던진다`() {
+            fun `닉네임에 해당하는 사용자가 없으면 개발용 사용자를 생성하고 토큰을 발급한다`() {
+                val user = UserFixture.user()
                 whenever(userRepository.findByNickname("unknown")).thenReturn(Optional.empty())
+                whenever(userRepository.save(any<User>())).thenReturn(user)
+                whenever(jwtProvider.createAccessToken(user)).thenReturn("access.token")
+                whenever(jwtProvider.createRefreshToken(user))
+                    .thenReturn(JwtProvider.JwtToken("refresh.token", "refresh-jti"))
 
-                assertThatThrownBy { authService.devLogin("unknown") }
-                    .isInstanceOf(GeneralException::class.java)
-                    .extracting("errorCode")
-                    .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
+                val result = authService.devLogin("unknown")
+
+                assertThat(result.accessToken).isEqualTo("access.token")
+                assertThat(result.refreshToken).isEqualTo("refresh.token")
+                assertThat(result.userId).isEqualTo("1")
             }
         }
     }

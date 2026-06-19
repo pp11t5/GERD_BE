@@ -1,13 +1,20 @@
 package com.gerd.domain.food.service
 
+import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
+import com.gerd.domain.food.repository.FoodCategoryRepository
 import org.springframework.stereotype.Component
 
 // 검색·최근 응답 조립 시 음식별 대표 카테고리 code를 한 번에 로딩해 N+1을 막는다 (두 서비스 공용)
 @Component
 class FoodCategoryReader(
     private val foodCategoryMapRepository: FoodCategoryMapRepository,
+    private val foodCategoryRepository: FoodCategoryRepository,
 ) {
+
+    fun getAll(): List<FoodCategoryDTO> =
+        foodCategoryRepository.findAllByOrderBySortOrderAsc()
+            .map { FoodCategoryDTO(code = it.code, displayName = it.displayName) }
 
     /**
      * 음식 1건당 대표 카테고리 code 1개를 반환한다 (분류가 없는 음식은 map에서 제외).

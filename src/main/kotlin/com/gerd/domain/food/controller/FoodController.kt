@@ -2,8 +2,10 @@ package com.gerd.domain.food.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.food.dto.AddRecentRequestDTO
+import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
+import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.food.service.FoodSearchService
 import com.gerd.domain.food.service.RecentFoodService
 import com.gerd.global.annotation.CurrentUser
@@ -18,7 +20,15 @@ import org.springframework.web.bind.annotation.RestController
 class FoodController(
     private val foodSearchService: FoodSearchService,
     private val recentFoodService: RecentFoodService,
+    private val foodCategoryReader: FoodCategoryReader,
 ) : FoodApi {
+
+    override fun getCategories(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<List<FoodCategoryDTO>>> =
+        ResponseEntity
+            .status(CommonSuccessCode.OK.httpStatus)
+            .body(ApiResponse.onSuccess(foodCategoryReader.getAll(), CommonSuccessCode.OK))
 
     override fun search(
         @CurrentUser userDetails: CustomUserDetails,
