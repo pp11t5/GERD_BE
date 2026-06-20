@@ -1,5 +1,6 @@
 package com.gerd.global.fixture
 
+import com.gerd.domain.auth.entity.User
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
@@ -16,10 +17,10 @@ object MealRecordFixture {
 
     fun mealRecord(
         id: Long = MEAL_RECORD_ID,
-        userId: Long = 1L,
+        user: User = UserFixture.user(),
         eatenAt: LocalDateTime = EATEN_AT,
     ): MealRecord = MealRecord(
-        userId = userId,
+        user = user,
         eatenAt = eatenAt,
     ).apply {
         ReflectionTestUtils.setField(this, "id", id)
@@ -28,7 +29,7 @@ object MealRecordFixture {
 
     fun mealFood(
         id: Long = 1L,
-        userId: Long = 1L,
+        user: User = UserFixture.user(),
         foodId: Long = 1L,
         mealRecordId: Long = MEAL_RECORD_ID,
         eatenAt: LocalDateTime = EATEN_AT,
@@ -36,7 +37,7 @@ object MealRecordFixture {
         analysisJson: String? = null,
         externalId: UUID = MEAL_FOOD_EXTERNAL_ID,
     ): MealFood = MealFood(
-        userId = userId,
+        user = user,
         foodId = foodId,
         mealRecordId = mealRecordId,
         eatenAt = eatenAt,

@@ -8,14 +8,15 @@ import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
 import com.gerd.domain.food.repository.FoodCategoryRepository
 import com.gerd.domain.food.repository.FoodRepository
-import com.gerd.domain.judgment.client.GeminiClient
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import com.gerd.domain.judgment.service.JudgmentGeminiAdapter
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.global.security.WithCustomUser
 import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -25,6 +26,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -42,10 +44,25 @@ class MealRecordIntegrationTest @Autowired constructor(
     private val foodCategoryMapRepository: FoodCategoryMapRepository,
     private val mealFoodRepository: MealFoodRepository,
     private val mealRecordRepository: MealRecordRepository,
+    private val jdbcTemplate: JdbcTemplate,
 ) {
 
     @MockitoBean
-    private lateinit var geminiClient: GeminiClient
+    private lateinit var judgmentGeminiAdapter: JudgmentGeminiAdapter
+
+    @BeforeEach
+    fun setUp() {
+        jdbcTemplate.update(
+            """
+            INSERT INTO users (user_id, external_id, email, role, status)
+            VALUES (?, ?::uuid, ?, 'USER', 'ACTIVE')
+            ON CONFLICT (user_id) DO NOTHING
+            """.trimIndent(),
+            USER_ID,
+            "11111111-1111-1111-1111-111111111111",
+            "meal-integration@test.com",
+        )
+    }
 
     @AfterEach
     fun tearDown() {
@@ -54,6 +71,7 @@ class MealRecordIntegrationTest @Autowired constructor(
         foodCategoryMapRepository.deleteAll()
         foodCategoryRepository.deleteAll()
         foodRepository.deleteAll()
+        jdbcTemplate.update("DELETE FROM users WHERE user_id = ?", USER_ID)
     }
 
     @Nested
@@ -63,7 +81,7 @@ class MealRecordIntegrationTest @Autowired constructor(
         @WithCustomUser(userId = USER_ID)
         fun `음식 검색 후 분석 결과가 캐싱되고 식사 기록 조회 시 증상이 없으면 null을 반환한다`() {
             val food = seedFood()
-            whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment())
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment())
 
             mockMvc.get("/api/v1/foods/search") {
                 param("q", "통합")
@@ -92,7 +110,7 @@ class MealRecordIntegrationTest @Autowired constructor(
                     jsonPath("$.result.personalTitle") { value("속이 불편할 수 있어요") }
                 }
 
-            verify(geminiClient, times(1)).generateJudgment(any(), any(), any())
+            verify(judgmentGeminiAdapter, times(1)).generateJudgment(any(), any(), any())
 
             mockMvc.post("/api/v1/meal-records") {
                 contentType = MediaType.APPLICATION_JSON
