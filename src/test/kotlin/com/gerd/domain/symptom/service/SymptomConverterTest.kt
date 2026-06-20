@@ -14,6 +14,20 @@ class SymptomConverterTest {
     private val converter = SymptomConverter(ObjectMapper())
 
     @Nested
+    inner class `발생 시각 파싱` {
+
+        @Test
+        fun `값이 없으면 서버 현재 시각을 사용한다`() {
+            val before = java.time.LocalDateTime.now().minusSeconds(1)
+
+            val result = converter.parseOccurredAt(null)
+
+            val after = java.time.LocalDateTime.now().plusSeconds(1)
+            assertThat(result).isBetween(before, after)
+        }
+    }
+
+    @Nested
     inner class `상세 응답 변환` {
 
         @Test

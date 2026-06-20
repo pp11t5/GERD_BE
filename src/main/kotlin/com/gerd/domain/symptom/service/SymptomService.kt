@@ -76,7 +76,7 @@ class SymptomService(
             userId,
         )
         symptom.update(
-            symptomState = request.symptomState ?: throw GeneralException(SymptomErrorCode.SYMPTOM_NOT_FOUND),
+            symptomState = request.symptomState ?: throw GeneralException(CommonErrorCode.INVALID_REQUEST),
             symptomTypes = request.symptomTypes,
             occurredAt = symptomConverter.parseOccurredAt(request.occurredAt),
             mealRecordId = mealRecordId,

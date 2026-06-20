@@ -17,6 +17,7 @@ import com.gerd.domain.symptom.entity.enums.SymptomType
 import com.gerd.domain.symptom.exception.SymptomErrorCode
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
+import com.gerd.global.apiPayload.code.CommonErrorCode
 import com.gerd.global.fixture.FoodFixture
 import com.gerd.global.fixture.MealRecordFixture
 import com.gerd.global.fixture.SymptomFixture
@@ -181,6 +182,26 @@ class SymptomServiceTest {
             assertThat(symptom.analysisVersion).isEqualTo(2L)
             verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
         }
+
+        @Test
+        fun `전체 수정에서 증상 상태가 없으면 INVALID_REQUEST`() {
+            val symptom = SymptomFixture.symptom(isAnalysisDirty = false)
+            whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+                .thenReturn(MealRecordFixture.mealRecord())
+
+            assertThatThrownBy {
+                service.update(
+                    SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(),
+                    updateRequest(symptomState = null),
+                    userId,
+                )
+            }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode").isEqualTo(CommonErrorCode.INVALID_REQUEST)
+
+            verify(symptomPatternRefreshService, never()).refreshAsync(any(), any())
+        }
     }
 
     @Nested
@@ -224,8 +245,10 @@ class SymptomServiceTest {
         memo = "속이 편했어요",
     )
 
-    private fun updateRequest() = SymptomUpdateRequestDTO(
-        symptomState = SymptomState.UNCOMFORTABLE,
+    private fun updateRequest(
+        symptomState: SymptomState? = SymptomState.UNCOMFORTABLE,
+    ) = SymptomUpdateRequestDTO(
+        symptomState = symptomState,
         symptomTypes = setOf(SymptomType.ACID_REFLUX),
         occurredAt = "2026-05-12T19:30:00+09:00",
         mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),

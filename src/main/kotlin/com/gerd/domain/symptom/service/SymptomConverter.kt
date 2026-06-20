@@ -18,7 +18,7 @@ class SymptomConverter(
 ) {
 
     fun parseOccurredAt(raw: String?): LocalDateTime {
-        if (raw == null) throw GeneralException(SymptomErrorCode.INVALID_DATE_TIME)
+        if (raw == null) return LocalDateTime.now()
         return try {
             OffsetDateTime.parse(raw).toLocalDateTime()
         } catch (_: DateTimeParseException) {
