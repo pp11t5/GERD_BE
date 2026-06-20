@@ -1,5 +1,6 @@
 package com.gerd.domain.judgment.service
 
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodAllergenRepository
@@ -9,6 +10,7 @@ import com.gerd.domain.food.repository.FoodTriggerRepository
 import com.gerd.domain.food.service.FoodAccessPolicy
 import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.JudgmentContext
+import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
@@ -16,9 +18,13 @@ import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
 import com.gerd.domain.onboarding.repository.UserTriggerRepository
+import com.gerd.domain.symptom.entity.enums.SymptomState
+import com.gerd.domain.symptom.repository.SymptomMealPatternRow
+import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.UUID
 
 /**
@@ -30,6 +36,7 @@ import java.util.UUID
 @Component
 @Transactional(readOnly = true)
 class JudgmentContextReader(
+    private val userRepository: UserRepository,
     private val foodRepository: FoodRepository,
     private val foodTriggerRepository: FoodTriggerRepository,
     private val foodAllergenRepository: FoodAllergenRepository,
@@ -39,6 +46,7 @@ class JudgmentContextReader(
     private val userAllergenRepository: UserAllergenRepository,
     private val userMedicationRepository: UserMedicationRepository,
     private val userSymptomRepository: UserSymptomRepository,
+    private val symptomRepository: SymptomRepository,
 ) {
 
     fun load(foodExternalId: String, userId: Long): JudgmentContext {
@@ -55,6 +63,7 @@ class JudgmentContextReader(
                 category = null,
                 foodTriggers = emptyList(),
                 foodAllergens = emptyList(),
+                nickname = userRepository.findById(userId).map { it.nickname }.orElse(null),
                 userTriggers = emptyList(),
                 userAllergens = emptyList(),
                 medications = emptyList(),
@@ -63,23 +72,28 @@ class JudgmentContextReader(
         }
 
         val foodId = requireNotNull(food.id) { "영속 음식은 id를 가진다" }
+        val category = foodCategoryReader.loadPrimaryByFoodIds(listOf(foodId))[foodId]
+        val nickname = userRepository.findById(userId).map { it.nickname }.orElse(null)
         return JudgmentContext(
             food = food,
-            category = foodCategoryReader.loadPrimaryByFoodIds(listOf(foodId))[foodId],
+            category = category,
             foodTriggers = foodTriggerRepository.findTriggerLabelsByFoodId(foodId)
                 .map { TagDTO(it.code, it.displayName) },
             foodAllergens = foodAllergenRepository.findAllergensByFoodId(foodId)
                 .map { TagDTO(it.code, it.displayName) },
+            nickname = nickname,
             userTriggers = userTriggerRepository.findTriggerLabelsByUserId(userId)
                 .map { TagDTO(it.code, it.displayName) },
             userAllergens = userAllergenRepository.findAllergensByUserId(userId)
                 .map { TagDTO(it.code, it.displayName) },
             medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },
             symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
+            history = loadHistory(userId, food.name, category),
         )
     }
 
     fun loadUserContext(userId: Long): UserContext = UserContext(
+        nickname = userRepository.findById(userId).map { it.nickname }.orElse(null),
         userTriggers = userTriggerRepository.findTriggerLabelsByUserId(userId).map { TagDTO(it.code, it.displayName) },
         userAllergens = userAllergenRepository.findAllergensByUserId(userId).map { TagDTO(it.code, it.displayName) },
         medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },
@@ -114,4 +128,50 @@ class JudgmentContextReader(
         } catch (e: IllegalArgumentException) {
             null
         }
+
+    private fun loadHistory(userId: Long, foodName: String, category: String?): LlmInputSnapshotDTO.HistorySnapshotDTO {
+        val rows = symptomRepository.findLinkedRows(userId, LocalDateTime.now().minusDays(HISTORY_WINDOW_DAYS.toLong()))
+            .filter { row -> row.foodName == foodName || (category != null && row.category == category) }
+        val distinctRows = rows.distinctBy { it.symptomInternalId }
+        return LlmInputSnapshotDTO.HistorySnapshotDTO(
+            similarFoodRecords = buildSimilarFoodRecords(rows),
+            comfortCount = distinctRows.count { it.symptomState.isComfort() },
+            discomfortCount = distinctRows.count { it.symptomState.isDiscomfort() },
+        )
+    }
+
+    private fun buildSimilarFoodRecords(rows: List<SymptomMealPatternRow>): List<LlmInputSnapshotDTO.SimilarFoodRecordDTO> =
+        rows
+            .distinctBy { "${it.symptomInternalId}:${it.foodName}" }
+            .groupBy { it.foodName to it.symptomState.historyState() }
+            .map { (key, records) ->
+                LlmInputSnapshotDTO.SimilarFoodRecordDTO(
+                    food = key.first,
+                    state = key.second,
+                    count = records.size,
+                )
+            }
+            .sortedWith(
+                compareByDescending<LlmInputSnapshotDTO.SimilarFoodRecordDTO> { it.count }
+                    .thenBy { it.food },
+            )
+            .take(MAX_HISTORY_RECORDS)
+
+    private fun SymptomState.isComfort(): Boolean =
+        this == SymptomState.COMFORTABLE || this == SymptomState.GOOD
+
+    private fun SymptomState.isDiscomfort(): Boolean =
+        this == SymptomState.UNCOMFORTABLE || this == SymptomState.SEVERE
+
+    private fun SymptomState.historyState(): String =
+        when {
+            isComfort() -> "comfort"
+            isDiscomfort() -> "discomfort"
+            else -> "neutral"
+        }
+
+    companion object {
+        private const val HISTORY_WINDOW_DAYS = 14
+        private const val MAX_HISTORY_RECORDS = 5
+    }
 }

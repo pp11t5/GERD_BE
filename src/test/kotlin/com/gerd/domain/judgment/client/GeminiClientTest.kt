@@ -1,6 +1,5 @@
-package com.gerd.domain.judgment.client
+package com.gerd.global.ai.gemini
 
-import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.global.config.properties.GeminiProperties
 import com.sun.net.httpserver.HttpServer
 import org.assertj.core.api.Assertions.assertThat
@@ -46,7 +45,7 @@ class GeminiClientTest {
                 connectTimeoutMs = 1000,
                 readTimeoutMs = 1000,
             ),
-            objectMapper = objectMapper,
+            geminiResponseParser = GeminiResponseParser(),
         )
     }
 
@@ -67,13 +66,13 @@ class GeminiClientTest {
             ),
         )
 
-    private fun call() = client.generateJudgment("system", "user", mapOf("type" to "OBJECT"))
+    private fun call() = client.generateJson(GeminiRequest("system", "user", mapOf("type" to "OBJECT")))
 
     @Nested
     inner class 성공 {
 
         @Test
-        fun `structured output을 LlmJudgmentDTO로 파싱한다`() {
+        fun `structured output text를 반환한다`() {
             responseBody = envelope(
                 """
                 {"grade":"CAUTION","personalTitle":"오늘은 천천히 즐겨보세요","reasons":["카페인"],"items":[
@@ -83,19 +82,17 @@ class GeminiClientTest {
                 """.trimIndent(),
             )
 
-            val judgment = call()
+            val text = call()
 
-            assertThat(judgment).isNotNull
-            assertThat(judgment?.grade).isEqualTo(JudgmentGrade.CAUTION)
-            assertThat(judgment?.personalTitle).isEqualTo("오늘은 천천히 즐겨보세요")
-            assertThat(judgment?.items).hasSize(2)
+            assertThat(text).contains("\"grade\":\"CAUTION\"")
+            assertThat(text).contains("오늘은 천천히 즐겨보세요")
         }
 
         @Test
-        fun `UNKNOWN은 items 슬롯 수와 무관하게 유효하다(items는 버려진다)`() {
+        fun `UNKNOWN도 text 그대로 반환한다`() {
             responseBody = envelope("""{"grade":"UNKNOWN","reasons":[],"items":[]}""")
 
-            assertThat(call()?.grade).isEqualTo(JudgmentGrade.UNKNOWN)
+            assertThat(call()).contains("\"grade\":\"UNKNOWN\"")
         }
     }
 
@@ -126,19 +123,19 @@ class GeminiClientTest {
         }
 
         @Test
-        fun `판정 텍스트가 JSON이 아니면 null을 반환한다`() {
+        fun `응답 텍스트가 JSON이 아니어도 공통 클라이언트는 그대로 반환한다`() {
             responseBody = envelope("죄송하지만 판단할 수 없습니다")
 
-            assertThat(call()).isNull()
+            assertThat(call()).isEqualTo("죄송하지만 판단할 수 없습니다")
         }
 
         @Test
-        fun `UNKNOWN이 아닌데 items가 2개가 아니면 null을 반환한다`() {
+        fun `도메인 스키마 검증은 하지 않는다`() {
             responseBody = envelope(
                 """{"grade":"CAUTION","reasons":[],"items":[{"emphasis":"하나","body":"뿐"}]}""",
             )
 
-            assertThat(call()).isNull()
+            assertThat(call()).contains("\"grade\":\"CAUTION\"")
         }
 
         @Test
@@ -151,10 +148,10 @@ class GeminiClientTest {
                     connectTimeoutMs = 1000,
                     readTimeoutMs = 1000,
                 ),
-                objectMapper = objectMapper,
+                geminiResponseParser = GeminiResponseParser(),
             )
 
-            assertThat(blankKeyClient.generateJudgment("system", "user", mapOf("type" to "OBJECT"))).isNull()
+            assertThat(blankKeyClient.generateJson(GeminiRequest("system", "user", mapOf("type" to "OBJECT")))).isNull()
             assertThat(requestCount).isZero()
         }
     }

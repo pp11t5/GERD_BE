@@ -2,7 +2,6 @@ package com.gerd.domain.judgment.service
 
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
-import com.gerd.domain.judgment.client.GeminiClient
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
@@ -28,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper
 class FoodJudgmentQueryServiceTest {
 
     @Mock private lateinit var judgmentContextReader: JudgmentContextReader
-    @Mock private lateinit var geminiClient: GeminiClient
+    @Mock private lateinit var judgmentGeminiAdapter: JudgmentGeminiAdapter
 
     private lateinit var service: FoodJudgmentQueryService
 
@@ -56,7 +55,7 @@ class FoodJudgmentQueryServiceTest {
             judgmentCacheKeyFactory = JudgmentCacheKeyFactory(),
             judgmentCache = JudgmentCache(),
             judgmentPromptBuilder = JudgmentPromptBuilder(JsonMapper.builder().findAndAddModules().build()),
-            geminiClient = geminiClient,
+            judgmentGeminiAdapter = judgmentGeminiAdapter,
             safetyOverrideRule = SafetyOverrideRule(),
             judgmentResponseAssembler = JudgmentResponseAssembler(),
         )
@@ -98,7 +97,7 @@ class FoodJudgmentQueryServiceTest {
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(isCached).isFalse()
-            verify(geminiClient, never()).generateJudgment(any(), any(), any())
+            verify(judgmentGeminiAdapter, never()).generateJudgment(any(), any(), any())
         }
     }
 
@@ -108,7 +107,7 @@ class FoodJudgmentQueryServiceTest {
         @Test
         fun `같은 입력의 재호출은 LLM 없이 캐시로 응답한다(X-Cache HIT)`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
-            whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
 
             val (first, firstCached) = service.getJudgment(foodExternalId, userId)
@@ -117,13 +116,13 @@ class FoodJudgmentQueryServiceTest {
             assertThat(firstCached).isFalse()
             assertThat(secondCached).isTrue()
             assertThat(second.grade).isEqualTo(JudgmentGrade.CAUTION)
-            verify(geminiClient, times(1)).generateJudgment(any(), any(), any())
+            verify(judgmentGeminiAdapter, times(1)).generateJudgment(any(), any(), any())
         }
 
         @Test
         fun `LLM 실패는 UNKNOWN 폴백을 반환하고 캐시에 남기지 않는다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
-            whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(null)
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(null)
 
             val (first, _) = service.getJudgment(foodExternalId, userId)
             val (second, secondCached) = service.getJudgment(foodExternalId, userId)
@@ -131,7 +130,7 @@ class FoodJudgmentQueryServiceTest {
             assertThat(first.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(secondCached).isFalse()
             // 실패가 캐시되지 않았으므로 재호출 시 LLM을 다시 시도한다
-            verify(geminiClient, times(2)).generateJudgment(any(), any(), any())
+            verify(judgmentGeminiAdapter, times(2)).generateJudgment(any(), any(), any())
         }
     }
 
@@ -141,7 +140,7 @@ class FoodJudgmentQueryServiceTest {
         @Test
         fun `LLM이 UNKNOWN이면 items를 고정 폴백으로 교체하고 대체식단을 조회하지 않는다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
-            whenever(geminiClient.generateJudgment(any(), any(), any()))
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
                 .thenReturn(LlmJudgmentDTO(JudgmentGrade.UNKNOWN))
 
             val (response, _) = service.getJudgment(foodExternalId, userId)
@@ -156,7 +155,7 @@ class FoodJudgmentQueryServiceTest {
         fun `알레르겐 매치 시 RISK로 강등하고 대체식단을 조회한다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId))
                 .thenReturn(seedContext(foodAllergens = listOf(milk), userAllergens = listOf(milk)))
-            whenever(geminiClient.generateJudgment(any(), any(), any()))
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
                 .thenReturn(llmJudgment.copy(grade = JudgmentGrade.RECOMMEND))
             whenever(judgmentContextReader.loadSubstituteCandidates(any()))
                 .thenReturn(listOf(SubstituteCandidateDTO(foodExternalId, "디카페인 아메리카노", emptySet())))
@@ -173,7 +172,7 @@ class FoodJudgmentQueryServiceTest {
             // 사용자: caffeine 트리거 + milk 알레르기. 음식: 우유 알레르겐 매치로 RISK
             whenever(judgmentContextReader.load(foodExternalId, userId))
                 .thenReturn(seedContext(foodAllergens = listOf(milk), userAllergens = listOf(milk)))
-            whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(
                 listOf(
                     SubstituteCandidateDTO(foodExternalId, "달걀찜", setOf("egg")),
@@ -195,7 +194,7 @@ class FoodJudgmentQueryServiceTest {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(
                 seedContext().copy(userTriggers = emptyList()),
             )
-            whenever(geminiClient.generateJudgment(any(), any(), any()))
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
                 .thenReturn(llmJudgment.copy(grade = JudgmentGrade.RECOMMEND))
 
             val (response, _) = service.getJudgment(foodExternalId, userId)
@@ -208,7 +207,7 @@ class FoodJudgmentQueryServiceTest {
         @Test
         fun `LLM items 본문과 제목을 가공 없이 그대로 응답에 담는다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
-            whenever(geminiClient.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
             whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
 
             val (response, _) = service.getJudgment(foodExternalId, userId)

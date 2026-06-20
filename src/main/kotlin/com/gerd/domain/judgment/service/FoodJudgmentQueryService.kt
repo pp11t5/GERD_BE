@@ -1,7 +1,6 @@
 package com.gerd.domain.judgment.service
 
 import com.gerd.domain.food.entity.enums.FoodSource
-import com.gerd.domain.judgment.client.GeminiClient
 import com.gerd.domain.judgment.dto.CachedJudgment
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
@@ -27,7 +26,7 @@ class FoodJudgmentQueryService(
     private val judgmentCacheKeyFactory: JudgmentCacheKeyFactory,
     private val judgmentCache: JudgmentCache,
     private val judgmentPromptBuilder: JudgmentPromptBuilder,
-    private val geminiClient: GeminiClient,
+    private val judgmentGeminiAdapter: JudgmentGeminiAdapter,
     private val safetyOverrideRule: SafetyOverrideRule,
     private val judgmentResponseAssembler: JudgmentResponseAssembler,
 ) {
@@ -68,7 +67,7 @@ class FoodJudgmentQueryService(
     }
 
     private fun judgeText(foodText: String, snapshot: LlmInputSnapshotDTO, userContext: UserContext): CachedJudgment? {
-        val llmJudgment = geminiClient.generateJudgment(
+        val llmJudgment = judgmentGeminiAdapter.generateJudgment(
             systemInstruction = judgmentPromptBuilder.buildSystemInstruction(),
             userContent = judgmentPromptBuilder.buildUserContent(snapshot),
             responseSchema = judgmentPromptBuilder.buildResponseSchema(),
@@ -88,7 +87,7 @@ class FoodJudgmentQueryService(
 
     // ① LLM → ② 안전 오버라이드 → ③ 조립. 실패는 null로 반환해 캐시에 남기지 않는다
     private fun judge(context: JudgmentContext, snapshot: LlmInputSnapshotDTO): CachedJudgment? {
-        val llmJudgment = geminiClient.generateJudgment(
+        val llmJudgment = judgmentGeminiAdapter.generateJudgment(
             systemInstruction = judgmentPromptBuilder.buildSystemInstruction(),
             userContent = judgmentPromptBuilder.buildUserContent(snapshot),
             responseSchema = judgmentPromptBuilder.buildResponseSchema(),

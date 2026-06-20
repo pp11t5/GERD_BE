@@ -24,6 +24,7 @@ class JudgmentSnapshotFactory {
                 allergenTags = emptyList(),
             ),
             user = LlmInputSnapshotDTO.UserSnapshotDTO(
+                nickname = userContext.nickname,
                 symptoms = userContext.symptomCodes.sorted(),
                 triggerFoods = userContext.userTriggers.sortedBy { it.code },
                 allergies = userContext.userAllergens.sortedBy { it.code },
@@ -41,10 +42,12 @@ class JudgmentSnapshotFactory {
                 allergenTags = context.foodAllergens.sortedBy { it.code },
             ),
             user = LlmInputSnapshotDTO.UserSnapshotDTO(
+                nickname = context.nickname,
                 symptoms = context.symptomCodes.sorted(),
                 triggerFoods = context.userTriggers.sortedBy { it.code },
                 allergies = context.userAllergens.sortedBy { it.code },
                 meds = context.medications.sorted(),
             ),
+            history = context.history,
         )
 }
