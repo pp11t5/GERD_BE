@@ -3,9 +3,7 @@ package com.gerd.domain.judgment.dto
 /**
  * LLM 입력 스냅샷 — 프롬프트 본문이자 캐시 키의 원천
  *
- * - PII(닉네임·이름·식별자) 절대 포함 금지 — 무료 티어 프롬프트는 학습에 쓰일 수 있다 (spec §5)
  * - 캐시 키 안정성을 위해 모든 리스트는 생성 시점에 code 기준 정렬된 상태여야 한다
- * - history는 식사기록 도메인 연동 전까지 빈 값 고정 — 연동 시 키가 자연 분리되며 캐시도 자연 무효화된다
  */
 data class LlmInputSnapshotDTO(
     val food: FoodSnapshotDTO,
@@ -22,6 +20,7 @@ data class LlmInputSnapshotDTO(
     )
 
     data class UserSnapshotDTO(
+        val nickname: String?,
         val symptoms: List<String>,
         val triggerFoods: List<TagDTO>,
         val allergies: List<TagDTO>,

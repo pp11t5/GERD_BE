@@ -1,5 +1,6 @@
 package com.gerd.domain.meal.service
 
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
@@ -16,6 +17,7 @@ import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
 import com.gerd.global.fixture.MealRecordFixture
+import com.gerd.global.fixture.UserFixture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -36,6 +38,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.SimpleTransactionStatus
 import tools.jackson.databind.ObjectMapper
+import java.util.Optional
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -46,6 +49,9 @@ class MealRecordCommandServiceTest {
 
     @Mock
     private lateinit var mealRecordRepository: MealRecordRepository
+
+    @Mock
+    private lateinit var userRepository: UserRepository
 
     @Mock
     private lateinit var foodRepository: FoodRepository
@@ -70,6 +76,7 @@ class MealRecordCommandServiceTest {
         service = MealCommandService(
             mealFoodRepository = mealFoodRepository,
             mealRecordRepository = mealRecordRepository,
+            userRepository = userRepository,
             foodRepository = foodRepository,
             mealRecordConverter = mealRecordConverter,
             foodJudgmentQueryService = foodJudgmentQueryService,
@@ -88,6 +95,7 @@ class MealRecordCommandServiceTest {
             whenever(transactionManager.getTransaction(any())).thenAnswer { SimpleTransactionStatus() }
             whenever(mealRecordConverter.parseUuid(foodExternalId.toString())).thenReturn(foodExternalId)
             whenever(foodRepository.findByExternalId(foodExternalId)).thenReturn(food)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
             whenever(foodJudgmentQueryService.getJudgment(foodExternalId.toString(), userId)).thenReturn(judgment() to true)
             whenever(mealRecordConverter.parseEatenAt("2026-06-11T12:30:00+09:00")).thenReturn(MealRecordFixture.EATEN_AT)
             whenever(mealRecordRepository.save(any())).thenReturn(mealRecord)
@@ -109,6 +117,7 @@ class MealRecordCommandServiceTest {
 
             val captor = argumentCaptor<MealFood>()
             verify(mealFoodRepository).save(captor.capture())
+            assertThat(captor.firstValue.user.id).isEqualTo(userId)
             assertThat(captor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(captor.firstValue.judgedGrade).isEqualTo(JudgmentGrade.CAUTION)
             val analysis = objectMapper.readValue(captor.firstValue.analysisJson, MealAnalysisSnapshotDTO::class.java)
@@ -162,9 +171,9 @@ class MealRecordCommandServiceTest {
             val mealRecord = MealRecordFixture.mealRecord()
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID)
-            whenever(mealFoodRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
+            whenever(mealFoodRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
             whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(0)
-            whenever(mealRecordRepository.findByIdAndUserId(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
+            whenever(mealRecordRepository.findByIdAndUser_Id(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
 
             service.delete(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(), userId)
 
@@ -181,7 +190,7 @@ class MealRecordCommandServiceTest {
             val mealFood = MealRecordFixture.mealFood()
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID)
-            whenever(mealFoodRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
+            whenever(mealFoodRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
             whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(1)
 
             service.delete(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(), userId)
@@ -201,7 +210,7 @@ class MealRecordCommandServiceTest {
             val foods = listOf(MealRecordFixture.mealFood())
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID)
-            whenever(mealRecordRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
                 .thenReturn(mealRecord)
             whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(foods)
 

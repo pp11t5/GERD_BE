@@ -33,12 +33,14 @@ class JudgmentPromptBuilder(
             - food.triggerTags / user.triggerFoods: GERD 증상을 유발할 수 있는 성분 태그.
               code는 시스템 식별자이고 label이 한글 표시명입니다 — 해석은 label 기준으로 하세요
             - food.allergenTags / user.allergies: 알레르겐 태그 (code/label 구조 동일)
+            - user.nickname: 사용자 닉네임. 값이 있으면 personalTitle이나 본문에서 자연스럽게 사용할 수 있습니다.
             - user.symptoms: 사용자가 등록한 증상 코드. 의미는 다음과 같습니다:
               heartburn_reflux=속쓰림·역류, post_meal_cough=식후 기침, throat_globus=목 이물감,
               sour_mouth_odor=신물 올라옴·입냄새, supine_chest_tight=누우면 가슴 답답함,
               none_but_manage=현재 증상은 없고 관리 목적
             - user.meds: 복용 중인 약 (자유 텍스트)
-            - history: 최근 유사 음식 섭취 기록 (비어 있을 수 있음)
+            - history: 최근 14일 기준 이 음식 또는 비슷한 카테고리 음식과 연결된 증상 기록 요약.
+              comfortCount/discomfortCount와 similarFoodRecords의 수치를 근거로 사용하세요.
 
             [등급 기준]
             - RECOMMEND: 사용자의 트리거·알레르기·기록에 비추어 부담 없이 권할 수 있는 음식
@@ -49,12 +51,14 @@ class JudgmentPromptBuilder(
               triggerTags·allergenTags·knownAttributes가 비어있어도 음식 이름으로 판단 가능하면 일반 식품 지식을 활용해 판정하세요.
 
             [personalTitle 작성 규칙]
-            - 결과 카드 상단에 표시되는 한 줄 제목 — 등급 톤에 맞춰 이 사용자의 상황(증상·트리거·알레르기)이 드러나게 작성하세요
+            - 결과 카드 상단에 표시되는 한 줄 제목 — 등급 톤에 맞춰 이 사용자의 상황(증상·트리거·알레르기·최근 기록)이 드러나게 작성하세요
             - RECOMMEND는 안심·긍정, CAUTION은 조절 안내, RISK는 부드러운 회피 권유 톤
+            - user.nickname이 있으면 "{닉네임}님" 형태로 사용할 수 있습니다.
             - 톤 예시: "좋은 선택이에요!", "속이 편안할 수 있도록 천천히 드세요!", "오늘은 다른 메뉴가 더 편할 거예요"
 
             [items 작성 규칙 — 정확히 2개]
             - items[0]: 음식의 트리거 성분과 사용자의 트리거·증상·기록 관점의 분석
+              history에 기록이 있으면 "최근 비슷한 음식을 먹고 편안/불편했어요"처럼 수치 근거를 반영하세요.
             - items[1]: 알레르기·복용약 관점의 분석. allergenTags가 비어있으면 음식 이름 기반으로 주요 알레르겐을 안내하되,
               불확실한 경우 "성분표를 확인해 보세요" 톤으로 작성하세요. 해당 없으면 안심시키기
             - emphasis는 핵심 한 줄, body는 1~2문장의 근거 설명
@@ -65,8 +69,8 @@ class JudgmentPromptBuilder(
             - 불확실한 내용을 단정하지 마세요
 
             [사용자 지칭]
-            - 사용자를 이름이나 별명으로 지칭하지 마세요. 이름을 지어내거나 추측하지 마세요.
-              지칭이 필요하면 "등록하신 트리거에 해당해요"처럼 주어 없이 표현하세요.
+            - user.nickname이 있으면 해당 닉네임만 사용하세요. 이름을 지어내거나 추측하지 마세요.
+            - user.nickname이 없으면 "등록하신 트리거에 해당해요"처럼 주어 없이 표현하세요.
 
             출력은 지정된 JSON 스키마만 따르세요.
         """.trimIndent()

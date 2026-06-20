@@ -1,5 +1,6 @@
 package com.gerd.domain.meal.repository
 
+import com.gerd.domain.auth.entity.User
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
+import jakarta.persistence.EntityManager
 import java.time.LocalDateTime
 
 @ActiveProfiles("test")
@@ -19,6 +21,7 @@ import java.time.LocalDateTime
 class MealRecordRepositoryTest @Autowired constructor(
     private val mealFoodRepository: MealFoodRepository,
     private val mealRecordRepository: MealRecordRepository,
+    private val em: EntityManager,
 ) {
 
     @Nested
@@ -26,9 +29,10 @@ class MealRecordRepositoryTest @Autowired constructor(
 
         @Test
         fun `mealRecordId로 소속 음식을 먹은 시각 오름차순 조회한다`() {
-            val recordId = mealRecordRepository.save(mealRecord()).id!!
-            val later = mealFood(mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 13, 0))
-            val earlier = mealFood(mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 12, 0))
+            val user = saveUser()
+            val recordId = mealRecordRepository.save(mealRecord(user = user)).id!!
+            val later = mealFood(user = user, mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 13, 0))
+            val earlier = mealFood(user = user, mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 12, 0))
             mealFoodRepository.saveAll(listOf(later, earlier))
 
             val result = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(recordId)
@@ -41,11 +45,12 @@ class MealRecordRepositoryTest @Autowired constructor(
 
         @Test
         fun `mealRecordId 기준 음식 개수를 센다`() {
-            val recordId = mealRecordRepository.save(mealRecord()).id!!
+            val user = saveUser(email = "count@test.com")
+            val recordId = mealRecordRepository.save(mealRecord(user = user)).id!!
             mealFoodRepository.saveAll(
                 listOf(
-                    mealFood(mealRecordId = recordId),
-                    mealFood(mealRecordId = recordId, foodId = 2L),
+                    mealFood(user = user, mealRecordId = recordId),
+                    mealFood(user = user, mealRecordId = recordId, foodId = 2L),
                 ),
             )
 
@@ -55,18 +60,24 @@ class MealRecordRepositoryTest @Autowired constructor(
         }
     }
 
+    private fun saveUser(email: String = "user@test.com"): User =
+        User(email = email).also {
+            em.persist(it)
+            em.flush()
+        }
+
     private fun mealRecord(
-        userId: Long = 1L,
+        user: User,
         eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
-    ) = MealRecord(userId = userId, eatenAt = eatenAt)
+    ) = MealRecord(user = user, eatenAt = eatenAt)
 
     private fun mealFood(
-        userId: Long = 1L,
+        user: User,
         foodId: Long = 1L,
         mealRecordId: Long,
         eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
     ) = MealFood(
-        userId = userId,
+        user = user,
         foodId = foodId,
         mealRecordId = mealRecordId,
         eatenAt = eatenAt,

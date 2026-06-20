@@ -1,5 +1,8 @@
 package com.gerd.domain.meal.service
 
+import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.exception.AuthErrorCode
+import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
@@ -28,6 +31,7 @@ import java.time.LocalDateTime
 class MealCommandService(
     private val mealFoodRepository: MealFoodRepository,
     private val mealRecordRepository: MealRecordRepository,
+    private val userRepository: UserRepository,
     private val foodRepository: FoodRepository,
     private val mealRecordConverter: MealRecordConverter,
     private val foodJudgmentQueryService: FoodJudgmentQueryService,
@@ -48,9 +52,11 @@ class MealCommandService(
         val food = foodRepository.findByExternalId(foodExternalId)
             ?.takeIf { FoodAccessPolicy.isVisibleTo(it, userId) }
             ?: throw GeneralException(FoodErrorCode.FOOD_NOT_FOUND)
+        val user = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val judgment = loadJudgmentSnapshot(request.foodExternalId, userId)
         return writeTransactionTemplate.execute {
-            saveFood(food, request.eatenAt, request.mealRecordId, judgment.grade, judgment.analysisJson, userId)
+            saveFood(food, request.eatenAt, request.mealRecordId, judgment.grade, judgment.analysisJson, user)
         } ?: error("meal record save transaction returned null")
     }
 
@@ -62,7 +68,7 @@ class MealCommandService(
         mealFoodRepository.flush()
         val remainingFoodCount = mealFoodRepository.countByMealRecordId(mealFood.mealRecordId)
         if (remainingFoodCount == 0L) {
-            mealRecordRepository.findByIdAndUserId(mealFood.mealRecordId, userId)
+            mealRecordRepository.findByIdAndUser_Id(mealFood.mealRecordId, userId)
                 ?.let(mealRecordRepository::delete)
         }
     }
@@ -72,7 +78,7 @@ class MealCommandService(
     fun deleteMealRecord(mealRecordId: String, userId: Long) {
         val externalId = mealRecordConverter.parseUuid(mealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealRecord = mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
+        val mealRecord = mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecord.id!!)
         mealFoodRepository.deleteAll(foods)
@@ -86,13 +92,13 @@ class MealCommandService(
         rawMealRecordId: String?,
         judgedGrade: JudgmentGrade,
         analysisJson: String,
-        userId: Long,
+        user: User,
     ): MealFoodRecordDetailDTO {
         val eatenAt = mealRecordConverter.parseEatenAt(rawEatenAt)
-        val mealRecordId = resolveMealRecordId(rawMealRecordId, userId, eatenAt)
+        val mealRecordId = resolveMealRecordId(rawMealRecordId, user, eatenAt)
         val saved = mealFoodRepository.save(
             MealFood(
-                userId = userId,
+                user = user,
                 foodId = food.id!!,
                 mealRecordId = mealRecordId,
                 eatenAt = eatenAt,
@@ -104,11 +110,12 @@ class MealCommandService(
     }
 
     // 사용자 소유 기록 끼니 ID인지 검증
-    private fun resolveMealRecordId(rawMealRecordId: String?, userId: Long, eatenAt: LocalDateTime): Long {
-        if (rawMealRecordId == null) return mealRecordRepository.save(MealRecord(userId = userId, eatenAt = eatenAt)).id!!
+    private fun resolveMealRecordId(rawMealRecordId: String?, user: User, eatenAt: LocalDateTime): Long {
+        if (rawMealRecordId == null) return mealRecordRepository.save(MealRecord(user = user, eatenAt = eatenAt)).id!!
         val mealRecordExternalId = mealRecordConverter.parseUuid(rawMealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealRecord = mealRecordRepository.findByExternalIdAndUserId(mealRecordExternalId, userId)
+        val userId = user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
+        val mealRecord = mealRecordRepository.findByExternalIdAndUser_Id(mealRecordExternalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         return mealRecord.id!!
     }
@@ -117,7 +124,7 @@ class MealCommandService(
     private fun resolveOwnedFood(mealFoodId: String, userId: Long): MealFood {
         val externalId = mealRecordConverter.parseUuid(mealFoodId)
             ?: throw GeneralException(MealErrorCode.MEAL_FOOD_NOT_FOUND)
-        return mealFoodRepository.findByExternalIdAndUserId(externalId, userId)
+        return mealFoodRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_FOOD_NOT_FOUND)
     }
 

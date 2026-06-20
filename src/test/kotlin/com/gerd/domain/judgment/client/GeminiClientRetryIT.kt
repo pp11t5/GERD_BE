@@ -1,4 +1,4 @@
-package com.gerd.domain.judgment.client
+package com.gerd.global.ai.gemini
 
 import com.gerd.global.config.RetryConfig
 import com.gerd.global.config.properties.GeminiProperties
@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class GeminiClientRetryIT {
 
     @TestConfiguration
-    @Import(GeminiClient::class, RetryConfig::class)
+    @Import(GeminiClient::class, GeminiResponseParser::class, RetryConfig::class)
     class Cfg {
 
         @Bean
@@ -75,7 +75,7 @@ class GeminiClientRetryIT {
         requestCount.set(0)
     }
 
-    private fun call() = geminiClient.generateJudgment("system", "user", mapOf("type" to "OBJECT"))
+    private fun call() = geminiClient.generateJson(GeminiRequest("system", "user", mapOf("type" to "OBJECT")))
 
     @Test
     fun `503 두 번 후 성공하면 결과를 반환하고 총 3회 호출된다`() {

@@ -28,7 +28,7 @@ class MealQueryService(
     fun getDetail(mealFoodId: String, userId: Long): MealFoodRecordDetailDTO {
         val externalId = mealRecordConverter.parseUuid(mealFoodId)
             ?: throw GeneralException(MealErrorCode.MEAL_FOOD_NOT_FOUND)
-        val mealFood = mealFoodRepository.findByExternalIdAndUserId(externalId, userId)
+        val mealFood = mealFoodRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_FOOD_NOT_FOUND)
         return mealRecordConverter.toDetail(mealFood)
     }
@@ -37,7 +37,7 @@ class MealQueryService(
     fun getGroupDetail(mealRecordId: String, userId: Long): MealRecordDetailDTO {
         val externalId = mealRecordConverter.parseUuid(mealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealRecord = mealRecordRepository.findByExternalIdAndUserId(externalId, userId)
+        val mealRecord = mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         val internalMealRecordId = mealRecord.id!!
         val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(internalMealRecordId)
@@ -48,7 +48,7 @@ class MealQueryService(
     // 최근 24시간 내 기록 중 증상과 연결되지 않은 음식 기록 그룹 후보 조회
     fun getCandidates(userId: Long): List<MealCandidatesDTO> {
         val cutoff = LocalDateTime.now(SEOUL).minusHours(24)
-        val mealRecords = mealRecordRepository.findByUserIdAndEatenAtAfter(userId, cutoff)
+        val mealRecords = mealRecordRepository.findByUser_IdAndEatenAtAfter(userId, cutoff)
         if (mealRecords.isEmpty()) return emptyList()
         val linkedIds = symptomRepository.findLinkedMealRecordIdsByUserId(userId).toSet()
         val candidates = mealRecords.filter { it.id !in linkedIds }

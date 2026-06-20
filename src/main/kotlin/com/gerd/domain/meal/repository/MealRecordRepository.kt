@@ -6,7 +6,7 @@ import java.util.UUID
 
 interface MealFoodRepository : JpaRepository<MealFood, Long> {
 
-    fun findByExternalIdAndUserId(externalId: UUID, userId: Long): MealFood?
+    fun findByExternalIdAndUser_Id(externalId: UUID, userId: Long): MealFood?
 
     fun findByMealRecordIdOrderByEatenAtAsc(mealRecordId: Long): List<MealFood>
 

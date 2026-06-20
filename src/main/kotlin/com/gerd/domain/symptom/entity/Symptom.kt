@@ -31,7 +31,7 @@ import java.time.LocalDateTime
         Index(name = "symptom_records_user_occurred_idx", columnList = "user_id, occurred_at"),
     ],
 )
-@SQLDelete(sql = "UPDATE symptom_records SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLDelete(sql = "UPDATE symptom_records SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP WHERE symptom_id = ?")
 @SQLRestriction("deleted_at IS NULL")
 class Symptom(
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -39,27 +39,23 @@ class Symptom(
     @OnDelete(action = OnDeleteAction.CASCADE)
     val user: User,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "symptom_state", nullable = false)
-    val symptomState: SymptomState,
+    symptomState: SymptomState,
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "symptom_types", joinColumns = [JoinColumn(name = "symptom_id")])
-    @Enumerated(EnumType.STRING)
-    @Column(name = "symptom_type", nullable = false)
-    val symptomTypes: Set<SymptomType>,
+    symptomTypes: Set<SymptomType>,
 
-    @Column(name = "occurred_at", nullable = false)
-    val occurredAt: LocalDateTime,
+    occurredAt: LocalDateTime,
 
-    @Column(name = "meal_record_id")
-    val mealRecordId: Long? = null,
+    mealRecordId: Long,
 
-    @Column(length = 200)
-    var memo: String? = null,
+    memo: String? = null,
 
-    @Column(name = "deleted_at")
-    var deletedAt: LocalDateTime? = null,
+    deletedAt: LocalDateTime? = null,
+
+    analysisJson: String? = null,
+
+    isAnalysisDirty: Boolean = true,
+
+    analysisVersion: Long = 0L,
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,7 +63,79 @@ class Symptom(
     val id: Long? = null,
 ) : BaseEntity() {
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "symptom_state", nullable = false)
+    var symptomState: SymptomState = symptomState
+        protected set
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "symptom_types", joinColumns = [JoinColumn(name = "symptom_id")])
+    @Enumerated(EnumType.STRING)
+    @Column(name = "symptom_type", nullable = false)
+    var symptomTypes: Set<SymptomType> = symptomTypes
+        protected set
+
+    @Column(name = "occurred_at", nullable = false)
+    var occurredAt: LocalDateTime = occurredAt
+        protected set
+
+    @Column(name = "meal_record_id", nullable = false)
+    var mealRecordId: Long = mealRecordId
+        protected set
+
+    @Column(length = 200)
+    var memo: String? = memo
+        protected set
+
+    @Column(name = "deleted_at")
+    var deletedAt: LocalDateTime? = deletedAt
+        protected set
+
+    @Column(name = "analysis_json", columnDefinition = "TEXT")
+    var analysisJson: String? = analysisJson
+        protected set
+
+    @Column(name = "is_analysis_dirty", nullable = false, columnDefinition = "boolean default true")
+    var isAnalysisDirty: Boolean = isAnalysisDirty
+        protected set
+
+    @Column(name = "analysis_version", nullable = false, columnDefinition = "bigint default 0")
+    var analysisVersion: Long = analysisVersion
+        protected set
+
+    fun update(
+        symptomState: SymptomState,
+        symptomTypes: Set<SymptomType>,
+        occurredAt: LocalDateTime,
+        mealRecordId: Long,
+        memo: String?,
+    ) {
+        this.symptomState = symptomState
+        this.symptomTypes = symptomTypes
+        this.occurredAt = occurredAt
+        this.mealRecordId = mealRecordId
+        this.memo = normalizeMemo(memo)
+        markAnalysisDirty()
+    }
+
     fun updateMemo(memo: String?) {
-        this.memo = memo?.trim()?.takeUnless { it.isEmpty() }
+        this.memo = normalizeMemo(memo)
+        markAnalysisDirty()
+    }
+
+    fun markAnalysisDirty() {
+        isAnalysisDirty = true
+        analysisVersion += 1
+    }
+
+    fun updateAnalysis(analysisJson: String, expectedVersion: Long): Boolean {
+        if (!isAnalysisDirty || analysisVersion != expectedVersion) return false
+        this.analysisJson = analysisJson
+        isAnalysisDirty = false
+        return true
+    }
+
+    private fun normalizeMemo(memo: String?): String? {
+        return memo?.trim()?.takeUnless { it.isEmpty() }
     }
 }

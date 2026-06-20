@@ -6,8 +6,8 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 interface MealRecordRepository : JpaRepository<MealRecord, Long> {
-    fun existsByExternalIdAndUserId(externalId: UUID, userId: Long): Boolean
-    fun findByExternalIdAndUserId(externalId: UUID, userId: Long): MealRecord?
-    fun findByIdAndUserId(id: Long, userId: Long): MealRecord?
-    fun findByUserIdAndEatenAtAfter(userId: Long, cutoff: LocalDateTime): List<MealRecord>
+    fun existsByExternalIdAndUser_Id(externalId: UUID, userId: Long): Boolean
+    fun findByExternalIdAndUser_Id(externalId: UUID, userId: Long): MealRecord?
+    fun findByIdAndUser_Id(id: Long, userId: Long): MealRecord?
+    fun findByUser_IdAndEatenAtAfter(userId: Long, cutoff: LocalDateTime): List<MealRecord>
 }

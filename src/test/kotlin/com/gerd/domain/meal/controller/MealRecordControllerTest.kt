@@ -17,6 +17,8 @@ import com.gerd.global.security.WithCustomUser
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -81,6 +83,48 @@ class MealRecordControllerTest @Autowired constructor(
                 status { isNotFound() }
                 jsonPath("$.code") { value("FOOD404_1") }
             }
+        }
+
+        @Test
+        @WithCustomUser
+        fun `음식 식별자가 UUID 형식이 아니면 COMMON400_1`() {
+            mockMvc.post("/api/v1/meal-records") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"foodExternalId":"bad","eatenAt":"2026-06-11T12:30:00+09:00"}"""
+            }.andExpect {
+                status { isBadRequest() }
+                jsonPath("$.code") { value("COMMON400_1") }
+            }
+
+            verify(mealCommandService, never()).create(any(), any())
+        }
+
+        @Test
+        @WithCustomUser
+        fun `먹은 시각이 offset 없는 형식이면 COMMON400_1`() {
+            mockMvc.post("/api/v1/meal-records") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"foodExternalId":"${FoodFixture.EXTERNAL_ID}","eatenAt":"2026-06-11T12:30:00"}"""
+            }.andExpect {
+                status { isBadRequest() }
+                jsonPath("$.code") { value("COMMON400_1") }
+            }
+
+            verify(mealCommandService, never()).create(any(), any())
+        }
+
+        @Test
+        @WithCustomUser
+        fun `끼니 식별자가 UUID 형식이 아니면 COMMON400_1`() {
+            mockMvc.post("/api/v1/meal-records") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"foodExternalId":"${FoodFixture.EXTERNAL_ID}","mealRecordId":"bad"}"""
+            }.andExpect {
+                status { isBadRequest() }
+                jsonPath("$.code") { value("COMMON400_1") }
+            }
+
+            verify(mealCommandService, never()).create(any(), any())
         }
     }
 

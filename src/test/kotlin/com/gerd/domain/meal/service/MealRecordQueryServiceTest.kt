@@ -74,7 +74,7 @@ class MealRecordQueryServiceTest {
             val foods = listOf(MealRecordFixture.mealFood())
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID)
-            whenever(mealRecordRepository.findByExternalIdAndUserId(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
                 .thenReturn(mealRecord)
             whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(foods)
             whenever(symptomRepository.findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(emptyList())
@@ -94,7 +94,7 @@ class MealRecordQueryServiceTest {
 
         @Test
         fun `최근 끼니가 없으면 빈 배열을 반환하고 추가 조회하지 않는다`() {
-            whenever(mealRecordRepository.findByUserIdAndEatenAtAfter(any(), any())).thenReturn(emptyList())
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtAfter(any(), any())).thenReturn(emptyList())
 
             val result = service.getCandidates(userId)
 
@@ -108,7 +108,7 @@ class MealRecordQueryServiceTest {
             val linked = MealRecordFixture.mealRecord(id = 11L)
             val unlinked = MealRecordFixture.mealRecord()
             val foods = listOf(MealRecordFixture.mealFood())
-            whenever(mealRecordRepository.findByUserIdAndEatenAtAfter(any(), any())).thenReturn(listOf(linked, unlinked))
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtAfter(any(), any())).thenReturn(listOf(linked, unlinked))
             whenever(symptomRepository.findLinkedMealRecordIdsByUserId(userId)).thenReturn(listOf(linked.id!!))
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id!!)))
                 .thenReturn(foods)
