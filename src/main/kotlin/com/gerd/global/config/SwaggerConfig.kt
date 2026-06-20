@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.util.ReflectionUtils
 import org.springframework.web.method.HandlerMethod
+import java.lang.reflect.ParameterizedType
 
 @Configuration
 class SwaggerConfig {
@@ -138,8 +139,49 @@ class SwaggerConfig {
                     ?.filterNot { parameter -> parameter.name in hiddenParameterNames }
             }
 
+            if (handlerMethod.returnsEmptyApiResponse()) {
+                responses["200"]?.let { successResponse ->
+                    successResponse.content = emptySuccessContent()
+                }
+            }
+
             operation
         }
+
+    private fun HandlerMethod.returnsEmptyApiResponse(): Boolean {
+        val returnType = method.genericReturnType as? ParameterizedType ?: return false
+        val responseBodyType = returnType.actualTypeArguments.firstOrNull() as? ParameterizedType ?: return false
+        if (responseBodyType.rawType.typeName != "com.gerd.global.apiPayload.ApiResponse") return false
+        return responseBodyType.actualTypeArguments.firstOrNull()?.typeName == "kotlin.Unit"
+    }
+
+    private fun emptySuccessContent(): Content =
+        Content().addMediaType(
+            "application/json",
+            MediaType()
+                .schema(
+                    Schema<Any>().apply {
+                        type = "object"
+                        properties = mapOf(
+                            "isSuccess" to Schema<Boolean>().apply { type = "boolean"; example = true },
+                            "code" to Schema<String>().apply { type = "string"; example = "COMMON200" },
+                            "message" to Schema<String>().apply { type = "string"; example = "성공입니다." },
+                            "result" to Schema<Any>().apply {
+                                nullable = true
+                                example = null
+                            },
+                        )
+                    },
+                )
+                .example(
+                    mapOf(
+                        "isSuccess" to true,
+                        "code" to "COMMON200",
+                        "message" to "성공입니다.",
+                        "result" to null,
+                    ),
+                ),
+        )
 
     // 선언된 enum 클래스의 상수를 이름으로 선별 — codes가 비면 전체 상수를 문서화
     private fun resolveErrorCodes(annotation: ApiErrorExample): List<BaseErrorCode> {

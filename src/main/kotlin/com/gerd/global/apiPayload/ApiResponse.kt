@@ -13,6 +13,7 @@ data class ApiResponse<T>(
     val isSuccess: Boolean,
     val code: String,
     val message: String,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
     val result: T? = null,
     val traceId: String? = null,  // 실패 응답에만 포함
 ) {
@@ -27,6 +28,16 @@ data class ApiResponse<T>(
                 code = successCode.code,
                 message = successCode.message,
                 result = result,
+            )
+
+        fun onSuccess(
+            successCode: BaseSuccessCode = CommonSuccessCode.OK,
+        ): ApiResponse<Unit?> =
+            ApiResponse(
+                isSuccess = true,
+                code = successCode.code,
+                message = successCode.message,
+                result = null,
             )
 
         fun <T> onFailure(errorCode: BaseErrorCode, detail: T? = null): ApiResponse<T> =
