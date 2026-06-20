@@ -1,0 +1,222 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "ko-KR"
+tone_instructions: "간결하고 근거 중심으로 한국어로 리뷰한다. 취향성 지적보다 버그, 보안, 테스트 누락, 운영 리스크를 우선한다."
+early_access: false
+enable_free_tier: true
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  review_details: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+
+  labeling_instructions:
+    - label: "feat"
+      instructions: "새로운 API, 도메인 기능, 비즈니스 플로우가 추가된 PR에 사용한다."
+    - label: "fix"
+      instructions: "버그, 예외 처리, 인증/인가 오류, 데이터 정합성 문제가 수정된 PR에 사용한다."
+    - label: "refactor"
+      instructions: "외부 동작 변화 없이 계층 책임, 구조, 중복, 명명만 개선한 PR에 사용한다."
+    - label: "test"
+      instructions: "테스트 코드 추가/수정이 주된 변경인 PR에 사용한다."
+    - label: "docs"
+      instructions: "문서, README, AGENTS.md, API 명세가 주된 변경인 PR에 사용한다."
+    - label: "chore"
+      instructions: "Gradle, CI, Docker, 설정, 의존성, 운영 보조 파일 변경에 사용한다."
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 5
+    ignore_title_keywords:
+      - "wip"
+      - "draft"
+      - "do not review"
+    drafts: false
+    base_branches:
+      - "develop"
+
+  path_filters:
+    - "!build/**"
+    - "!.gradle/**"
+    - "!.gradle-local/**"
+    - "!.idea/**"
+    - "!.kotlin/**"
+    - "!**/build/**"
+    - "!**/generated/**"
+    - "!**/Q*.kt"
+
+  path_instructions:
+    - path: "src/main/kotlin/com/gerd/domain/**/controller/**"
+      instructions: |
+        - Controller는 입출력 처리, 인증 사용자 주입, ApiResponse 래핑에 집중하는지 확인한다.
+        - SecurityContext를 직접 조회하지 않고 @CurrentUser 또는 공통 리졸버를 사용하는지 확인한다.
+        - @RequestBody에는 @Valid가 필요한지, @PathVariable/@RequestParam 검증에는 @Validated가 필요한지 확인한다.
+        - Swagger responseCode가 실제 BaseSuccessCode.httpStatus와 맞는지 확인한다.
+        - 엔티티 또는 내부 Long ID가 응답으로 직접 노출되는지 우선적으로 지적한다.
+
+    - path: "src/main/kotlin/com/gerd/domain/**/service/**"
+      instructions: |
+        - Service 메서드 단위로 @Transactional 경계가 명확한지 확인한다.
+        - 조회 전용 로직은 @Transactional(readOnly = true)를 우선 검토한다.
+        - Command/Query 책임이 섞여 복잡도가 커졌는지 확인한다.
+        - 외부 호출(Gemini, Kakao, Firebase, S3 등)은 실패, 재시도, 타임아웃, 테스트 대체 가능성을 확인한다.
+        - 비즈니스 예외는 도메인 *ErrorCode와 GeneralException 계열로 일관되게 처리되는지 확인한다.
+
+    - path: "src/main/kotlin/com/gerd/domain/**/entity/**"
+      instructions: |
+        - DTO.toEntity() 패턴이 추가되지 않았는지 확인한다.
+        - 상태 변경은 setter 대신 의미 있는 도메인 메서드로 노출되는지 확인한다.
+        - JPA 기본 생성자는 protected인지 확인한다.
+        - API로 노출될 식별자는 Long PK가 아니라 BaseEntity.externalId(UUID)를 사용하는지 확인한다.
+        - 연관관계, cascade, orphanRemoval 변경은 데이터 삭제/정합성 영향을 구체적으로 검토한다.
+
+    - path: "src/main/kotlin/com/gerd/domain/**/repository/**"
+      instructions: |
+        - QueryDSL 동적 조회는 Custom Repository로 분리되어 있는지 확인한다.
+        - fetch join, 페이징, distinct, group by 조합에서 중복/누락/N+1 가능성을 확인한다.
+        - API 응답 DTO와 repository/dto projection DTO가 혼용되지 않는지 확인한다.
+        - 사용자 입력이 JPQL/SQL 문자열로 직접 결합되어 SQL Injection 위험을 만들지 않는지 확인한다.
+
+    - path: "src/main/kotlin/com/gerd/domain/auth/**"
+      instructions: |
+        - JWT 검증, refresh token 재발급/폐기, OIDC claims 검증에서 인증 우회 가능성을 우선 검토한다.
+        - 토큰, provider id, 민감 식별자가 로그나 응답에 노출되는지 확인한다.
+        - 탈퇴/비활성 사용자(UserStatus) 처리와 권한(UserRole) 검사가 누락되지 않았는지 확인한다.
+
+    - path: "src/main/kotlin/com/gerd/global/config/**"
+      instructions: |
+        - 보안 설정은 인증이 필요한 경로와 공개 경로가 의도대로 분리되는지 확인한다.
+        - CORS, CSRF, 세션, 필터 순서 변경은 운영 환경 영향과 테스트 보강 필요성을 지적한다.
+        - profile별 application 설정과 충돌하거나 secret을 기본값으로 고정하지 않는지 확인한다.
+
+    - path: "src/main/resources/**"
+      instructions: |
+        - application-*.yml에 실제 secret, 토큰, 운영 credential이 들어가지 않는지 확인한다.
+        - local/test/prod profile 차이가 인증, DB, 외부 인프라 동작을 의도치 않게 바꾸지 않는지 확인한다.
+        - 로깅 설정은 JWT, refresh token, 개인정보, 외부 API 응답 원문을 노출하지 않는지 확인한다.
+
+    - path: "src/test/kotlin/**"
+      instructions: |
+        - 테스트는 하나의 동작을 명확히 검증하고 성공/실패/경계값을 포함하는지 확인한다.
+        - Controller 테스트는 상태코드와 ApiResponse 필드 구조를 함께 검증하는지 확인한다.
+        - Service 테스트는 비즈니스 예외와 권한 실패 케이스를 포함하는지 확인한다.
+        - DB 테스트는 프로덕션 DB에 의존하지 않고 H2 또는 Testcontainers PostgreSQL로 격리되는지 확인한다.
+        - 외부 인프라 의존 빈은 Mock, test profile, 대체 빈으로 격리되는지 확인한다.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        - PR 대상 브랜치, Java 21, Gradle 명령이 docs/branch-strategy.md와 일치하는지 확인한다.
+        - build와 test가 병합 전 품질 게이트로 충분히 동작하는지 확인한다.
+        - 권한, 캐시, secret 사용이 과도하거나 위험하지 않은지 확인한다.
+
+    - path: "docs/**"
+      instructions: |
+        - 문서가 AGENTS.md, 실제 코드 구조, Gradle 설정과 충돌하지 않는지 확인한다.
+        - API 응답, 테스트, 브랜치 전략 문서 변경은 실제 구현/CI와 함께 맞는지 확인한다.
+
+  pre_merge_checks:
+    title:
+      mode: "warning"
+      requirements: "PR 제목은 변경 목적이 드러나야 하며, 가능한 경우 feat/fix/refactor/test/docs/chore 중 하나의 타입을 포함한다."
+    description:
+      mode: "warning"
+    issue_assessment:
+      mode: "warning"
+    custom_checks:
+      - name: "API response contract"
+        mode: "warning"
+        instructions: |
+          변경된 API는 docs/api-response.md를 따라 ApiResponse<T>를 반환해야 한다.
+          성공 HTTP status와 body code/message는 같은 BaseSuccessCode 구현체에서 나와야 한다.
+          Entity 전체와 내부 Long ID는 API 응답에 직접 노출하면 안 된다.
+      - name: "Layer and transaction boundaries"
+        mode: "warning"
+        instructions: |
+          Controller, Service, Repository, Entity, DTO 책임이 docs/coding-convention.md와 맞아야 한다.
+          Service 메서드의 트랜잭션 경계가 명확해야 하며, 조회 로직은 readOnly=true를 우선 사용해야 한다.
+          DTO에서 Entity를 생성하는 toEntity() 패턴을 추가하면 안 된다.
+      - name: "Security sensitive changes"
+        mode: "warning"
+        instructions: |
+          인증/인가, JWT/OIDC, refresh token, CORS/CSRF, 로그, application 설정 변경은 보안 영향을 검토해야 한다.
+          실제 secret, token, credential, 개인정보를 저장소나 로그에 남기면 안 된다.
+      - name: "Test coverage"
+        mode: "warning"
+        instructions: |
+          기능 변경에는 관련 Controller/Service/Repository/통합 테스트 중 필요한 범위의 테스트가 포함되어야 한다.
+          예외 흐름, 권한 실패, 경계값, 외부 의존성 격리 중 변경 위험에 맞는 테스트가 없으면 지적한다.
+
+tools:
+  detekt:
+    enabled: true
+  shellcheck:
+    enabled: true
+  markdownlint:
+    enabled: true
+  yamllint:
+    enabled: true
+  hadolint:
+    enabled: true
+  actionlint:
+    enabled: true
+  zizmor:
+    enabled: true
+  gitleaks:
+    enabled: true
+  trufflehog:
+    enabled: true
+  checkov:
+    enabled: true
+  trivy:
+    enabled: true
+  osvScanner:
+    enabled: true
+  sqlfluff:
+    enabled: true
+  pmd:
+    enabled: false
+  fbinfer:
+    enabled: false
+    enable_java: false
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "docs/*.md"
+      - "skills/*/SKILL.md"
+  learnings:
+    scope: "local"
+    approval_delay: 7
+  issues:
+    scope: "local"
+  pull_requests:
+    scope: "local"
+  automatic_repository_linking: false
+
+chat:
+  art: false
+  auto_reply: true
