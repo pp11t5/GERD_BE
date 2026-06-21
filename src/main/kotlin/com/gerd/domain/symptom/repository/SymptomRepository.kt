@@ -15,4 +15,22 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
     @Query("SELECT s.mealRecordId FROM Symptom s WHERE s.user.id = :userId AND s.mealRecordId IS NOT NULL")
     fun findLinkedMealRecordIdsByUserId(@Param("userId") userId: Long): List<Long>
 
+    // 특정 끼니를 제외한 다른 편안 증상에서 여전히 유효한 음식 ID 목록
+    // symptom_state는 @Enumerated(STRING)이라 enum 이름 대문자로 조회
+    @Query("""
+        SELECT DISTINCT mf.food_id
+        FROM symptom_records s
+        INNER JOIN meal_foods mf ON s.meal_record_id = mf.meal_record_id
+        WHERE s.user_id = :userId
+          AND s.symptom_state IN ('COMFORTABLE', 'GOOD')
+          AND s.deleted_at IS NULL
+          AND mf.deleted_at IS NULL
+          AND mf.food_id IN :foodIds
+          AND s.meal_record_id <> :excludeMealRecordId
+    """, nativeQuery = true)
+    fun findFoodIdsStillSafeByOtherSymptoms(
+        @Param("userId") userId: Long,
+        @Param("foodIds") foodIds: List<Long>,
+        @Param("excludeMealRecordId") excludeMealRecordId: Long,
+    ): List<Long>
 }
