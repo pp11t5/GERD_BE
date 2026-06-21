@@ -11,9 +11,10 @@ import com.gerd.domain.timeline.dto.WeeklyJudgementResponseDTO
 import com.gerd.domain.timeline.enums.TimeLineType
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 
 @Service
 @Transactional(readOnly = true)
@@ -34,14 +35,15 @@ class TimeLineService(
         if (mealRecords.isEmpty() && symptoms.isEmpty()) return TimeLineResponseDTO(emptyList())
 
         val mealRecordIds = mealRecords.map { it.id!! }
-        val mealRecordExternalIdById = mealRecords.associate { it.id!! to it.externalId.toString() }
+        val mealRecordById = mealRecords.associateBy { it.id!! }
 
         val mealFoodsByRecordId = mealFoodRepository
             .findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(mealRecordIds)
             .groupBy { it.mealRecordId }
 
         val foodIds = mealFoodsByRecordId.values.flatten().map { it.foodId }.distinct()
-        val foodNameById = foodRepository.findAllByIdsIncludingDeleted(foodIds).associate { it.id!! to it.name }
+        val foodNameById = if (foodIds.isEmpty()) emptyMap()
+        else foodRepository.findAllByIdsIncludingDeleted(foodIds).associate { it.id!! to it.name }
 
         val mealItems = mealRecords.map { record ->
             val foods = mealFoodsByRecordId[record.id] ?: emptyList()
@@ -67,7 +69,7 @@ class TimeLineService(
         }
 
         val symptomItems = symptoms.map { s ->
-            val linkedRecord = mealRecords.find { it.id == s.mealRecordId }
+            val linkedRecord = mealRecordById[s.mealRecordId]
             val afterMealMinutes = linkedRecord?.let {
                 ChronoUnit.MINUTES.between(it.eatenAt, s.occurredAt).toInt()
             } ?: 0
@@ -81,9 +83,9 @@ class TimeLineService(
 
         val items = (mealItems + symptomItems).sortedBy { item ->
             when (item) {
-                is TimeLineItemDTO.Single -> LocalDateTime.parse(item.mealRecordDateTime)
-                is TimeLineItemDTO.Group -> LocalDateTime.parse(item.mealRecordDateTime)
-                is TimeLineItemDTO.Symptom -> LocalDateTime.parse(item.occurredAt)
+                is TimeLineItemDTO.Single -> item.mealRecordDateTime
+                is TimeLineItemDTO.Group -> item.mealRecordDateTime
+                is TimeLineItemDTO.Symptom -> item.occurredAt
             }
         }
 
@@ -91,12 +93,12 @@ class TimeLineService(
     }
 
     fun getWeeklyJudgements(userId: Long, date: LocalDate): List<WeeklyJudgementResponseDTO> {
-        // 해당 날짜 기준 일요일~토요일 가져오기
-        val sunday = date.minusDays(date.dayOfWeek.value.toLong() % 7)
+        val sunday = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
         val saturday = sunday.plusDays(6)
 
-        // 해당 주간의 식사 기록 가져오기
-        val mealFoods = mealFoodRepository.findByUser_IdAndEatenAtBetween(userId,sunday.atStartOfDay(),saturday.atStartOfDay())
+        val mealFoods = mealFoodRepository.findByUser_IdAndEatenAtBetween(
+            userId, sunday.atStartOfDay(), saturday.plusDays(1).atStartOfDay()
+        )
 
         val gradesByDate = mealFoods.groupBy { it.eatenAt.toLocalDate() }
 
