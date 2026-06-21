@@ -32,7 +32,13 @@ class SymptomPatternAnalysisPromptBuilder(
               없는 수치를 만들어내면 안 됩니다.
 
             [입력 데이터 설명]
-            - user: 사용자 닉네임, 등록 트리거 음식, 알레르기, 복용약
+            - user.symptoms: 온보딩에서 사용자가 선택한 최근 4주 불편함 코드. 의미는 다음과 같습니다:
+              heartburn_reflux=속쓰림·역류, post_meal_cough=식후 기침, throat_globus=목 이물감,
+              sour_mouth_odor=신물 올라옴·입냄새, supine_chest_tight=누우면 가슴 답답함,
+              none_but_manage=현재 증상은 없고 관리 목적
+            - user.triggerFoods: 사용자가 등록한 트리거 음식
+            - user.allergies: 사용자가 등록한 알레르기
+            - user.medications: 사용자가 등록한 복용약
             - currentSymptom: 현재 조회 중인 증상 기록
             - linkedMeal: 이 증상 기록에 필수 연결된 식사와 음식 목록
             - window: 최근 N일 rolling 식사-증상 연결 기록 집계

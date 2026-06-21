@@ -29,7 +29,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 @RequestMapping("/api/v1/symptoms")
 interface SymptomApi {
 
-    @Operation(summary = "증상 기록 생성")
+    @Operation(
+        summary = "증상 기록 생성",
+        description = "증상 목록을 선택하지 않으면 없음으로 입력됩니다.",
+    )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "생성 성공"))
     @PostMapping
     fun create(

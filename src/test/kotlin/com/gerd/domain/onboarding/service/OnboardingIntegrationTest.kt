@@ -85,7 +85,7 @@ class OnboardingIntegrationTest @Autowired constructor(
             onboardingService.submit(
                 userId,
                 OnboardingRequestDTO(
-                    symptoms = listOf(SymptomCode.HEARTBURN_REFLUX, SymptomCode.THROAT_GLOBUS),
+                    symptoms = setOf(SymptomCode.HEARTBURN_REFLUX, SymptomCode.THROAT_GLOBUS),
                     triggers = listOf(TriggerCode.CAFFEINE),
                     allergens = listOf(AllergenCode.MILK),
                     medications = listOf("PPI", "제산제"),

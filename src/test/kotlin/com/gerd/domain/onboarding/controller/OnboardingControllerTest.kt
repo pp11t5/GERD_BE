@@ -66,7 +66,7 @@ class OnboardingControllerTest @Autowired constructor(
         @WithCustomUser
         fun `유효한 요청이면 201을 반환한다`() {
             val request = OnboardingRequestDTO(
-                symptoms = listOf(SymptomCode.HEARTBURN_REFLUX),
+                symptoms = setOf(SymptomCode.HEARTBURN_REFLUX),
                 triggers = listOf(TriggerCode.CAFFEINE),
                 medications = listOf("PPI"),
                 customTriggerText = "오렌지주스",

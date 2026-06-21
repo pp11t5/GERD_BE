@@ -1,7 +1,5 @@
 package com.gerd.domain.symptom.service
 
-import com.gerd.domain.auth.exception.AuthErrorCode
-import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
 import com.gerd.domain.food.repository.FoodRepository
@@ -12,6 +10,7 @@ import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
+import com.gerd.domain.onboarding.repository.UserSymptomRepository
 import com.gerd.domain.onboarding.repository.UserTriggerRepository
 import com.gerd.domain.symptom.dto.SymptomPatternAnalysisInputDTO
 import com.gerd.domain.symptom.entity.Symptom
@@ -34,7 +33,6 @@ import java.time.ZoneOffset
 @Component
 @Transactional(readOnly = true)
 class SymptomPatternAnalysisInputReader(
-    private val userRepository: UserRepository,
     private val mealRecordRepository: MealRecordRepository,
     private val mealFoodRepository: MealFoodRepository,
     private val foodRepository: FoodRepository,
@@ -42,12 +40,11 @@ class SymptomPatternAnalysisInputReader(
     private val userTriggerRepository: UserTriggerRepository,
     private val userAllergenRepository: UserAllergenRepository,
     private val userMedicationRepository: UserMedicationRepository,
+    private val userSymptomRepository: UserSymptomRepository,
     private val symptomRepository: SymptomRepository,
 ) {
 
     fun read(symptom: Symptom, userId: Long): SymptomPatternAnalysisInputDTO {
-        val user = userRepository.findById(userId)
-            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val mealRecord = mealRecordRepository.findByIdAndUser_Id(symptom.mealRecordId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(symptom.mealRecordId)
@@ -57,7 +54,7 @@ class SymptomPatternAnalysisInputReader(
 
         return SymptomPatternAnalysisInputDTO(
             user = SymptomPatternAnalysisInputDTO.UserSnapshotDTO(
-                nickname = user.nickname,
+                symptoms = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
                 triggerFoods = userTriggerRepository.findTriggerLabelsByUserId(userId).map { it.displayName },
                 allergies = userAllergenRepository.findAllergensByUserId(userId).map { it.displayName },
                 medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },

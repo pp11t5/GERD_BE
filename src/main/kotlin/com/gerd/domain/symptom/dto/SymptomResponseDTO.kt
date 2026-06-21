@@ -49,9 +49,6 @@ data class SymptomResponseDTO(
     )
 
     data class AnalysisDTO(
-        @field:Schema(description = "분석 제목 (유저명 포함)", example = "유진 님을 위한 맞춤 분석이에요")
-        val title: String,
-
         @field:Schema(description = "분석 항목")
         val items: List<Item>,
     )

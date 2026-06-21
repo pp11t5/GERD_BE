@@ -34,15 +34,14 @@ class SymptomConverter(
             symptomTypes = symptom.symptomTypes.toList(),
             occurredAt = symptom.occurredAt.atOffset(ZoneOffset.ofHours(9)).toString(),
             linkedMeal = linkedMeal,
-            analysis = deserializeAnalysis(symptom.analysisJson, symptom.user.nickname),
+            analysis = deserializeAnalysis(symptom.analysisJson),
         )
 
-    private fun deserializeAnalysis(json: String?, nickname: String?): SymptomResponseDTO.AnalysisDTO? {
+    private fun deserializeAnalysis(json: String?): SymptomResponseDTO.AnalysisDTO? {
         val analysis = json?.let {
             runCatching { objectMapper.readValue(it, SymptomPatternAnalysisDTO::class.java) }.getOrNull()
         } ?: return null
         return SymptomResponseDTO.AnalysisDTO(
-            title = "${nickname ?: "사용자"} 님을 위한 맞춤 분석이에요",
             items = listOf(
                 SymptomResponseDTO.Item(
                     emphasis = analysis.pattern,

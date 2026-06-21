@@ -19,7 +19,7 @@ data class OnboardingRequestDTO(
         example = "[\"heartburn_reflux\", \"post_meal_cough\"]",
     )
     @field:Size(max = 6, message = "증상은 최대 6개까지 선택할 수 있습니다.")
-    val symptoms: List<SymptomCode> = emptyList(),
+    val symptoms: Set<SymptomCode> = emptySet(),
 
     @field:Schema(
         description = """07 트리거 음식 칩(다중). 영어 code 배열로 전달.
