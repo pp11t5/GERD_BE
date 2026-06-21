@@ -11,7 +11,7 @@ data class WeeklyJudgementResponseDTO(
     @field:Schema(description = "요일", example = "SAT")
     val dayOfWeek: String,
 
-    @field:Schema(description = "판정 등급 목록, 최대 3개", example = "[\"GOOD\", \"BAD\"]")
+    @field:Schema(description = "판정 등급 목록, 최대 3개", example = "[\"RECOMMEND\", \"CAUTION\"]")
     val judgementList: List<JudgmentGrade>
 
 )

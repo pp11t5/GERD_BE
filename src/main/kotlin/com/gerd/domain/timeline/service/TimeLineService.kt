@@ -34,8 +34,8 @@ class TimeLineService(
 
         if (mealRecords.isEmpty() && symptoms.isEmpty()) return TimeLineResponseDTO(emptyList())
 
-        val mealRecordIds = mealRecords.map { it.id!! }
-        val mealRecordById = mealRecords.associateBy { it.id!! }
+        val mealRecordIds = mealRecords.mapNotNull { it.id }
+        val mealRecordById = mealRecords.associateBy { requireNotNull(it.id) { "MealRecord.id must not be null" } }
 
         val mealFoodsByRecordId = mealFoodRepository
             .findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(mealRecordIds)
