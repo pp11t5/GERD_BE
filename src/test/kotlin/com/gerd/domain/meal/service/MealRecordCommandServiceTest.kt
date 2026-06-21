@@ -1,6 +1,7 @@
 package com.gerd.domain.meal.service
 
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
@@ -14,6 +15,7 @@ import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
 import com.gerd.global.fixture.MealRecordFixture
@@ -65,6 +67,12 @@ class MealRecordCommandServiceTest {
     @Mock
     private lateinit var transactionManager: PlatformTransactionManager
 
+    @Mock
+    private lateinit var symptomRepository: SymptomRepository
+
+    @Mock
+    private lateinit var dictionaryCommandService: DictionaryCommandService
+
     private lateinit var service: MealCommandService
 
     private val objectMapper = ObjectMapper()
@@ -81,6 +89,8 @@ class MealRecordCommandServiceTest {
             mealRecordConverter = mealRecordConverter,
             foodJudgmentQueryService = foodJudgmentQueryService,
             objectMapper = objectMapper,
+            symptomRepository = symptomRepository,
+            dictionaryCommandService = dictionaryCommandService,
             transactionManager = transactionManager,
         )
     }
@@ -166,37 +176,38 @@ class MealRecordCommandServiceTest {
     inner class `단일 음식 삭제` {
 
         @Test
-        fun `삭제 후 남은 음식이 없으면 부모 끼니도 삭제한다`() {
+        fun `마지막 음식이면 끼니 전체 삭제 경로로 소속 음식과 끼니를 함께 삭제한다`() {
             val mealFood = MealRecordFixture.mealFood()
             val mealRecord = MealRecordFixture.mealRecord()
+            val foods = listOf(mealFood)
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID)
             whenever(mealFoodRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
-            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(0)
+            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(1L)
+            whenever(symptomRepository.findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(emptyList())
+            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(foods)
             whenever(mealRecordRepository.findByIdAndUser_Id(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
 
             service.delete(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(), userId)
 
+            verify(dictionaryCommandService, never()).removeSafeEntries(any(), any())
             inOrder(mealFoodRepository, mealRecordRepository) {
-                verify(mealFoodRepository).delete(mealFood)
-                verify(mealFoodRepository).flush()
-                verify(mealFoodRepository).countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)
+                verify(mealFoodRepository).deleteAll(foods)
                 verify(mealRecordRepository).delete(mealRecord)
             }
         }
 
         @Test
-        fun `삭제 후 다른 음식이 남아 있으면 부모 끼니는 유지한다`() {
+        fun `삭제 후 다른 음식이 남아 있으면 음식만 삭제하고 끼니는 유지한다`() {
             val mealFood = MealRecordFixture.mealFood()
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID)
             whenever(mealFoodRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
-            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(1)
+            whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(2L)
 
             service.delete(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(), userId)
 
             verify(mealFoodRepository).delete(mealFood)
-            verify(mealFoodRepository).flush()
             verify(mealRecordRepository, never()).delete(any())
         }
     }
@@ -212,10 +223,13 @@ class MealRecordCommandServiceTest {
                 .thenReturn(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID)
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
                 .thenReturn(mealRecord)
+            whenever(symptomRepository.findByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(emptyList())
             whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(foods)
+            whenever(mealRecordRepository.findByIdAndUser_Id(MealRecordFixture.MEAL_RECORD_ID, userId)).thenReturn(mealRecord)
 
             service.deleteMealRecord(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(), userId)
 
+            verify(dictionaryCommandService, never()).removeSafeEntries(any(), any())
             verify(mealFoodRepository).deleteAll(foods)
             verify(mealRecordRepository).delete(mealRecord)
         }
