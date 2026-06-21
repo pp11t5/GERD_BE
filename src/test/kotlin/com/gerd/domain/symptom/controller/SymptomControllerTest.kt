@@ -149,7 +149,7 @@ class SymptomControllerTest @Autowired constructor(
                 .andExpect {
                     status { isOk() }
                     jsonPath("$.result.symptomId") { value(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString()) }
-                    jsonPath("$.result.analysis.title") { value("유진 님을 위한 맞춤 분석이에요") }
+                    jsonPath("$.result.analysis.title") { doesNotExist() }
                     jsonPath("$.result.linkedMeal.foods[0].name") { value("된장찌개") }
                 }
         }
@@ -248,7 +248,6 @@ class SymptomControllerTest @Autowired constructor(
             ),
         ),
         analysis = SymptomResponseDTO.AnalysisDTO(
-            title = "유진 님을 위한 맞춤 분석이에요",
             items = listOf(
                 SymptomResponseDTO.Item(
                     emphasis = "편안한 식사 패턴이에요",

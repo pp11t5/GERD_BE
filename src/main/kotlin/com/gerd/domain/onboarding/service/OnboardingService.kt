@@ -73,7 +73,7 @@ class OnboardingService(
 
         if (request.symptoms.isNotEmpty()) {
             userSymptomRepository.saveAll(
-                request.symptoms.distinct().map { symptom ->
+                request.symptoms.map { symptom ->
                     UserSymptom(userProfile = profile, id = UserSymptomId(symptomCode = symptom.code))
                 },
             )

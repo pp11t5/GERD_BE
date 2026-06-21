@@ -46,7 +46,7 @@ class SymptomConverterTest {
         }
 
         @Test
-        fun `분석이 있으면 사용자 닉네임 기반 제목으로 반환한다`() {
+        fun `분석이 있으면 항목만 반환한다`() {
             val symptom = SymptomFixture.symptom(
                 analysisJson = """
                     {"label":"유지 권장","pattern":"편안한 식사 패턴이에요","advice":"저녁 식사량 조절을 이어가 보세요."}
@@ -55,7 +55,6 @@ class SymptomConverterTest {
 
             val result = converter.toResponse(symptom, linkedMeal())
 
-            assertThat(result.analysis?.title).isEqualTo("유진 님을 위한 맞춤 분석이에요")
             assertThat(result.analysis?.items?.first()?.emphasis).isEqualTo("편안한 식사 패턴이에요")
             assertThat(result.analysis?.items?.first()?.body).isEqualTo("저녁 식사량 조절을 이어가 보세요.")
         }

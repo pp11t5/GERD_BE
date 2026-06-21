@@ -9,7 +9,6 @@ data class JudgmentContext(
     val category: String?,
     val foodTriggers: List<TagDTO>,
     val foodAllergens: List<TagDTO>,
-    val nickname: String? = null,
     val userTriggers: List<TagDTO>,
     val userAllergens: List<TagDTO>,
     val medications: List<String>,

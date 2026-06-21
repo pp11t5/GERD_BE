@@ -20,7 +20,6 @@ data class LlmInputSnapshotDTO(
     )
 
     data class UserSnapshotDTO(
-        val nickname: String?,
         val symptoms: List<String>,
         val triggerFoods: List<TagDTO>,
         val allergies: List<TagDTO>,

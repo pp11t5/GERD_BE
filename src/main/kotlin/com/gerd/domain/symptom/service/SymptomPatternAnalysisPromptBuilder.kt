@@ -32,7 +32,10 @@ class SymptomPatternAnalysisPromptBuilder(
               없는 수치를 만들어내면 안 됩니다.
 
             [입력 데이터 설명]
-            - user: 사용자 닉네임, 등록 트리거 음식, 알레르기, 복용약
+            - user.symptoms: 온보딩에서 사용자가 선택한 최근 4주 불편함 코드
+            - user.triggerFoods: 사용자가 등록한 트리거 음식
+            - user.allergies: 사용자가 등록한 알레르기
+            - user.medications: 사용자가 등록한 복용약
             - currentSymptom: 현재 조회 중인 증상 기록
             - linkedMeal: 이 증상 기록에 필수 연결된 식사와 음식 목록
             - window: 최근 N일 rolling 식사-증상 연결 기록 집계

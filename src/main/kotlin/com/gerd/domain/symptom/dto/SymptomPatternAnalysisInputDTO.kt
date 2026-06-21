@@ -14,7 +14,7 @@ data class SymptomPatternAnalysisInputDTO(
     val features: PatternFeatureDTO,
 ) {
     data class UserSnapshotDTO(
-        val nickname: String?,
+        val symptoms: List<String> = emptyList(),
         val triggerFoods: List<String> = emptyList(),
         val allergies: List<String> = emptyList(),
         val medications: List<String> = emptyList(),

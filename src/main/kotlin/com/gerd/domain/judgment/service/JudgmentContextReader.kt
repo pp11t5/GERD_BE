@@ -1,6 +1,5 @@
 package com.gerd.domain.judgment.service
 
-import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodAllergenRepository
@@ -36,7 +35,6 @@ import java.util.UUID
 @Component
 @Transactional(readOnly = true)
 class JudgmentContextReader(
-    private val userRepository: UserRepository,
     private val foodRepository: FoodRepository,
     private val foodTriggerRepository: FoodTriggerRepository,
     private val foodAllergenRepository: FoodAllergenRepository,
@@ -63,7 +61,6 @@ class JudgmentContextReader(
                 category = null,
                 foodTriggers = emptyList(),
                 foodAllergens = emptyList(),
-                nickname = userRepository.findById(userId).map { it.nickname }.orElse(null),
                 userTriggers = emptyList(),
                 userAllergens = emptyList(),
                 medications = emptyList(),
@@ -73,7 +70,6 @@ class JudgmentContextReader(
 
         val foodId = requireNotNull(food.id) { "영속 음식은 id를 가진다" }
         val category = foodCategoryReader.loadPrimaryByFoodIds(listOf(foodId))[foodId]
-        val nickname = userRepository.findById(userId).map { it.nickname }.orElse(null)
         return JudgmentContext(
             food = food,
             category = category,
@@ -81,7 +77,6 @@ class JudgmentContextReader(
                 .map { TagDTO(it.code, it.displayName) },
             foodAllergens = foodAllergenRepository.findAllergensByFoodId(foodId)
                 .map { TagDTO(it.code, it.displayName) },
-            nickname = nickname,
             userTriggers = userTriggerRepository.findTriggerLabelsByUserId(userId)
                 .map { TagDTO(it.code, it.displayName) },
             userAllergens = userAllergenRepository.findAllergensByUserId(userId)
@@ -93,7 +88,6 @@ class JudgmentContextReader(
     }
 
     fun loadUserContext(userId: Long): UserContext = UserContext(
-        nickname = userRepository.findById(userId).map { it.nickname }.orElse(null),
         userTriggers = userTriggerRepository.findTriggerLabelsByUserId(userId).map { TagDTO(it.code, it.displayName) },
         userAllergens = userAllergenRepository.findAllergensByUserId(userId).map { TagDTO(it.code, it.displayName) },
         medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },

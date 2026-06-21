@@ -97,7 +97,7 @@ class OnboardingServiceTest {
                     .thenAnswer { it.arguments[0] as UserProfile }
 
                 val request = OnboardingRequestDTO(
-                    symptoms = listOf(SymptomCode.HEARTBURN_REFLUX),
+                    symptoms = setOf(SymptomCode.HEARTBURN_REFLUX),
                     triggers = listOf(TriggerCode.CAFFEINE),
                     allergens = listOf(AllergenCode.MILK),
                     medications = listOf("PPI"),
