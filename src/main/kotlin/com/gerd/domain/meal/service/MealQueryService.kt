@@ -11,9 +11,6 @@ import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
-import java.time.ZoneId
-
-private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
 @Service
 @Transactional(readOnly = true)
@@ -47,7 +44,7 @@ class MealQueryService(
 
     // 최근 24시간 내 기록 중 증상과 연결되지 않은 음식 기록 그룹 후보 조회
     fun getCandidates(userId: Long): List<MealCandidatesDTO> {
-        val cutoff = LocalDateTime.now(SEOUL).minusHours(24)
+        val cutoff = LocalDateTime.now().minusHours(24)
         val mealRecords = mealRecordRepository.findByUser_IdAndEatenAtAfter(userId, cutoff)
         if (mealRecords.isEmpty()) return emptyList()
         val linkedIds = symptomRepository.findLinkedMealRecordIdsByUserId(userId).toSet()
