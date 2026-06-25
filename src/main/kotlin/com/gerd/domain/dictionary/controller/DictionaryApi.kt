@@ -29,7 +29,7 @@ interface DictionaryApi {
 
     @Operation(
         summary = "안전 음식 목록 조회",
-        description = "먹고 편안했던 음식 목록을 최신순으로 반환합니다(커서 페이징, 기본 20·최대 50) cursor 미지정 시 첫 페이지입니다.",
+        description = "먹고 편안했던 음식 목록을 최신순으로 반환합니다(커서 페이징, 기본 20·최대 20) cursor 미지정 시 첫 페이지입니다.",
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
     @GetMapping("/safe")
@@ -43,7 +43,7 @@ interface DictionaryApi {
 
     @Operation(
         summary = "주의·위험 음식 목록 조회",
-        description = "신호등 판정에서 주의·위험 등급을 받은 음식 목록을 최신순으로 반환합니다(커서 페이징, 기본 20·최대 50) cursor 미지정 시 첫 페이지입니다.",
+        description = "신호등 판정에서 주의·위험 등급을 받은 음식 목록을 최신순으로 반환합니다(커서 페이징, 기본 20·최대 20) cursor 미지정 시 첫 페이지입니다.",
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
     @GetMapping("/caution-risk")

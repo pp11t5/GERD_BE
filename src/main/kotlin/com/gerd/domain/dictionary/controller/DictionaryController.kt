@@ -8,10 +8,14 @@ import com.gerd.domain.dictionary.service.DictionaryQueryService
 import com.gerd.global.annotation.CurrentUser
 import com.gerd.global.apiPayload.ApiResponse
 import com.gerd.global.apiPayload.code.CommonSuccessCode
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import org.springframework.http.ResponseEntity
+import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+@Validated
 class DictionaryController(
     private val dictionaryService: DictionaryQueryService,
 ) : DictionaryApi {
@@ -25,8 +29,8 @@ class DictionaryController(
 
     override fun getSafeFoods(
         @CurrentUser userDetails: CustomUserDetails,
-        cursor: Long?,
-        size: Int?,
+        @Min(0) cursor: Long?,
+        @Min(1) @Max(20) size: Int?,
     ): ResponseEntity<ApiResponse<DictionarySafeResponseDTO>> =
         ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
@@ -39,8 +43,8 @@ class DictionaryController(
 
     override fun getCautionRiskFoods(
         @CurrentUser userDetails: CustomUserDetails,
-        cursor: Long?,
-        size: Int?,
+        @Min(0) cursor: Long?,
+        @Min(1) @Max(20) size: Int?,
     ): ResponseEntity<ApiResponse<DictionaryCautionRiskResponseDTO>> =
         ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
