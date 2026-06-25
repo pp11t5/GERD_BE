@@ -124,6 +124,7 @@ class TimeLineService(
         val allTypes = symptoms.flatMap { it.symptomTypes }.distinct()
         val afterMealMinutes = ChronoUnit.MINUTES.between(mealEatenAt, mostRecent.occurredAt).toInt()
         return TimeLineItemDTO.ConnectedSymptom(
+            symptomId = mostRecent.externalId?.toString() ?: "",
             symptomState = mostRecent.symptomState,
             afterMealMinutes = afterMealMinutes,
             representativeSymptoms = allTypes.take(2),

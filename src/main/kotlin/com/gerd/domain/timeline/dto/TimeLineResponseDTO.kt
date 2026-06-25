@@ -53,6 +53,8 @@ sealed class TimeLineItemDTO {
     ) : TimeLineItemDTO()
 
     data class ConnectedSymptom(
+        @field:Schema(description = "대표 증상 기록 외부 식별자(UUID) — 상세 진입용", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        val symptomId: String,
         @field:Schema(description = "증상 상태") // 맞게 수정 필요
         val symptomState: SymptomState,
         @field:Schema(description = "식사 후 경과 시간 (분)", example = "30")
@@ -61,7 +63,6 @@ sealed class TimeLineItemDTO {
         val representativeSymptoms: List<SymptomType>,
         @field:Schema(description = "기타 증상 개수, example")
         val etcCount: Int,
-
     )
 
 }

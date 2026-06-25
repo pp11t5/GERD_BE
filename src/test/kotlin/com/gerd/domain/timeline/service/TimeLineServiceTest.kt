@@ -159,6 +159,7 @@ class TimeLineServiceTest {
             assertThat(result.items.filterIsInstance<TimeLineItemDTO.Symptom>()).isEmpty()
             val groupItem = result.items.first() as TimeLineItemDTO.Group
             val connected = groupItem.connectedSymptoms!!
+            assertThat(connected.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
             assertThat(connected.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
             assertThat(connected.afterMealMinutes).isEqualTo(70)
             assertThat(connected.representativeSymptoms).hasSize(2)
