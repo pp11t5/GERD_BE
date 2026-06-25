@@ -28,8 +28,7 @@ data class SymptomUpdateRequestDTO(
     @field:ValidOffsetDateTime(message = "증상 발생 시각은 ISO-8601 offset 형식이어야 합니다.")
     val occurredAt: String?,
 
-    @field:Schema(description = "원인 끼니 식별자(UUID). 증상 기록은 식사 연결 필수", example = "c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
-    @field:NotBlank(message = "끼니 식별자는 필수입니다.")
+    @field:Schema(description = "원인 끼니 식별자(UUID). 생략 시 미연결 증상으로 저장", nullable = true, example = "c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
     @field:UUID(message = "끼니 식별자는 UUID 형식이어야 합니다.")
     val mealRecordId: String?,
 

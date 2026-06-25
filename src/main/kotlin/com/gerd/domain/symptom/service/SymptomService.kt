@@ -54,10 +54,7 @@ class SymptomService(
     @Transactional
     fun create(userId: Long, request: SymptomCreateRequestDTO): SymptomResponseDTO {
         val user = userRepository.getReferenceById(userId)
-        val mealRecordId = resolveMealRecordId(
-            request.mealRecordId ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND),
-            userId,
-        )
+        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
         val symptom = Symptom(
             user = user,
             symptomState = request.symptomState ?: throw GeneralException(CommonErrorCode.INVALID_REQUEST),
@@ -69,7 +66,7 @@ class SymptomService(
         val saved = symptomRepository.save(symptom)
         scheduleAnalysisRefreshAfterCommit(saved, userId)
 
-        if (request.symptomState?.isSafe() == true) {
+        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
             registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
         }
 
@@ -79,12 +76,9 @@ class SymptomService(
     @Transactional
     fun update(symptomId: String, request: SymptomUpdateRequestDTO, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
-        val mealRecordId = resolveMealRecordId(
-            request.mealRecordId ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND),
-            userId,
-        )
+        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
 
-        dictionaryCommandService.removeSafeEntries(userId, symptom.mealRecordId)
+        symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
 
         symptom.update(
             symptomState = request.symptomState ?: throw GeneralException(CommonErrorCode.INVALID_REQUEST),
@@ -95,7 +89,7 @@ class SymptomService(
         )
         scheduleAnalysisRefreshAfterCommit(symptom, userId)
 
-        if (request.symptomState?.isSafe() == true) {
+        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
             registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
         }
     }
@@ -112,7 +106,7 @@ class SymptomService(
     @Transactional
     fun delete(symptomId: String, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
-        dictionaryCommandService.removeSafeEntries(userId, symptom.mealRecordId)
+        symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
         symptomRepository.delete(symptom)
     }
 
@@ -137,11 +131,12 @@ class SymptomService(
             ?: throw GeneralException(SymptomErrorCode.SYMPTOM_NOT_FOUND)
     }
 
-    // 연결된 식사 기록과 음식 정보를 조회하여 DTO로 변환
-    private fun buildLinkedMeal(symptom: Symptom, userId: Long): SymptomResponseDTO.LinkedMealDTO {
-        val mealRecord = mealRecordRepository.findByIdAndUser_Id(symptom.mealRecordId, userId)
+    // 연결된 식사 기록과 음식 정보를 조회하여 DTO로 변환 (미연결 증상은 null 반환)
+    private fun buildLinkedMeal(symptom: Symptom, userId: Long): SymptomResponseDTO.LinkedMealDTO? {
+        val mealRecordId = symptom.mealRecordId ?: return null
+        val mealRecord = mealRecordRepository.findByIdAndUser_Id(mealRecordId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(symptom.mealRecordId)
+        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId)
         val foodsById = loadFoodsById(mealFoods)
         val categoriesByFoodId = loadCategoriesByFoodId(foodsById.keys)
 
