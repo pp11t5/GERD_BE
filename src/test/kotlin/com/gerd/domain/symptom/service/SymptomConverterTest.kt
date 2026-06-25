@@ -40,9 +40,9 @@ class SymptomConverterTest {
             assertThat(result.symptomState).isEqualTo(SymptomState.COMFORTABLE)
             assertThat(result.stateTitle).isEqualTo("comfortable")
             assertThat(result.occurredAt).isEqualTo("2026-05-12T19:30+09:00")
-            assertThat(result.linkedMeal.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString())
-            assertThat(result.linkedMeal.foods[0].mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
-            assertThat(result.linkedMeal.foods[0].name).isEqualTo("된장찌개")
+            assertThat(result.linkedMeal!!.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString())
+            assertThat(result.linkedMeal!!.foods[0].mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
+            assertThat(result.linkedMeal!!.foods[0].name).isEqualTo("된장찌개")
         }
 
         @Test

@@ -5,6 +5,7 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.entity.enums.SymptomState
+import com.gerd.domain.symptom.entity.enums.SymptomType
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.domain.timeline.dto.TimeLineItemDTO
 import com.gerd.global.fixture.FoodFixture
@@ -111,7 +112,7 @@ class TimeLineServiceTest {
         }
 
         @Test
-        fun `증상 기록이 있으면 Symptom으로 포함된다`() {
+        fun `Single 식사에 연결된 증상은 standalone Symptom 아이템으로 표시된다`() {
             val mealRecord = MealRecordFixture.mealRecord(eatenAt = LocalDateTime.of(2026, 6, 17, 12, 0, 0))
             val symptom = SymptomFixture.symptom(
                 mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
@@ -134,6 +135,141 @@ class TimeLineServiceTest {
         }
 
         @Test
+        fun `Group 식사에 연결된 증상은 connectedSymptoms에 임베드되고 standalone 아이템에서 제외된다`() {
+            val mealRecord = MealRecordFixture.mealRecord(eatenAt = LocalDateTime.of(2026, 6, 17, 12, 0, 0))
+            val food1 = MealRecordFixture.mealFood(id = 1L, foodId = 1L)
+            val food2 = MealRecordFixture.mealFood(id = 2L, foodId = 2L)
+            val symptom = SymptomFixture.symptom(
+                mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
+                occurredAt = LocalDateTime.of(2026, 6, 17, 13, 10, 0),
+                symptomState = SymptomState.UNCOMFORTABLE,
+                symptomTypes = setOf(SymptomType.ACID_REFLUX, SymptomType.CHEST_TIGHTNESS),
+            )
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
+                FoodFixture.food(id = 1L, name = "된장찌개"),
+                FoodFixture.food(id = 2L, name = "밥"),
+            ))
+
+            val result = service.getTimeLine(userId, date)
+
+            assertThat(result.items.filterIsInstance<TimeLineItemDTO.Symptom>()).isEmpty()
+            val groupItem = result.items.first() as TimeLineItemDTO.Group
+            val connected = groupItem.connectedSymptoms!!
+            assertThat(connected.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
+            assertThat(connected.afterMealMinutes).isEqualTo(70)
+            assertThat(connected.representativeSymptoms).hasSize(2)
+            assertThat(connected.etcCount).isEqualTo(0)
+        }
+
+        @Test
+        fun `Group에 연결된 증상이 여러 개이면 가장 최근 증상 기준으로 connectedSymptoms가 설정된다`() {
+            val mealRecord = MealRecordFixture.mealRecord(eatenAt = LocalDateTime.of(2026, 6, 17, 12, 0, 0))
+            val food1 = MealRecordFixture.mealFood(id = 1L, foodId = 1L)
+            val food2 = MealRecordFixture.mealFood(id = 2L, foodId = 2L)
+            val olderSymptom = SymptomFixture.symptom(
+                id = 1L,
+                mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
+                occurredAt = LocalDateTime.of(2026, 6, 17, 12, 30, 0),
+                symptomState = SymptomState.COMFORTABLE,
+                symptomTypes = setOf(SymptomType.COUGH),
+            )
+            val recentSymptom = SymptomFixture.symptom(
+                id = 2L,
+                mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
+                occurredAt = LocalDateTime.of(2026, 6, 17, 13, 0, 0),
+                symptomState = SymptomState.UNCOMFORTABLE,
+                symptomTypes = setOf(SymptomType.ACID_REFLUX),
+            )
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(olderSymptom, recentSymptom))
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
+                FoodFixture.food(id = 1L), FoodFixture.food(id = 2L),
+            ))
+
+            val result = service.getTimeLine(userId, date)
+
+            val groupItem = result.items.first() as TimeLineItemDTO.Group
+            val connected = groupItem.connectedSymptoms!!
+            assertThat(connected.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
+            assertThat(connected.afterMealMinutes).isEqualTo(60)
+            assertThat(connected.representativeSymptoms).containsExactlyInAnyOrder(SymptomType.COUGH, SymptomType.ACID_REFLUX)
+        }
+
+        @Test
+        fun `Group에 연결된 증상 유형이 3개 이상이면 representativeSymptoms는 최대 2개이고 etcCount에 나머지 수가 담긴다`() {
+            val mealRecord = MealRecordFixture.mealRecord(eatenAt = LocalDateTime.of(2026, 6, 17, 12, 0, 0))
+            val food1 = MealRecordFixture.mealFood(id = 1L, foodId = 1L)
+            val food2 = MealRecordFixture.mealFood(id = 2L, foodId = 2L)
+            val symptom = SymptomFixture.symptom(
+                mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
+                occurredAt = LocalDateTime.of(2026, 6, 17, 12, 30, 0),
+                symptomTypes = setOf(
+                    SymptomType.ACID_REFLUX,
+                    SymptomType.CHEST_TIGHTNESS,
+                    SymptomType.COUGH,
+                ),
+            )
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
+                FoodFixture.food(id = 1L), FoodFixture.food(id = 2L),
+            ))
+
+            val result = service.getTimeLine(userId, date)
+
+            val groupItem = result.items.first() as TimeLineItemDTO.Group
+            val connected = groupItem.connectedSymptoms!!
+            assertThat(connected.representativeSymptoms).hasSize(2)
+            assertThat(connected.etcCount).isEqualTo(1)
+        }
+
+        @Test
+        fun `Group에 연결된 증상이 없으면 connectedSymptoms는 null이다`() {
+            val mealRecord = MealRecordFixture.mealRecord()
+            val food1 = MealRecordFixture.mealFood(id = 1L, foodId = 1L)
+            val food2 = MealRecordFixture.mealFood(id = 2L, foodId = 2L)
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
+                FoodFixture.food(id = 1L), FoodFixture.food(id = 2L),
+            ))
+
+            val result = service.getTimeLine(userId, date)
+
+            val groupItem = result.items.first() as TimeLineItemDTO.Group
+            assertThat(groupItem.connectedSymptoms).isNull()
+        }
+
+        @Test
+        fun `미연결 증상은 standalone Symptom 아이템으로 표시되며 afterMealMinutes는 0이다`() {
+            val symptom = SymptomFixture.symptom(
+                mealRecordId = null,
+                occurredAt = LocalDateTime.of(2026, 6, 17, 14, 32, 0),
+                symptomState = SymptomState.UNCOMFORTABLE,
+            )
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+
+            val result = service.getTimeLine(userId, date)
+
+            assertThat(result.items).hasSize(1)
+            val symptomItem = result.items.first() as TimeLineItemDTO.Symptom
+            assertThat(symptomItem.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
+            assertThat(symptomItem.afterMealMinutes).isEqualTo(0)
+        }
+
+        @Test
         fun `아이템들은 시간 오름차순으로 정렬된다`() {
             val earlyRecord = MealRecordFixture.mealRecord(id = 1L, eatenAt = LocalDateTime.of(2026, 6, 17, 8, 0, 0))
             val lateRecord = MealRecordFixture.mealRecord(id = 2L, eatenAt = LocalDateTime.of(2026, 6, 17, 18, 0, 0))
@@ -151,6 +287,7 @@ class TimeLineServiceTest {
 
             val result = service.getTimeLine(userId, date)
 
+            // Single(8:00) → Symptom(12:00, Single 연결) → Single(18:00)
             assertThat(result.items[0]).isInstanceOf(TimeLineItemDTO.Single::class.java)
             assertThat(result.items[1]).isInstanceOf(TimeLineItemDTO.Symptom::class.java)
             assertThat(result.items[2]).isInstanceOf(TimeLineItemDTO.Single::class.java)
@@ -171,7 +308,7 @@ class TimeLineServiceTest {
 
         @Test
         fun `화요일 기준으로 해당 주 일요일부터 토요일까지 반환한다`() {
-            val tuesday = LocalDate.of(2026, 6, 16) // 화요일
+            val tuesday = LocalDate.of(2026, 6, 16)
             whenever(mealFoodRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
 
             val result = service.getWeeklyJudgements(userId, tuesday)

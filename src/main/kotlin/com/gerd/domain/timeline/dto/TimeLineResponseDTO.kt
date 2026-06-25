@@ -2,6 +2,7 @@ package com.gerd.domain.timeline.dto
 
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.symptom.entity.enums.SymptomState
+import com.gerd.domain.symptom.entity.enums.SymptomType
 import com.gerd.domain.timeline.enums.TimeLineType
 import io.swagger.v3.oas.annotations.media.Schema
 
@@ -37,6 +38,7 @@ sealed class TimeLineItemDTO {
         val representativeFoods: List<String>,
         @field:Schema(description = "기타 음식 개수", example = "3")
         val etcCount: Int,
+        val connectedSymptoms: ConnectedSymptom?,
     ) : TimeLineItemDTO()
 
     data class Symptom(
@@ -49,4 +51,17 @@ sealed class TimeLineItemDTO {
         @field:Schema(description = "증상 발생 시각 (ISO 8601)", example = "2026-06-21T13:00:00")
         val occurredAt: String,
     ) : TimeLineItemDTO()
+
+    data class ConnectedSymptom(
+        @field:Schema(description = "증상 상태") // 맞게 수정 필요
+        val symptomState: SymptomState,
+        @field:Schema(description = "식사 후 경과 시간 (분)", example = "30")
+        val afterMealMinutes: Int,
+        @field:Schema(description = "대표 증상,최대 2개", example = "[\"throat_foreign_body\", \"stomachache\"]") // 실제에 맞출 필요
+        val representativeSymptoms: List<SymptomType>,
+        @field:Schema(description = "기타 증상 개수, example")
+        val etcCount: Int,
+
+    )
+
 }
