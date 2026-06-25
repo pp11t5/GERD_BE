@@ -28,7 +28,7 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
           AND s.symptom_state IN ('COMFORTABLE', 'GOOD')
           AND s.deleted_at IS NULL
           AND mf.deleted_at IS NULL
-          AND mf.food_id IN :foodIds
+          AND mf.food_id IN (:foodIds)
           AND s.meal_record_id <> :excludeMealRecordId
     """, nativeQuery = true)
     fun findFoodIdsStillSafeByOtherSymptoms(
