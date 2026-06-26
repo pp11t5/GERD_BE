@@ -112,11 +112,10 @@ class MealRecordIntegrationTest @Autowired constructor(
 
             verify(judgmentGeminiAdapter, times(1)).generateJudgment(any(), any(), any())
 
-            mockMvc.post("/api/v1/meal-records") {
+            mockMvc.post("/api/v1/meal-records/foods/{foodId}", food.externalId) {
                 contentType = MediaType.APPLICATION_JSON
                 content = """
                     {
-                      "foodExternalId": "${food.externalId}",
                       "eatenAt": "2026-06-11T12:30:00+09:00"
                     }
                 """.trimIndent()

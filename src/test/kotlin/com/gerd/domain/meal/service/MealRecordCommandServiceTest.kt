@@ -10,7 +10,6 @@ import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
-import com.gerd.domain.meal.dto.MealRecordAppendRequestDTO
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
@@ -96,7 +95,7 @@ class MealRecordCommandServiceTest {
     }
 
     @Nested
-    inner class `생성` {
+    inner class `신규 끼니 생성` {
 
         @Test
         fun `판정 스냅샷을 독립 트랜잭션에서 만든 뒤 식사 음식을 저장한다`() {
@@ -117,12 +116,10 @@ class MealRecordCommandServiceTest {
             }
             whenever(mealRecordConverter.toSummary(any(), any())).thenReturn(mealFoodDetail())
 
-            val result = service.create(
-                MealRecordAppendRequestDTO(
-                    foodExternalId = foodExternalId.toString(),
-                    eatenAt = "2026-06-11T12:30:00+09:00",
-                ),
-                userId,
+            val result = service.createNew(
+                foodExternalId = foodExternalId.toString(),
+                rawEatenAt = "2026-06-11T12:30:00+09:00",
+                userId = userId,
             )
 
             val captor = argumentCaptor<MealFood>()
@@ -148,7 +145,7 @@ class MealRecordCommandServiceTest {
         fun `형식이 잘못된 음식 UUID면 FOOD_NOT_FOUND`() {
             whenever(mealRecordConverter.parseUuid("bad")).thenReturn(null)
 
-            assertThatThrownBy { service.create(MealRecordAppendRequestDTO(foodExternalId = "bad"), userId) }
+            assertThatThrownBy { service.createNew("bad", null, userId) }
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(FoodErrorCode.FOOD_NOT_FOUND)
             verify(foodRepository, never()).findByExternalId(any())
@@ -165,7 +162,7 @@ class MealRecordCommandServiceTest {
             whenever(mealRecordConverter.parseUuid(foodExternalId.toString())).thenReturn(foodExternalId)
             whenever(foodRepository.findByExternalId(foodExternalId)).thenReturn(privateFood)
 
-            assertThatThrownBy { service.create(MealRecordAppendRequestDTO(foodExternalId = foodExternalId.toString()), userId) }
+            assertThatThrownBy { service.createNew(foodExternalId.toString(), null, userId) }
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(FoodErrorCode.FOOD_NOT_FOUND)
             verify(mealFoodRepository, never()).save(any())
