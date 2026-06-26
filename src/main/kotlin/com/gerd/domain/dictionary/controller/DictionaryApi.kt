@@ -38,7 +38,7 @@ interface DictionaryApi {
     fun getSafeFoods(
         @CurrentUser userDetails: CustomUserDetails,
         @Parameter(description = "이전 응답의 nextCursor(첫 페이지는 생략)", example = "120")
-        @RequestParam(required = false) @Min(0) cursor: Long?,
+        @RequestParam(required = false) @Min(0) @Max(30) cursor: Long?,
         @Parameter(description = "페이지 크기(기본 20, 최대 20)", example = "20")
         @RequestParam(required = false) @Min(1) @Max(20) size: Int?,
     ): ResponseEntity<ApiResponse<DictionarySafeResponseDTO>>
@@ -52,7 +52,7 @@ interface DictionaryApi {
     fun getCautionRiskFoods(
         @CurrentUser userDetails: CustomUserDetails,
         @Parameter(description = "이전 응답의 nextCursor(첫 페이지는 생략)", example = "120")
-        @RequestParam(required = false) @Min(0) cursor: Long?,
+        @RequestParam(required = false) @Min(0) @Max(30) cursor: Long?,
         @Parameter(description = "페이지 크기(기본 20, 최대 20)", example = "20")
         @RequestParam(required = false) @Min(1) @Max(20) size: Int?,
     ): ResponseEntity<ApiResponse<DictionaryCautionRiskResponseDTO>>
