@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -36,9 +38,9 @@ interface DictionaryApi {
     fun getSafeFoods(
         @CurrentUser userDetails: CustomUserDetails,
         @Parameter(description = "이전 응답의 nextCursor(첫 페이지는 생략)", example = "120")
-        @RequestParam(required = false) cursor: Long?,
-        @Parameter(description = "페이지 크기(기본 20, 최대 50)", example = "20")
-        @RequestParam(required = false) size: Int?,
+        @RequestParam(required = false) @Min(0) cursor: Long?,
+        @Parameter(description = "페이지 크기(기본 20, 최대 20)", example = "20")
+        @RequestParam(required = false) @Min(1) @Max(20) size: Int?,
     ): ResponseEntity<ApiResponse<DictionarySafeResponseDTO>>
 
     @Operation(
@@ -50,8 +52,8 @@ interface DictionaryApi {
     fun getCautionRiskFoods(
         @CurrentUser userDetails: CustomUserDetails,
         @Parameter(description = "이전 응답의 nextCursor(첫 페이지는 생략)", example = "120")
-        @RequestParam(required = false) cursor: Long?,
-        @Parameter(description = "페이지 크기(기본 20, 최대 50)", example = "20")
-        @RequestParam(required = false) size: Int?,
+        @RequestParam(required = false) @Min(0) cursor: Long?,
+        @Parameter(description = "페이지 크기(기본 20, 최대 20)", example = "20")
+        @RequestParam(required = false) @Min(1) @Max(20) size: Int?,
     ): ResponseEntity<ApiResponse<DictionaryCautionRiskResponseDTO>>
 }
