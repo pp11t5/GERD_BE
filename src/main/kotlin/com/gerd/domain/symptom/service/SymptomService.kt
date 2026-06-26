@@ -1,6 +1,8 @@
 package com.gerd.domain.symptom.service
 
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.dictionary.service.DictionaryCommandService
+import com.gerd.domain.dictionary.service.isSafe
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
 import com.gerd.domain.food.repository.FoodRepository
@@ -17,6 +19,7 @@ import com.gerd.domain.symptom.exception.SymptomErrorCode
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.apiPayload.code.CommonErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
@@ -34,7 +37,10 @@ class SymptomService(
     private val symptomConverter: SymptomConverter,
     private val userRepository: UserRepository,
     private val symptomPatternRefreshService: SymptomPatternRefreshService,
+    private val dictionaryCommandService: DictionaryCommandService,
 ) {
+
+    private val log = LoggerFactory.getLogger(SymptomService::class.java)
 
     // 상세 조회
     fun getDetail(symptomId: String, userId: Long): SymptomResponseDTO {
@@ -48,10 +54,7 @@ class SymptomService(
     @Transactional
     fun create(userId: Long, request: SymptomCreateRequestDTO): SymptomResponseDTO {
         val user = userRepository.getReferenceById(userId)
-        val mealRecordId = resolveMealRecordId(
-            request.mealRecordId ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND),
-            userId,
-        )
+        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
         val symptom = Symptom(
             user = user,
             symptomState = request.symptomState ?: throw GeneralException(CommonErrorCode.INVALID_REQUEST),
@@ -61,20 +64,22 @@ class SymptomService(
             memo = request.memo,
         )
         val saved = symptomRepository.save(symptom)
-        // 증상 생성 후 분석이 필요하므로, 커밋 이후 비동기 갱신 예약
-        scheduleAnalysisRefreshAfterCommit(saved, userId)
+        if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(saved, userId)
+
+        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
+            registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
+        }
+
         return symptomConverter.toResponse(saved, buildLinkedMeal(saved, userId))
-
     }
-
 
     @Transactional
     fun update(symptomId: String, request: SymptomUpdateRequestDTO, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
-        val mealRecordId = resolveMealRecordId(
-            request.mealRecordId ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND),
-            userId,
-        )
+        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
+
+        symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
+
         symptom.update(
             symptomState = request.symptomState ?: throw GeneralException(CommonErrorCode.INVALID_REQUEST),
             symptomTypes = request.symptomTypes,
@@ -82,7 +87,11 @@ class SymptomService(
             mealRecordId = mealRecordId,
             memo = request.memo,
         )
-        scheduleAnalysisRefreshAfterCommit(symptom, userId)
+        if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(symptom, userId)
+
+        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
+            registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
+        }
     }
 
     // 메모 업데이트
@@ -97,6 +106,7 @@ class SymptomService(
     @Transactional
     fun delete(symptomId: String, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
+        symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
         symptomRepository.delete(symptom)
     }
 
@@ -115,19 +125,18 @@ class SymptomService(
 
     // 증상 기록 ID를 UUID 문자열로 받아서 내부 Symptom 엔티티로 변환
     private fun resolveSymptom(rawSymptomId: String, userId: Long): Symptom {
-        // UUID 파싱
         val symptomExternalId = parseUuid(rawSymptomId)
             ?: throw GeneralException(SymptomErrorCode.SYMPTOM_NOT_FOUND)
-        // UUID로 증상 기록 조회
         return symptomRepository.findByExternalIdAndUser_Id(symptomExternalId, userId)
             ?: throw GeneralException(SymptomErrorCode.SYMPTOM_NOT_FOUND)
     }
 
-    // 연결된 식사 기록과 음식 정보를 조회하여 DTO로 변환
-    private fun buildLinkedMeal(symptom: Symptom, userId: Long): SymptomResponseDTO.LinkedMealDTO {
-        val mealRecord = mealRecordRepository.findByIdAndUser_Id(symptom.mealRecordId, userId)
+    // 연결된 식사 기록과 음식 정보를 조회하여 DTO로 변환 (미연결 증상은 null 반환)
+    private fun buildLinkedMeal(symptom: Symptom, userId: Long): SymptomResponseDTO.LinkedMealDTO? {
+        val mealRecordId = symptom.mealRecordId ?: return null
+        val mealRecord = mealRecordRepository.findByIdAndUser_Id(mealRecordId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(symptom.mealRecordId)
+        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId)
         val foodsById = loadFoodsById(mealFoods)
         val categoriesByFoodId = loadCategoriesByFoodId(foodsById.keys)
 
@@ -165,16 +174,21 @@ class SymptomService(
     // 트랜잭션 커밋 이후에 증상 패턴 분석 갱신을 예약
     private fun scheduleAnalysisRefreshAfterCommit(symptom: Symptom, userId: Long) {
         val symptomId = symptom.externalId?.toString() ?: return
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            symptomPatternRefreshService.refreshAsync(symptomId, userId)
-            return
+        registerAfterCommit { symptomPatternRefreshService.refreshAsync(symptomId, userId) }
+    }
+
+    private fun registerAfterCommit(action: () -> Unit) {
+        val wrapped = {
+            try { action() }
+            catch (e: Exception) {
+                log.error("[afterCommit] 커밋 후 작업 실패", e)
+            }
         }
-        TransactionSynchronizationManager.registerSynchronization(
-            object : TransactionSynchronization {
-                override fun afterCommit() {
-                    symptomPatternRefreshService.refreshAsync(symptomId, userId)
-                }
-            },
-        )
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            wrapped(); return
+        }
+        TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+            override fun afterCommit() = wrapped()
+        })
     }
 }

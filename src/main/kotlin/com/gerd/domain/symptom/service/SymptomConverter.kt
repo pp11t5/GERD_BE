@@ -26,7 +26,7 @@ class SymptomConverter(
         }
     }
 
-    fun toResponse(symptom: Symptom, linkedMeal: SymptomResponseDTO.LinkedMealDTO): SymptomResponseDTO =
+    fun toResponse(symptom: Symptom, linkedMeal: SymptomResponseDTO.LinkedMealDTO?): SymptomResponseDTO =
         SymptomResponseDTO(
             symptomId = symptom.externalId?.toString() ?: throw GeneralException(SymptomErrorCode.SYMPTOM_NOT_FOUND),
             symptomState = symptom.symptomState,

@@ -4,6 +4,7 @@ import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.symptom.entity.Symptom
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.domain.timeline.dto.TimeLineItemDTO
 import com.gerd.domain.timeline.dto.TimeLineResponseDTO
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 
@@ -45,34 +47,56 @@ class TimeLineService(
         val foodNameById = if (foodIds.isEmpty()) emptyMap()
         else foodRepository.findAllByIdsIncludingDeleted(foodIds).associate { it.id!! to it.name }
 
+        val linkedSymptomsByMealId: Map<Long, List<Symptom>> = symptoms
+            .filter { it.mealRecordId != null }
+            .groupBy { it.mealRecordId!! }
+
+        // Group 식사에 연결된 증상 ID 집합 — 이 증상들은 카드에 임베드되므로 standalone 목록에서 제외
+        val groupEmbeddedMealIds = mutableSetOf<Long>()
+
         val mealItems = mealRecords.map { record ->
             val foods = mealFoodsByRecordId[record.id] ?: emptyList()
-            if (foods.size == 1) {
-                val food = foods.first()
+
+            if (foods.size <= 1) {
+                val food = foods.firstOrNull()
                 TimeLineItemDTO.Single(
                     timeLineType = TimeLineType.SINGLE,
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
-                    mealFoodName = foodNameById[food.foodId] ?: "",
-                    grade = food.judgedGrade ?: JudgmentGrade.UNKNOWN,
+                    mealFoodName = food?.let { foodNameById[it.foodId] } ?: "",
+                    grade = food?.judgedGrade ?: JudgmentGrade.UNKNOWN,
                     etcCount = 0,
                 )
             } else {
+                val linkedSymptoms = linkedSymptomsByMealId[record.id] ?: emptyList()
+                val connectedSymptomDTO = if (linkedSymptoms.isEmpty()) null
+                else {
+                    record.id?.let { groupEmbeddedMealIds.add(it) }
+                    buildConnectedSymptom(record.eatenAt, linkedSymptoms)
+                }
+
                 TimeLineItemDTO.Group(
                     timeLineType = TimeLineType.GROUP,
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     representativeFoods = foods.take(2).map { foodNameById[it.foodId] ?: "" },
                     etcCount = maxOf(0, foods.size - 2),
+                    connectedSymptoms = connectedSymptomDTO,
                 )
             }
         }
 
-        val symptomItems = symptoms.map { s ->
-            val linkedRecord = mealRecordById[s.mealRecordId]
+        // Single 연결 증상 + 미연결 증상만 standalone으로 표시 (Group 임베드 증상 제외)
+        val standaloneSymptoms = symptoms.filter { s ->
+            s.mealRecordId == null || s.mealRecordId !in groupEmbeddedMealIds
+        }
+
+        val symptomItems = standaloneSymptoms.map { s ->
+            val linkedRecord = s.mealRecordId?.let { mealRecordById[it] }
             val afterMealMinutes = linkedRecord?.let {
                 ChronoUnit.MINUTES.between(it.eatenAt, s.occurredAt).toInt()
             } ?: 0
+
             TimeLineItemDTO.Symptom(
                 timeLineType = TimeLineType.SYMPTOM,
                 symptomState = s.symptomState,
@@ -92,6 +116,22 @@ class TimeLineService(
         return TimeLineResponseDTO(items = items)
     }
 
+    private fun buildConnectedSymptom(
+        mealEatenAt: LocalDateTime,
+        symptoms: List<Symptom>,
+    ): TimeLineItemDTO.ConnectedSymptom {
+        val mostRecent = symptoms.maxBy { it.occurredAt }
+        val allTypes = symptoms.flatMap { it.symptomTypes }.distinct()
+        val afterMealMinutes = ChronoUnit.MINUTES.between(mealEatenAt, mostRecent.occurredAt).toInt()
+        return TimeLineItemDTO.ConnectedSymptom(
+            symptomId = mostRecent.externalId?.toString() ?: "",
+            symptomState = mostRecent.symptomState,
+            afterMealMinutes = afterMealMinutes,
+            representativeSymptoms = allTypes.take(2),
+            etcCount = maxOf(0, allTypes.size - 2),
+        )
+    }
+
     fun getWeeklyJudgements(userId: Long, date: LocalDate): List<WeeklyJudgementResponseDTO> {
         val sunday = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
         val saturday = sunday.plusDays(6)
@@ -102,9 +142,6 @@ class TimeLineService(
 
         val gradesByDate = mealFoods.groupBy { it.eatenAt.toLocalDate() }
 
-        // 각 날짜별로 판정 등급 리스트 생성
-        // day로 key값 조회, null이 아닌 것들만 가져오고 신호등 등급이 없는 건 빈 리스트로 반환
-        // safe call로 null이면 null반환하도록 설정
         return (0..6).map { i ->
             val day = sunday.plusDays(i.toLong())
             WeeklyJudgementResponseDTO(

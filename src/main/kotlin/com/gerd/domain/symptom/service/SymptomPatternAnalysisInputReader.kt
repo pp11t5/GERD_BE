@@ -45,9 +45,10 @@ class SymptomPatternAnalysisInputReader(
 ) {
 
     fun read(symptom: Symptom, userId: Long): SymptomPatternAnalysisInputDTO {
-        val mealRecord = mealRecordRepository.findByIdAndUser_Id(symptom.mealRecordId, userId)
+        val mealRecordId = symptom.mealRecordId ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
+        val mealRecord = mealRecordRepository.findByIdAndUser_Id(mealRecordId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(symptom.mealRecordId)
+        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId)
         val foodsById = loadFoodsById(mealFoods)
         val categoriesByFoodId = loadCategoriesByFoodId(foodsById.keys)
         val rows = symptomRepository.findLinkedRows(userId, LocalDateTime.now().minusDays(WINDOW_DAYS.toLong()))

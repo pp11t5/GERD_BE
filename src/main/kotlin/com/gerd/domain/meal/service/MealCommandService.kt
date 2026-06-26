@@ -3,6 +3,7 @@ package com.gerd.domain.meal.service
 import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
@@ -18,6 +19,7 @@ import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
@@ -36,6 +38,8 @@ class MealCommandService(
     private val mealRecordConverter: MealRecordConverter,
     private val foodJudgmentQueryService: FoodJudgmentQueryService,
     private val objectMapper: ObjectMapper,
+    private val symptomRepository: SymptomRepository,
+    private val dictionaryCommandService: DictionaryCommandService,
     transactionManager: PlatformTransactionManager,
 ) {
     private val judgmentTransactionTemplate = TransactionTemplate(transactionManager).apply {
@@ -64,12 +68,13 @@ class MealCommandService(
     @Transactional
     fun delete(mealFoodId: String, userId: Long) {
         val mealFood = resolveOwnedFood(mealFoodId, userId)
-        mealFoodRepository.delete(mealFood)
-        mealFoodRepository.flush()
-        val remainingFoodCount = mealFoodRepository.countByMealRecordId(mealFood.mealRecordId)
-        if (remainingFoodCount == 0L) {
-            mealRecordRepository.findByIdAndUser_Id(mealFood.mealRecordId, userId)
-                ?.let(mealRecordRepository::delete)
+        val isLastFood = mealFoodRepository.countByMealRecordId(mealFood.mealRecordId) == 1L
+
+        if (isLastFood) {
+            // 마지막 음식이면 끼니 전체 삭제 플로우와 동일하게 순서 보장
+            cascadeDeleteMealRecord(mealFood.mealRecordId, userId)
+        } else {
+            mealFoodRepository.delete(mealFood)
         }
     }
 
@@ -80,9 +85,23 @@ class MealCommandService(
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         val mealRecord = mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecord.id!!)
+        cascadeDeleteMealRecord(mealRecord.id!!, userId)
+    }
+
+    // 도감 SAFE 제거 →  증상 삭제 → MealFood 삭제 → MealRecord 삭제
+    private fun cascadeDeleteMealRecord(mealRecordDbId: Long, userId: Long) {
+        val linkedSymptoms = symptomRepository.findByMealRecordId(mealRecordDbId)
+
+        if (linkedSymptoms.isNotEmpty()) {
+            dictionaryCommandService.removeSafeEntries(userId, mealRecordDbId)
+            symptomRepository.deleteAll(linkedSymptoms)
+        }
+
+        val foods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordDbId)
         mealFoodRepository.deleteAll(foods)
-        mealRecordRepository.delete(mealRecord)
+
+        mealRecordRepository.findByIdAndUser_Id(mealRecordDbId, userId)
+            ?.let(mealRecordRepository::delete)
     }
 
     // 음식 기록 저장

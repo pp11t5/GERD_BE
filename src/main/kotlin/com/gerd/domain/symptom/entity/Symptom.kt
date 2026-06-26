@@ -45,7 +45,7 @@ class Symptom(
 
     occurredAt: LocalDateTime,
 
-    mealRecordId: Long,
+    mealRecordId: Long?,
 
     memo: String? = null,
 
@@ -79,8 +79,8 @@ class Symptom(
     var occurredAt: LocalDateTime = occurredAt
         protected set
 
-    @Column(name = "meal_record_id", nullable = false)
-    var mealRecordId: Long = mealRecordId
+    @Column(name = "meal_record_id", nullable = true)
+    var mealRecordId: Long? = mealRecordId
         protected set
 
     @Column(length = 200)
@@ -107,7 +107,7 @@ class Symptom(
         symptomState: SymptomState,
         symptomTypes: Set<SymptomType>,
         occurredAt: LocalDateTime,
-        mealRecordId: Long,
+        mealRecordId: Long?,
         memo: String?,
     ) {
         this.symptomState = symptomState

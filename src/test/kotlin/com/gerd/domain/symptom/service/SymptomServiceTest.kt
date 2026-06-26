@@ -1,6 +1,7 @@
 package com.gerd.domain.symptom.service
 
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
 import com.gerd.domain.food.repository.FoodCategoryView
 import com.gerd.domain.food.repository.FoodRepository
@@ -61,6 +62,9 @@ class SymptomServiceTest {
     @Mock
     private lateinit var symptomPatternRefreshService: SymptomPatternRefreshService
 
+    @Mock
+    private lateinit var dictionaryCommandService: DictionaryCommandService
+
     private val service by lazy {
         SymptomService(
             symptomRepository = symptomRepository,
@@ -71,6 +75,7 @@ class SymptomServiceTest {
             symptomConverter = symptomConverter,
             userRepository = userRepository,
             symptomPatternRefreshService = symptomPatternRefreshService,
+            dictionaryCommandService = dictionaryCommandService,
         )
     }
 

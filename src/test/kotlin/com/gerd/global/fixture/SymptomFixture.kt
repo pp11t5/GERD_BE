@@ -33,7 +33,7 @@ object SymptomFixture {
         symptomState: SymptomState = SymptomState.COMFORTABLE,
         symptomTypes: Set<SymptomType> = emptySet(),
         occurredAt: LocalDateTime = OCCURRED_AT,
-        mealRecordId: Long = MealRecordFixture.MEAL_RECORD_ID,
+        mealRecordId: Long? = MealRecordFixture.MEAL_RECORD_ID,
         memo: String? = null,
         analysisJson: String? = null,
         isAnalysisDirty: Boolean = true,

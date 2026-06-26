@@ -23,8 +23,8 @@ data class SymptomResponseDTO(
     @field:Schema(description = "증상 발생 시각 ISO-8601(offset 포함)", example = "2026-05-12T19:30:00+09:00")
     val occurredAt: String,
 
-    @field:Schema(description = "연결된 원인 끼니")
-    val linkedMeal: LinkedMealDTO,
+    @field:Schema(description = "연결된 원인 끼니. 미연결 증상은 null", nullable = true)
+    val linkedMeal: LinkedMealDTO?,
 
     @field:Schema(description = "AI 맞춤 분석. 분석 전이면 null", nullable = true)
     val analysis: AnalysisDTO?,

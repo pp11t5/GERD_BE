@@ -4,7 +4,6 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import io.swagger.v3.oas.annotations.media.Schema
 
 // 개별 음식 기록 시점의 신호등 분석 스냅샷 — MealFood.analysisJson에 직렬화 저장
-// foodName·category는 food 조인으로 복원하므로 제외
 data class MealAnalysisSnapshotDTO(
     @field:Schema(description = "신호등 판정 등급", example = "RECOMMEND")
     val judgmentGrade: JudgmentGrade,
