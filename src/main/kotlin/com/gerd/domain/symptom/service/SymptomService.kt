@@ -64,7 +64,7 @@ class SymptomService(
             memo = request.memo,
         )
         val saved = symptomRepository.save(symptom)
-        scheduleAnalysisRefreshAfterCommit(saved, userId)
+        if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(saved, userId)
 
         if (request.symptomState?.isSafe() == true && mealRecordId != null) {
             registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
@@ -87,7 +87,7 @@ class SymptomService(
             mealRecordId = mealRecordId,
             memo = request.memo,
         )
-        scheduleAnalysisRefreshAfterCommit(symptom, userId)
+        if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(symptom, userId)
 
         if (request.symptomState?.isSafe() == true && mealRecordId != null) {
             registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
