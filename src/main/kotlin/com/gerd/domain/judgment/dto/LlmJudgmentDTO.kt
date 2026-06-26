@@ -13,6 +13,10 @@ data class LlmJudgmentDTO(
     // 결과 카드 상단 한 줄 제목 — 누락/공백이면 Assembler가 등급별 고정 제목으로 폴백한다
     val personalTitle: String? = null,
     val items: List<LlmJudgmentItemDTO> = emptyList(),
+    // 음식에서 추출한 트리거/알레르겐 코드 — DB 태그가 없는 텍스트 판정에서 안전 오버라이드(②) 입력으로 쓴다.
+    // DB 음식(ID 판정)은 검수 태그를 쓰므로 이 값은 무시된다. 스키마 enum으로 코드 집합이 제한된다.
+    val triggerTags: List<String> = emptyList(),
+    val allergenTags: List<String> = emptyList(),
 ) {
 
     data class LlmJudgmentItemDTO(

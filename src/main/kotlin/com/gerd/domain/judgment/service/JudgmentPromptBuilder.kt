@@ -1,5 +1,7 @@
 package com.gerd.domain.judgment.service
 
+import com.gerd.domain.food.entity.enums.AllergenCode
+import com.gerd.domain.food.entity.enums.TriggerCode
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
@@ -71,6 +73,15 @@ class JudgmentPromptBuilder(
             - 이름이나 닉네임을 지어내거나 추측하지 마세요.
             - "등록하신 트리거에 해당해요"처럼 주어 없이 표현하세요.
 
+            [triggerTags / allergenTags 추출 규칙]
+            - 이 음식에 포함된 것으로 볼 수 있는 트리거·알레르겐 성분의 code를 각 배열에 담으세요.
+            - 반드시 아래 허용 code에서만 고르세요. 목록에 없는 값이나 자유 텍스트는 절대 넣지 마세요.
+              · triggerTags 허용: caffeine, carbonated, alcohol, spicy, fried_fatty, chocolate, citrus, tomato, mint, onion_garlic_raw, cheese_dairy, refined_flour
+              · allergenTags 허용: milk, egg, wheat, soy, peanut, crustacean, tree_nut, fish_shellfish
+            - 음식명·속성으로 일반적으로 포함된다고 알려진 성분만 넣으세요. 근거가 불확실하면 넣지 말고 빈 배열로 두세요.
+            - 이 값은 서버의 안전 판정에 사용되니 추측으로 채우지 마세요.
+            - food.triggerTags / food.allergenTags가 입력으로 이미 주어진 경우(검수된 음식)에는 그 값을 그대로 반영하면 됩니다.
+
             출력은 지정된 JSON 스키마만 따르세요.
         """.trimIndent()
 
@@ -94,6 +105,15 @@ class JudgmentPromptBuilder(
                         ),
                         "required" to listOf("emphasis", "body"),
                     ),
+                ),
+                // 음식에서 추출한 트리거/알레르겐 코드 — 텍스트 판정의 안전 오버라이드 입력. enum으로 코드 집합을 강제
+                "triggerTags" to mapOf(
+                    "type" to "ARRAY",
+                    "items" to mapOf("type" to "STRING", "enum" to TriggerCode.entries.map { it.code }),
+                ),
+                "allergenTags" to mapOf(
+                    "type" to "ARRAY",
+                    "items" to mapOf("type" to "STRING", "enum" to AllergenCode.entries.map { it.code }),
                 ),
             ),
             "required" to listOf("grade", "personalTitle", "items"),
