@@ -1,11 +1,14 @@
 package com.gerd.domain.judgment.service
 
+import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.entity.enums.FoodSource
+import com.gerd.domain.food.entity.enums.TriggerCode
 import com.gerd.domain.judgment.dto.CachedJudgment
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO
+import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
 import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
@@ -73,11 +76,13 @@ class FoodJudgmentQueryService(
             responseSchema = judgmentPromptBuilder.buildResponseSchema(),
         ) ?: return null
 
-        // 텍스트 입력은 DB 음식 태그가 없어 foodAllergens/foodTriggers 모두 empty — 알레르겐 오버라이드 미발동
+        // 텍스트 음식은 DB 태그가 없어, LLM이 추출한 코드(스키마 enum 제한)를 음식 태그로 써서 안전 오버라이드(②)를 발동한다.
+        // 스키마 밖 코드는 방어적으로 한 번 더 거른다.
+        // TODO: 이 매칭은 user_allergens / allergens(+ trigger_labels) 마스터가 실DB에 시딩돼야 실제로 잡힌다 — 시드 데이터 채우기
         val override = safetyOverrideRule.apply(
             llmGrade = llmJudgment.grade,
-            foodTriggers = emptyList(),
-            foodAllergens = emptyList(),
+            foodTriggers = llmJudgment.triggerTags.toValidTags(TRIGGER_CODES),
+            foodAllergens = llmJudgment.allergenTags.toValidTags(ALLERGEN_CODES),
             userTriggers = userContext.userTriggers,
             userAllergens = userContext.userAllergens,
         )
@@ -115,5 +120,15 @@ class FoodJudgmentQueryService(
         }
 
         return judgmentResponseAssembler.assembleCacheable(context, llmJudgment, override, substitutes)
+    }
+
+    // LLM이 추출한 code를 안전 룰 입력 TagDTO로 변환 — 허용 code만 통과시키고 중복 제거.
+    // label은 매칭(코드 기준)·텍스트 응답 카피에 쓰이지 않아 code로 채운다
+    private fun List<String>.toValidTags(validCodes: Set<String>): List<TagDTO> =
+        filter { it in validCodes }.distinct().map { TagDTO(it, it) }
+
+    companion object {
+        private val TRIGGER_CODES = TriggerCode.entries.map { it.code }.toSet()
+        private val ALLERGEN_CODES = AllergenCode.entries.map { it.code }.toSet()
     }
 }

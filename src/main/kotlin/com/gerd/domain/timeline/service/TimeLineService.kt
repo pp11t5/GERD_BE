@@ -41,7 +41,7 @@ class TimeLineService(
 
         val mealFoodsByRecordId = mealFoodRepository
             .findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(mealRecordIds)
-            .groupBy { it.mealRecordId }
+            .groupBy { it.mealRecord.id!! }
 
         val foodIds = mealFoodsByRecordId.values.flatten().map { it.foodId }.distinct()
         val foodNameById = if (foodIds.isEmpty()) emptyMap()

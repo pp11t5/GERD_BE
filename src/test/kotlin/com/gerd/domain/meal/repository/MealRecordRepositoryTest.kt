@@ -30,12 +30,12 @@ class MealRecordRepositoryTest @Autowired constructor(
         @Test
         fun `mealRecordId로 소속 음식을 먹은 시각 오름차순 조회한다`() {
             val user = saveUser()
-            val recordId = mealRecordRepository.save(mealRecord(user = user)).id!!
-            val later = mealFood(user = user, mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 13, 0))
-            val earlier = mealFood(user = user, mealRecordId = recordId, eatenAt = LocalDateTime.of(2026, 6, 11, 12, 0))
+            val record = mealRecordRepository.save(mealRecord(user = user))
+            val later = mealFood(user = user, mealRecord = record, eatenAt = LocalDateTime.of(2026, 6, 11, 13, 0))
+            val earlier = mealFood(user = user, mealRecord = record, eatenAt = LocalDateTime.of(2026, 6, 11, 12, 0))
             mealFoodRepository.saveAll(listOf(later, earlier))
 
-            val result = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(recordId)
+            val result = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(record.id!!)
 
             assertThat(result.map { it.eatenAt }).containsExactly(
                 LocalDateTime.of(2026, 6, 11, 12, 0),
@@ -46,15 +46,15 @@ class MealRecordRepositoryTest @Autowired constructor(
         @Test
         fun `mealRecordId 기준 음식 개수를 센다`() {
             val user = saveUser(email = "count@test.com")
-            val recordId = mealRecordRepository.save(mealRecord(user = user)).id!!
+            val record = mealRecordRepository.save(mealRecord(user = user))
             mealFoodRepository.saveAll(
                 listOf(
-                    mealFood(user = user, mealRecordId = recordId),
-                    mealFood(user = user, mealRecordId = recordId, foodId = 2L),
+                    mealFood(user = user, mealRecord = record),
+                    mealFood(user = user, mealRecord = record, foodId = 2L),
                 ),
             )
 
-            val count = mealFoodRepository.countByMealRecordId(recordId)
+            val count = mealFoodRepository.countByMealRecordId(record.id!!)
 
             assertThat(count).isEqualTo(2)
         }
@@ -74,12 +74,12 @@ class MealRecordRepositoryTest @Autowired constructor(
     private fun mealFood(
         user: User,
         foodId: Long = 1L,
-        mealRecordId: Long,
+        mealRecord: MealRecord,
         eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
     ) = MealFood(
         user = user,
         foodId = foodId,
-        mealRecordId = mealRecordId,
+        mealRecord = mealRecord,
         eatenAt = eatenAt,
         judgedGrade = JudgmentGrade.RECOMMEND,
     )

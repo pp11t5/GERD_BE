@@ -91,6 +91,8 @@ class JudgmentResponseAssembler {
         llmJudgment: LlmJudgmentDTO,
         override: OverrideResult,
     ): CachedJudgment {
+        // TODO: 텍스트 음식은 알레르겐이 LLM 추출이라, PItem-2의 "알레르기 없어요" 같은 negative 단정 톤 다운 필요
+        //  (검수 음식과 달리 "없음"을 보장할 수 없음 — "확인된 알레르겐 없음"류로 완화)
         val baseItems = if (llmJudgment.grade == JudgmentGrade.UNKNOWN) {
             UNKNOWN_FALLBACK_ITEMS
         } else {
