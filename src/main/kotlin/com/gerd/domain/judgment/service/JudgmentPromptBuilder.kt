@@ -76,8 +76,8 @@ class JudgmentPromptBuilder(
             [triggerTags / allergenTags 추출 규칙]
             - 이 음식에 포함된 것으로 볼 수 있는 트리거·알레르겐 성분의 code를 각 배열에 담으세요.
             - 반드시 아래 허용 code에서만 고르세요. 목록에 없는 값이나 자유 텍스트는 절대 넣지 마세요.
-              · triggerTags 허용: caffeine, carbonated, alcohol, spicy, fried_fatty, chocolate, citrus, tomato, mint, onion_garlic_raw, cheese_dairy, refined_flour
-              · allergenTags 허용: milk, egg, wheat, soy, peanut, crustacean, tree_nut, fish_shellfish
+              · triggerTags 허용: ${TriggerCode.entries.joinToString { it.code }}
+              · allergenTags 허용: ${AllergenCode.entries.joinToString { it.code }}
             - 음식명·속성으로 일반적으로 포함된다고 알려진 성분만 넣으세요. 근거가 불확실하면 넣지 말고 빈 배열로 두세요.
             - 이 값은 서버의 안전 판정에 사용되니 추측으로 채우지 마세요.
             - food.triggerTags / food.allergenTags가 입력으로 이미 주어진 경우(검수된 음식)에는 그 값을 그대로 반영하면 됩니다.
@@ -116,7 +116,7 @@ class JudgmentPromptBuilder(
                     "items" to mapOf("type" to "STRING", "enum" to AllergenCode.entries.map { it.code }),
                 ),
             ),
-            "required" to listOf("grade", "personalTitle", "items"),
+            "required" to listOf("grade", "personalTitle", "items", "triggerTags", "allergenTags"),
         )
     }
 }
