@@ -270,7 +270,7 @@ class SymptomIntegrationTest @Autowired constructor(
             MealFood(
                 user = user,
                 foodId = food.id!!,
-                mealRecordId = record.id!!,
+                mealRecord = record,
                 eatenAt = record.eatenAt,
             ),
         )

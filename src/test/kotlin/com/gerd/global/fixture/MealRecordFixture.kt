@@ -36,10 +36,11 @@ object MealRecordFixture {
         judgedGrade: JudgmentGrade? = JudgmentGrade.RECOMMEND,
         analysisJson: String? = null,
         externalId: UUID = MEAL_FOOD_EXTERNAL_ID,
+        mealRecord: MealRecord = mealRecord(id = mealRecordId, user = user),
     ): MealFood = MealFood(
         user = user,
         foodId = foodId,
-        mealRecordId = mealRecordId,
+        mealRecord = mealRecord,
         eatenAt = eatenAt,
         judgedGrade = judgedGrade,
         analysisJson = analysisJson,

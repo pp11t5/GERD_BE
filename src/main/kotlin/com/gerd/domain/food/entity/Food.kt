@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
 import java.time.LocalDateTime
@@ -24,7 +25,15 @@ import java.time.LocalDateTime
  */
 // @SQLRestriction은 전역 필터라 삭제 row 조회가 필요하면 네이티브 쿼리로 우회한다
 @Entity
-@Table(name = "foods")
+// (owner_user_id, source, name) 유니크 — 동일 사용자의 같은 이름 USER 음식 중복 생성 방지(경합 차단).
+// seed/curated는 owner_user_id가 NULL이라 Postgres에서 서로 distinct로 취급돼 영향 없음.
+// 주의: 현재 USER 음식은 soft-delete되지 않아 단순 제약으로 충분하나, 향후 soft-delete가 생기면 partial unique(WHERE deleted_at IS NULL)로 바꿔야 한다.
+@Table(
+    name = "foods",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uq_foods_owner_source_name", columnNames = ["owner_user_id", "source", "name"]),
+    ],
+)
 @SQLDelete(sql = "UPDATE foods SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP WHERE food_id = ?")
 @SQLRestriction("deleted_at IS NULL")
 class Food(

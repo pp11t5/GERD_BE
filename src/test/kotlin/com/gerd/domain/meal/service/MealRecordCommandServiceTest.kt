@@ -98,7 +98,7 @@ class MealRecordCommandServiceTest {
     inner class `신규 끼니 생성` {
 
         @Test
-        fun `판정 스냅샷을 독립 트랜잭션에서 만든 뒤 식사 음식을 저장한다`() {
+        fun `판정은 트랜잭션 밖에서 수행하고 저장만 쓰기 트랜잭션에서 수행한다`() {
             val food = FoodFixture.food(id = 10L)
             val mealRecord = MealRecordFixture.mealRecord()
             whenever(transactionManager.getTransaction(any())).thenAnswer { SimpleTransactionStatus() }
@@ -125,7 +125,7 @@ class MealRecordCommandServiceTest {
             val captor = argumentCaptor<MealFood>()
             verify(mealFoodRepository).save(captor.capture())
             assertThat(captor.firstValue.user.id).isEqualTo(userId)
-            assertThat(captor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
+            assertThat(captor.firstValue.mealRecord.id).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(captor.firstValue.judgedGrade).isEqualTo(JudgmentGrade.CAUTION)
             val analysis = objectMapper.readValue(captor.firstValue.analysisJson, MealAnalysisSnapshotDTO::class.java)
             assertThat(analysis.judgmentGrade).isEqualTo(JudgmentGrade.CAUTION)
@@ -135,10 +135,10 @@ class MealRecordCommandServiceTest {
             assertThat(analysis.allergyAnalysis.content).isEqualTo("식후 바로 눕지 마세요")
             assertThat(result.mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
 
+            // 판정(LLM 호출 가능)은 트랜잭션 밖에서 수행 — 커넥션을 점유하지 않는다. 트랜잭션은 저장용 쓰기 tx 하나뿐
             val definitions = argumentCaptor<TransactionDefinition>()
-            verify(transactionManager, times(2)).getTransaction(definitions.capture())
-            assertThat(definitions.allValues[0].propagationBehavior).isEqualTo(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
-            assertThat(definitions.allValues[0].isReadOnly).isTrue()
+            verify(transactionManager, times(1)).getTransaction(definitions.capture())
+            assertThat(definitions.firstValue.isReadOnly).isFalse()
         }
 
         @Test

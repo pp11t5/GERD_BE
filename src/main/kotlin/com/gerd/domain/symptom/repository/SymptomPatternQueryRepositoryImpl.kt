@@ -28,7 +28,7 @@ class SymptomPatternQueryRepositoryImpl(
                 ),
             )
             .from(symptom)
-            .join(mealFood).on(mealFood.mealRecordId.eq(symptom.mealRecordId))
+            .join(mealFood).on(mealFood.mealRecord.id.eq(symptom.mealRecordId))
             .join(food).on(food.id.eq(mealFood.foodId))
             .leftJoin(foodCategoryMap).on(foodCategoryMap.food.id.eq(food.id))
             .leftJoin(foodCategoryMap.foodCategory, foodCategory)

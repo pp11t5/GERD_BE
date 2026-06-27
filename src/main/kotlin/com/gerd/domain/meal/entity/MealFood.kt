@@ -43,8 +43,10 @@ class MealFood(
     @Column(name = "food_id", nullable = false)
     val foodId: Long,
 
-    @Column(name = "meal_record_id", nullable = false)
-    val mealRecordId: Long,
+    // soft delete 도메인이기 때문에 cascade 옵션은 두지 않음 — 삭제 cascade는 앱 레벨(cascadeDeleteMealRecord)에서 처리
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "meal_record_id", nullable = false)
+    val mealRecord: MealRecord,
 
     @Column(name = "eaten_at", nullable = false)
     val eatenAt: LocalDateTime,

@@ -22,12 +22,13 @@ import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
 import tools.jackson.databind.ObjectMapper
+import java.text.Normalizer
 
 @Service
 class MealCommandService(
@@ -42,11 +43,6 @@ class MealCommandService(
     private val dictionaryCommandService: DictionaryCommandService,
     transactionManager: PlatformTransactionManager,
 ) {
-    private val judgmentTransactionTemplate = TransactionTemplate(transactionManager).apply {
-        propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
-        isReadOnly = true
-    }
-
     private val writeTransactionTemplate = TransactionTemplate(transactionManager)
 
     // 신규 끼니 + 음식 추가 (ID)
@@ -61,10 +57,12 @@ class MealCommandService(
 
     // 신규 끼니 + 음식 추가 (text) — 캐시 우선 텍스트 판정
     fun createNewByText(foodName: String, rawEatenAt: String?, userId: Long): MealFoodRecordDetailDTO {
+        val normalizedName = normalizeFoodName(foodName)
         val user = resolveUser(userId)
-        val snapshot = loadTextJudgmentSnapshot(foodName, userId)
+        val snapshot = loadTextJudgmentSnapshot(normalizedName, userId)
+        // 음식 생성은 쓰기 tx 밖에서 — 유니크 제약 위반 시 자체 트랜잭션만 롤백돼 catch-재조회가 동작한다(같은 tx면 abort돼 후속 쿼리 실패)
+        val food = resolveOrCreateUserFood(normalizedName, user)
         return writeTransactionTemplate.execute {
-            val food = resolveOrCreateUserFood(foodName, user)
             saveFoodToNewMeal(food, rawEatenAt, snapshot.grade, snapshot.analysisJson, user)
         } ?: error("meal record save transaction returned null")
     }
@@ -75,19 +73,21 @@ class MealCommandService(
         val user = resolveUser(userId)
         val snapshot = loadJudgmentSnapshot(foodExternalId, userId)
         return writeTransactionTemplate.execute {
-            val mealRecordDbId = findMealRecordId(rawMealRecordId, user)
-            saveFoodToExistingMeal(food, rawEatenAt, mealRecordDbId, snapshot.grade, snapshot.analysisJson, user)
+            val mealRecord = findMealRecord(rawMealRecordId, user)
+            saveFoodToExistingMeal(food, rawEatenAt, mealRecord, snapshot.grade, snapshot.analysisJson, user)
         } ?: error("meal record save transaction returned null")
     }
 
     // 같이 먹은 끼니에 음식 추가 (text) — 캐시 우선 텍스트 판정
     fun appendByText(rawMealRecordId: String, foodName: String, rawEatenAt: String?, userId: Long): MealFoodRecordDetailDTO {
+        val normalizedName = normalizeFoodName(foodName)
         val user = resolveUser(userId)
-        val snapshot = loadTextJudgmentSnapshot(foodName, userId)
+        val snapshot = loadTextJudgmentSnapshot(normalizedName, userId)
+        // 음식 생성은 쓰기 tx 밖에서 (createNewByText 주석 참고)
+        val food = resolveOrCreateUserFood(normalizedName, user)
         return writeTransactionTemplate.execute {
-            val food = resolveOrCreateUserFood(foodName, user)
-            val mealRecordDbId = findMealRecordId(rawMealRecordId, user)
-            saveFoodToExistingMeal(food, rawEatenAt, mealRecordDbId, snapshot.grade, snapshot.analysisJson, user)
+            val mealRecord = findMealRecord(rawMealRecordId, user)
+            saveFoodToExistingMeal(food, rawEatenAt, mealRecord, snapshot.grade, snapshot.analysisJson, user)
         } ?: error("meal record save transaction returned null")
     }
 
@@ -95,10 +95,11 @@ class MealCommandService(
     @Transactional
     fun delete(mealFoodId: String, userId: Long) {
         val mealFood = resolveOwnedFood(mealFoodId, userId)
-        val isLastFood = mealFoodRepository.countByMealRecordId(mealFood.mealRecordId) == 1L
+        val mealRecordDbId = mealFood.mealRecord.id!!
+        val isLastFood = mealFoodRepository.countByMealRecordId(mealRecordDbId) == 1L
 
         if (isLastFood) {
-            cascadeDeleteMealRecord(mealFood.mealRecordId, userId)
+            cascadeDeleteMealRecord(mealRecordDbId, userId)
         } else {
             mealFoodRepository.delete(mealFood)
         }
@@ -143,7 +144,7 @@ class MealCommandService(
             MealFood(
                 user = user,
                 foodId = food.id!!,
-                mealRecordId = mealRecord.id!!,
+                mealRecord = mealRecord,
                 eatenAt = eatenAt,
                 judgedGrade = grade,
                 analysisJson = analysisJson,
@@ -155,7 +156,7 @@ class MealCommandService(
     private fun saveFoodToExistingMeal(
         food: Food,
         rawEatenAt: String?,
-        mealRecordDbId: Long,
+        mealRecord: MealRecord,
         grade: JudgmentGrade,
         analysisJson: String,
         user: User,
@@ -165,7 +166,7 @@ class MealCommandService(
             MealFood(
                 user = user,
                 foodId = food.id!!,
-                mealRecordId = mealRecordDbId,
+                mealRecord = mealRecord,
                 eatenAt = eatenAt,
                 judgedGrade = grade,
                 analysisJson = analysisJson,
@@ -185,19 +186,24 @@ class MealCommandService(
     private fun resolveUser(userId: Long): User =
         userRepository.findById(userId).orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
 
-    private fun findMealRecordId(rawMealRecordId: String, user: User): Long {
+    private fun findMealRecord(rawMealRecordId: String, user: User): MealRecord {
         val externalId = mealRecordConverter.parseUuid(rawMealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         val userId = user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
-        val mealRecord = mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
+        return mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
-        return mealRecord.id!!
     }
+
+    // 텍스트 음식 이름 정규화 — 중복 USER 음식 생성·캐시 키 불일치 방지.
+    // NFC(자모 결합 통일) → 앞뒤 공백 제거 → 내부 연속 공백 1칸으로 축소
+    private fun normalizeFoodName(raw: String): String =
+        Normalizer.normalize(raw, Normalizer.Form.NFC).trim().replace(WHITESPACE_RUN, " ")
 
     private fun resolveOrCreateUserFood(name: String, user: User): Food {
         val ownerId = user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
-        return foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER)
-            ?: foodRepository.save(
+        foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER)?.let { return it }
+        return try {
+            foodRepository.save(
                 Food(
                     name = name,
                     source = FoodSource.USER,
@@ -205,6 +211,10 @@ class MealCommandService(
                     ownerUserId = ownerId,
                 ),
             )
+        } catch (e: DataIntegrityViolationException) {
+            // 경합 패자 — 다른 트랜잭션이 (owner, source, name) 유니크를 먼저 차지했으므로 그 음식을 재조회해 재사용
+            foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER) ?: throw e
+        }
     }
 
     private fun resolveOwnedFood(mealFoodId: String, userId: Long): MealFood {
@@ -214,37 +224,30 @@ class MealCommandService(
             ?: throw GeneralException(MealErrorCode.MEAL_FOOD_NOT_FOUND)
     }
 
-    // 캐시 우선 — getJudgment 내부가 judgmentCache.get(key)로 히트 시 LLM 호출 없이 캐시값 반환
-    private fun loadJudgmentSnapshot(foodExternalId: String, userId: Long): MealJudgmentSnapshot =
-        judgmentTransactionTemplate.execute {
-            val judgment = foodJudgmentQueryService.getJudgment(foodExternalId, userId).first
-            MealJudgmentSnapshot(
-                grade = judgment.grade,
-                analysisJson = objectMapper.writeValueAsString(
-                    MealAnalysisSnapshotDTO(
-                        judgmentGrade = judgment.grade,
-                        triggerAnalysis = judgment.items.toAnalysisItem(index = 0),
-                        allergyAnalysis = judgment.items.toAnalysisItem(index = 1),
-                    ),
-                ),
-            )
-        } ?: error("meal judgment transaction returned null")
+    // 캐시 우선 — getJudgment 내부가 judgmentCache.get(key)로 히트 시 LLM 호출 없이 캐시값 반환.
+    // 트랜잭션으로 감싸지 않는다 — LLM 호출(수 초) 동안 커넥션을 점유하지 않도록, DB 읽기는 판정 서비스가 자체 짧은 tx로 처리한다
+    private fun loadJudgmentSnapshot(foodExternalId: String, userId: Long): MealJudgmentSnapshot {
+        val judgment = foodJudgmentQueryService.getJudgment(foodExternalId, userId).first
+        return toSnapshot(judgment.grade, judgment.items)
+    }
 
-    // 캐시 우선 — getJudgmentByText 내부가 judgmentCache.get(key)로 히트 시 LLM 호출 없이 캐시값 반환
-    private fun loadTextJudgmentSnapshot(foodName: String, userId: Long): MealJudgmentSnapshot =
-        judgmentTransactionTemplate.execute {
-            val judgment = foodJudgmentQueryService.getJudgmentByText(foodName, userId).first
-            MealJudgmentSnapshot(
-                grade = judgment.grade,
-                analysisJson = objectMapper.writeValueAsString(
-                    MealAnalysisSnapshotDTO(
-                        judgmentGrade = judgment.grade,
-                        triggerAnalysis = judgment.items.toAnalysisItem(index = 0),
-                        allergyAnalysis = judgment.items.toAnalysisItem(index = 1),
-                    ),
+    // 캐시 우선 — getJudgmentByText 내부가 judgmentCache.get(key)로 히트 시 LLM 호출 없이 캐시값 반환 (위와 동일하게 tx 밖에서 호출)
+    private fun loadTextJudgmentSnapshot(foodName: String, userId: Long): MealJudgmentSnapshot {
+        val judgment = foodJudgmentQueryService.getJudgmentByText(foodName, userId).first
+        return toSnapshot(judgment.grade, judgment.items)
+    }
+
+    private fun toSnapshot(grade: JudgmentGrade, items: List<JudgmentItemDTO>): MealJudgmentSnapshot =
+        MealJudgmentSnapshot(
+            grade = grade,
+            analysisJson = objectMapper.writeValueAsString(
+                MealAnalysisSnapshotDTO(
+                    judgmentGrade = grade,
+                    triggerAnalysis = items.toAnalysisItem(index = 0),
+                    allergyAnalysis = items.toAnalysisItem(index = 1),
                 ),
-            )
-        } ?: error("meal judgment transaction returned null")
+            ),
+        )
 
     private fun List<JudgmentItemDTO>.toAnalysisItem(index: Int): MealAnalysisSnapshotDTO.AnalysisItemDTO {
         val item = getOrNull(index)
@@ -258,4 +261,8 @@ class MealCommandService(
         val grade: JudgmentGrade,
         val analysisJson: String,
     )
+
+    companion object {
+        private val WHITESPACE_RUN = Regex("\\s+")
+    }
 }

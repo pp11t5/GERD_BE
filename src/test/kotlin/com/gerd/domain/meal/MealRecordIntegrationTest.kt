@@ -141,7 +141,7 @@ class MealRecordIntegrationTest @Autowired constructor(
                     jsonPath("$.result.stateRecord") { value(nullValue()) }
                 }
 
-            val mealRecord = mealRecordRepository.findById(mealFood.mealRecordId).orElseThrow()
+            val mealRecord = mealRecordRepository.findById(mealFood.mealRecord.id!!).orElseThrow()
             mockMvc.get("/api/v1/meal-records/{mealRecordId}", mealRecord.externalId)
                 .andExpect {
                     status { isOk() }

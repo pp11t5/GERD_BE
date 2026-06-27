@@ -4,7 +4,6 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.food.service.FoodCategoryReader
-import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.entity.Symptom
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.entity.enums.SymptomType
@@ -21,7 +20,6 @@ import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDateTime
-import java.util.Optional
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -33,13 +31,10 @@ class MealRecordConverterTest {
     @Mock
     private lateinit var foodCategoryReader: FoodCategoryReader
 
-    @Mock
-    private lateinit var mealRecordRepository: MealRecordRepository
-
     private val objectMapper = ObjectMapper()
 
     private val converter by lazy {
-        MealRecordConverter(foodRepository, foodCategoryReader, mealRecordRepository, objectMapper)
+        MealRecordConverter(foodRepository, foodCategoryReader, objectMapper)
     }
 
     @Nested
@@ -51,8 +46,6 @@ class MealRecordConverterTest {
             val food = FoodFixture.food(id = mealFood.foodId)
             whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(mealFood.foodId)))
                 .thenReturn(mapOf(mealFood.foodId to "soup_stew"))
-            whenever(mealRecordRepository.findById(mealFood.mealRecordId))
-                .thenReturn(Optional.of(MealRecordFixture.mealRecord()))
 
             val result = converter.toSummary(mealFood, food)
 
@@ -68,8 +61,6 @@ class MealRecordConverterTest {
             val food = FoodFixture.food(id = mealFood.foodId)
             whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(mealFood.foodId)))
                 .thenReturn(mapOf(mealFood.foodId to "soup_stew"))
-            whenever(mealRecordRepository.findById(mealFood.mealRecordId))
-                .thenReturn(Optional.of(MealRecordFixture.mealRecord()))
 
             val result = converter.toSummary(mealFood, food)
 
