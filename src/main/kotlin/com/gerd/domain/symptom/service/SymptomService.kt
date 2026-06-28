@@ -16,6 +16,7 @@ import com.gerd.domain.symptom.dto.SymptomMemoUpdateRequestDTO
 import com.gerd.domain.symptom.dto.SymptomResponseDTO
 import com.gerd.domain.symptom.dto.SymptomUpdateRequestDTO
 import com.gerd.domain.symptom.entity.Symptom
+import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.exception.SymptomErrorCode
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
@@ -66,7 +67,7 @@ class SymptomService(
             memo = request.memo,
         )
         val saved = symptomRepository.save(symptom)
-        if (saved.symptomState.isSafe()) {
+        if (saved.symptomState.isStreakTarget()) {
             userStreakService.updateOnComfortableRecorded(userId, saved.occurredAt.toLocalDate())
         }
         if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(saved, userId)
@@ -81,7 +82,7 @@ class SymptomService(
     @Transactional
     fun update(symptomId: String, request: SymptomUpdateRequestDTO, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
-        val previousSafe = symptom.symptomState.isSafe()
+        val previousStreakTarget = symptom.symptomState.isStreakTarget()
         val previousDate = symptom.occurredAt.toLocalDate()
         val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
 
@@ -94,9 +95,11 @@ class SymptomService(
             mealRecordId = mealRecordId,
             memo = request.memo,
         )
-        val currentSafe = symptom.symptomState.isSafe()
+        val currentStreakTarget = symptom.symptomState.isStreakTarget()
         val currentDate = symptom.occurredAt.toLocalDate()
-        if ((previousSafe || currentSafe) && (previousSafe != currentSafe || previousDate != currentDate)) {
+        if ((previousStreakTarget || currentStreakTarget) &&
+            (previousStreakTarget != currentStreakTarget || previousDate != currentDate)
+        ) {
             userStreakService.rebuildCurrentStreak(userId)
         }
         if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(symptom, userId)
@@ -118,10 +121,10 @@ class SymptomService(
     @Transactional
     fun delete(symptomId: String, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
-        val safe = symptom.symptomState.isSafe()
+        val wasStreakTarget = symptom.symptomState.isStreakTarget()
         symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
         symptomRepository.delete(symptom)
-        if (safe) {
+        if (wasStreakTarget) {
             userStreakService.rebuildCurrentStreak(userId)
         }
     }
@@ -208,3 +211,6 @@ class SymptomService(
         })
     }
 }
+
+private fun SymptomState.isStreakTarget(): Boolean =
+    this == SymptomState.COMFORTABLE

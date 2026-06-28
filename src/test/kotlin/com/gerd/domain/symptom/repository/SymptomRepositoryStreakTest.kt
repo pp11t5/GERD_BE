@@ -45,7 +45,7 @@ class SymptomRepositoryStreakTest @Autowired constructor(
                 limit = 3,
             )
 
-            assertThat(result).containsExactly(today, today.minusDays(1), today.minusDays(2))
+            assertThat(result).containsExactly(today, today.minusDays(2), today.minusDays(4))
         }
 
         @Test
@@ -63,7 +63,7 @@ class SymptomRepositoryStreakTest @Autowired constructor(
                 limit = 10,
             )
 
-            assertThat(result).containsExactly(today.minusDays(1), today.minusDays(2))
+            assertThat(result).containsExactly(today.minusDays(1))
         }
 
         @Test
@@ -86,9 +86,10 @@ class SymptomRepositoryStreakTest @Autowired constructor(
         }
 
         @Test
-        fun `편안하지 않은 기록은 조회하지 않는다`() {
+        fun `스트릭 대상이 아닌 기록은 조회하지 않는다`() {
             val user = saveUser("unsafe@test.com")
             val today = LocalDate.of(2026, 6, 28)
+            saveSymptom(user, SymptomState.GOOD, today.minusDays(1))
             saveSymptom(user, SymptomState.UNCOMFORTABLE, today)
             saveSymptom(user, SymptomState.COMFORTABLE, today.minusDays(2))
             flushAndClear()

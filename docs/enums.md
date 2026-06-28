@@ -56,6 +56,29 @@ API 요청·응답에서 사용하는 열거형 값 레퍼런스.
 
 ---
 
+## FoodCategory — 음식 분류
+
+> `com.gerd.domain.food.entity.FoodCategory` (DB 마스터 `food_categories`, 13종 고정)  
+> enum이 아닌 시드 마스터 — JSON에는 `code`로 노출되며 `sort_order` 순서.
+
+| code | 한글 |
+|---|---|
+| `rice_porridge` | 밥·죽 |
+| `noodles` | 면류 |
+| `bread_bakery` | 빵·베이커리 |
+| `soup_stew` | 국·찌개·탕 |
+| `grilled_jeon` | 구이·전 |
+| `fried` | 튀김 |
+| `stirfry_braise` | 볶음·조림 | 
+| `steam_boil` | 찜·삶음 |
+| `sashimi_sushi` | 회·초밥 |
+| `salad_vegetable` | 샐러드·채소 |
+| `snack_dessert` | 간식·디저트 |
+| `fruit` | 과일 |
+| `beverage` | 음료 |
+
+---
+
 ## SymptomState — 증상 상태 (기록 시 선택값)
 
 > `com.gerd.domain.symptom.entity.enums.SymptomState`

@@ -18,7 +18,7 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
         SELECT DISTINCT CAST(s.occurred_at AS date) AS record_date
         FROM symptom_records s
         WHERE s.user_id = :userId
-          AND s.symptom_state IN ('COMFORTABLE', 'GOOD')
+          AND s.symptom_state = 'COMFORTABLE'
           AND s.deleted_at IS NULL
           AND CAST(s.occurred_at AS date) < :beforeDate
         ORDER BY record_date DESC
