@@ -10,11 +10,13 @@ import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.streak.service.UserStreakService
 import com.gerd.domain.symptom.dto.SymptomCreateRequestDTO
 import com.gerd.domain.symptom.dto.SymptomMemoUpdateRequestDTO
 import com.gerd.domain.symptom.dto.SymptomResponseDTO
 import com.gerd.domain.symptom.dto.SymptomUpdateRequestDTO
 import com.gerd.domain.symptom.entity.Symptom
+import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.exception.SymptomErrorCode
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
@@ -38,6 +40,7 @@ class SymptomService(
     private val userRepository: UserRepository,
     private val symptomPatternRefreshService: SymptomPatternRefreshService,
     private val dictionaryCommandService: DictionaryCommandService,
+    private val userStreakService: UserStreakService,
 ) {
 
     private val log = LoggerFactory.getLogger(SymptomService::class.java)
@@ -64,6 +67,9 @@ class SymptomService(
             memo = request.memo,
         )
         val saved = symptomRepository.save(symptom)
+        if (saved.symptomState.isStreakTarget()) {
+            userStreakService.updateOnComfortableRecorded(userId, saved.occurredAt.toLocalDate())
+        }
         if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(saved, userId)
 
         if (request.symptomState?.isSafe() == true && mealRecordId != null) {
@@ -76,6 +82,8 @@ class SymptomService(
     @Transactional
     fun update(symptomId: String, request: SymptomUpdateRequestDTO, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
+        val previousStreakTarget = symptom.symptomState.isStreakTarget()
+        val previousDate = symptom.occurredAt.toLocalDate()
         val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
 
         symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
@@ -87,6 +95,13 @@ class SymptomService(
             mealRecordId = mealRecordId,
             memo = request.memo,
         )
+        val currentStreakTarget = symptom.symptomState.isStreakTarget()
+        val currentDate = symptom.occurredAt.toLocalDate()
+        if ((previousStreakTarget || currentStreakTarget) &&
+            (previousStreakTarget != currentStreakTarget || previousDate != currentDate)
+        ) {
+            userStreakService.rebuildCurrentStreak(userId)
+        }
         if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(symptom, userId)
 
         if (request.symptomState?.isSafe() == true && mealRecordId != null) {
@@ -106,8 +121,12 @@ class SymptomService(
     @Transactional
     fun delete(symptomId: String, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
+        val wasStreakTarget = symptom.symptomState.isStreakTarget()
         symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
         symptomRepository.delete(symptom)
+        if (wasStreakTarget) {
+            userStreakService.rebuildCurrentStreak(userId)
+        }
     }
 
     // 연결된 식사 기록 ID를 UUID 문자열로 받아서 내부 Long ID로 변환
@@ -192,3 +211,6 @@ class SymptomService(
         })
     }
 }
+
+private fun SymptomState.isStreakTarget(): Boolean =
+    this == SymptomState.COMFORTABLE

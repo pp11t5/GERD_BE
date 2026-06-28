@@ -8,6 +8,7 @@ import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.streak.service.UserStreakService
 import com.gerd.domain.symptom.dto.SymptomCreateRequestDTO
 import com.gerd.domain.symptom.dto.SymptomMemoUpdateRequestDTO
 import com.gerd.domain.symptom.dto.SymptomResponseDTO
@@ -31,6 +32,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -65,6 +67,9 @@ class SymptomServiceTest {
     @Mock
     private lateinit var dictionaryCommandService: DictionaryCommandService
 
+    @Mock
+    private lateinit var userStreakService: UserStreakService
+
     private val service by lazy {
         SymptomService(
             symptomRepository = symptomRepository,
@@ -76,6 +81,7 @@ class SymptomServiceTest {
             userRepository = userRepository,
             symptomPatternRefreshService = symptomPatternRefreshService,
             dictionaryCommandService = dictionaryCommandService,
+            userStreakService = userStreakService,
         )
     }
 
@@ -103,6 +109,7 @@ class SymptomServiceTest {
             verify(symptomRepository).save(symptomCaptor.capture())
             verify(symptomConverter).toResponse(any(), linkedMealCaptor.capture())
             verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
+            verify(userStreakService).updateOnComfortableRecorded(userId, SymptomFixture.OCCURRED_AT.toLocalDate())
             assertThat(symptomCaptor.firstValue.user.id).isEqualTo(userId)
             assertThat(symptomCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(symptomCaptor.firstValue.symptomState).isEqualTo(SymptomState.COMFORTABLE)
@@ -110,6 +117,27 @@ class SymptomServiceTest {
             assertThat(linkedMealCaptor.firstValue.foods[0].mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
             assertThat(linkedMealCaptor.firstValue.foods[0].category).isEqualTo("soup_stew")
             assertThat(result.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
+        }
+
+        @Test
+        fun `양호 기록은 스트릭을 업데이트하지 않는다`() {
+            val request = createRequest(
+                symptomState = SymptomState.GOOD,
+                mealRecordId = null,
+            )
+            val saved = SymptomFixture.symptom(
+                symptomState = SymptomState.GOOD,
+                mealRecordId = null,
+            )
+            whenever(userRepository.getReferenceById(userId)).thenReturn(SymptomFixture.user())
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
+            whenever(symptomRepository.save(any())).thenReturn(saved)
+            whenever(symptomConverter.toResponse(any(), isNull()))
+                .thenReturn(symptomResponse(symptomState = SymptomState.GOOD))
+
+            service.create(userId, request)
+
+            verify(userStreakService, never()).updateOnComfortableRecorded(any(), any())
         }
 
         @Test
@@ -169,6 +197,7 @@ class SymptomServiceTest {
             assertThat(symptom.isAnalysisDirty).isTrue()
             assertThat(symptom.analysisVersion).isEqualTo(2L)
             verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
+            verify(userStreakService).rebuildCurrentStreak(userId)
         }
 
         @Test
@@ -220,6 +249,7 @@ class SymptomServiceTest {
             service.delete(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
 
             verify(symptomRepository).delete(symptom)
+            verify(userStreakService).rebuildCurrentStreak(userId)
         }
     }
 
@@ -241,9 +271,10 @@ class SymptomServiceTest {
         }
 
     private fun createRequest(
-        mealRecordId: String = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
+        symptomState: SymptomState = SymptomState.COMFORTABLE,
+        mealRecordId: String? = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
     ) = SymptomCreateRequestDTO(
-        symptomState = SymptomState.COMFORTABLE,
+        symptomState = symptomState,
         symptomTypes = emptySet(),
         occurredAt = "2026-05-12T19:30:00+09:00",
         mealRecordId = mealRecordId,
@@ -260,10 +291,12 @@ class SymptomServiceTest {
         memo = "신물이 올라왔어요",
     )
 
-    private fun symptomResponse() = SymptomResponseDTO(
+    private fun symptomResponse(
+        symptomState: SymptomState = SymptomState.COMFORTABLE,
+    ) = SymptomResponseDTO(
         symptomId = SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(),
-        symptomState = SymptomState.COMFORTABLE,
-        stateTitle = "comfortable",
+        symptomState = symptomState,
+        stateTitle = symptomState.code,
         symptomTypes = emptyList(),
         occurredAt = "2026-05-12T19:30+09:00",
         linkedMeal = SymptomResponseDTO.LinkedMealDTO(

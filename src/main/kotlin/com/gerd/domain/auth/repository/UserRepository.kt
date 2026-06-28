@@ -1,7 +1,9 @@
 package com.gerd.domain.auth.repository
 
 import com.gerd.domain.auth.entity.User
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -15,6 +17,10 @@ interface UserRepository : JpaRepository<User, Long> {
     // @SQLRestriction 우회 — 탈퇴 유예(DELETED) 유저 조회 전용 (복구 흐름)
     @Query(value = "SELECT * FROM users WHERE user_id = :userId", nativeQuery = true)
     fun findByIdIncludingDeleted(@Param("userId") userId: Long): Optional<User>
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :userId")
+    fun findByIdForUpdate(@Param("userId") userId: Long): User?
 
     // @SQLRestriction 우회해 DB에서 물리 삭제 — 14일 유예 후 스케줄러에서 호출
     @Modifying
