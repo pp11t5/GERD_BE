@@ -8,6 +8,7 @@ import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.streak.service.UserStreakService
 import com.gerd.domain.symptom.dto.SymptomCreateRequestDTO
 import com.gerd.domain.symptom.dto.SymptomMemoUpdateRequestDTO
 import com.gerd.domain.symptom.dto.SymptomResponseDTO
@@ -65,6 +66,9 @@ class SymptomServiceTest {
     @Mock
     private lateinit var dictionaryCommandService: DictionaryCommandService
 
+    @Mock
+    private lateinit var userStreakService: UserStreakService
+
     private val service by lazy {
         SymptomService(
             symptomRepository = symptomRepository,
@@ -76,6 +80,7 @@ class SymptomServiceTest {
             userRepository = userRepository,
             symptomPatternRefreshService = symptomPatternRefreshService,
             dictionaryCommandService = dictionaryCommandService,
+            userStreakService = userStreakService,
         )
     }
 
@@ -103,6 +108,7 @@ class SymptomServiceTest {
             verify(symptomRepository).save(symptomCaptor.capture())
             verify(symptomConverter).toResponse(any(), linkedMealCaptor.capture())
             verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
+            verify(userStreakService).updateOnComfortableRecorded(userId, SymptomFixture.OCCURRED_AT.toLocalDate())
             assertThat(symptomCaptor.firstValue.user.id).isEqualTo(userId)
             assertThat(symptomCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(symptomCaptor.firstValue.symptomState).isEqualTo(SymptomState.COMFORTABLE)
@@ -169,6 +175,7 @@ class SymptomServiceTest {
             assertThat(symptom.isAnalysisDirty).isTrue()
             assertThat(symptom.analysisVersion).isEqualTo(2L)
             verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
+            verify(userStreakService).rebuildCurrentStreak(userId)
         }
 
         @Test
@@ -220,6 +227,7 @@ class SymptomServiceTest {
             service.delete(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
 
             verify(symptomRepository).delete(symptom)
+            verify(userStreakService).rebuildCurrentStreak(userId)
         }
     }
 
