@@ -1,10 +1,12 @@
 package com.gerd.domain.streak.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.streak.dto.UserStreakResponseDTO
 import com.gerd.domain.streak.entity.UserStreak
 import com.gerd.domain.streak.repository.UserStreakRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.global.apiPayload.GeneralException
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -61,9 +63,13 @@ class UserStreakService(
         userStreakRepository.save(userStreak)
     }
 
-    private fun findOrCreateForUpdate(userId: Long): UserStreak =
-        userStreakRepository.findByUserIdForUpdate(userId)
-            ?: UserStreak(user = userRepository.getReferenceById(userId))
+    private fun findOrCreateForUpdate(userId: Long): UserStreak {
+        val user = userRepository.findByIdForUpdate(userId)
+            ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
+
+        return userStreakRepository.findByUserIdForUpdate(userId)
+            ?: UserStreak(user = user)
+    }
 
     // 현재 스트릭 계산, 재계산이 필요할 때만 호출
     private fun calculateCurrentStreak(userId: Long, today: LocalDate): StreakCalculationResult {

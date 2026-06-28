@@ -83,15 +83,15 @@ class UserStreakServiceTest {
         @Test
         fun `오늘 첫 편안 기록이면 스트릭 row를 생성하고 1일로 시작한다`() {
             val today = LocalDate.now()
+            whenever(userRepository.findByIdForUpdate(userId)).thenReturn(user)
             whenever(userStreakRepository.findByUserIdForUpdate(userId)).thenReturn(null)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user)
             whenever(userStreakRepository.save(any())).thenAnswer { it.arguments[0] as UserStreak }
 
             service.updateOnComfortableRecorded(userId, today)
 
             val userStreakCaptor = argumentCaptor<UserStreak>()
             verify(userStreakRepository).save(userStreakCaptor.capture())
-            verify(userRepository).getReferenceById(userId)
+            verify(userRepository).findByIdForUpdate(userId)
             assertThat(userStreakCaptor.firstValue.currentStreak).isEqualTo(1)
             assertThat(userStreakCaptor.firstValue.lastComfortableDate).isEqualTo(today)
         }
@@ -100,6 +100,7 @@ class UserStreakServiceTest {
         fun `어제까지 이어진 상태에서 오늘 기록하면 스트릭을 1 증가시킨다`() {
             val today = LocalDate.now()
             val userStreak = UserStreak(user = user, currentStreak = 2, lastComfortableDate = today.minusDays(1))
+            whenever(userRepository.findByIdForUpdate(userId)).thenReturn(user)
             whenever(userStreakRepository.findByUserIdForUpdate(userId)).thenReturn(userStreak)
             whenever(userStreakRepository.save(any())).thenAnswer { it.arguments[0] as UserStreak }
 
@@ -118,6 +119,7 @@ class UserStreakServiceTest {
                 .thenReturn(listOf(today, today.minusDays(1), today.minusDays(2)))
             whenever(symptomRepository.findComfortableRecordDatesBefore(userId, today.minusDays(2), 50))
                 .thenReturn(emptyList())
+            whenever(userRepository.findByIdForUpdate(userId)).thenReturn(user)
             whenever(userStreakRepository.findByUserIdForUpdate(userId)).thenReturn(userStreak)
             whenever(userStreakRepository.save(any())).thenAnswer { it.arguments[0] as UserStreak }
 
@@ -137,6 +139,7 @@ class UserStreakServiceTest {
             val userStreak = UserStreak(user = user, currentStreak = 5, lastComfortableDate = today.minusDays(1))
             whenever(symptomRepository.findComfortableRecordDatesBefore(userId, today.plusDays(1), 50))
                 .thenReturn(listOf(today.minusDays(2)))
+            whenever(userRepository.findByIdForUpdate(userId)).thenReturn(user)
             whenever(userStreakRepository.findByUserIdForUpdate(userId)).thenReturn(userStreak)
             whenever(userStreakRepository.save(any())).thenAnswer { it.arguments[0] as UserStreak }
 
@@ -152,6 +155,7 @@ class UserStreakServiceTest {
             val userStreak = UserStreak(user = user, currentStreak = 5, lastComfortableDate = today)
             whenever(symptomRepository.findComfortableRecordDatesBefore(userId, today.plusDays(1), 50))
                 .thenReturn(listOf(today, today.minusDays(1), today.minusDays(3)))
+            whenever(userRepository.findByIdForUpdate(userId)).thenReturn(user)
             whenever(userStreakRepository.findByUserIdForUpdate(userId)).thenReturn(userStreak)
             whenever(userStreakRepository.save(any())).thenAnswer { it.arguments[0] as UserStreak }
 
