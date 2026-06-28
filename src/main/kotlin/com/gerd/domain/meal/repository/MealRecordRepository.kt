@@ -10,4 +10,5 @@ interface MealRecordRepository : JpaRepository<MealRecord, Long> {
     fun findByIdAndUser_Id(id: Long, userId: Long): MealRecord?
     fun findByUser_IdAndEatenAtAfter(userId: Long, cutoff: LocalDateTime): List<MealRecord>
     fun findByUser_IdAndEatenAtBetween(userId: Long, start: LocalDateTime, end: LocalDateTime): List<MealRecord>
+    fun findByUser_IdOrderByEatenAtDesc(userId: Long): List<MealRecord>
 }

@@ -20,6 +20,7 @@ import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.streak.service.UserStreakService
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import org.springframework.dao.DataIntegrityViolationException
@@ -41,6 +42,7 @@ class MealCommandService(
     private val objectMapper: ObjectMapper,
     private val symptomRepository: SymptomRepository,
     private val dictionaryCommandService: DictionaryCommandService,
+    private val userStreakService: UserStreakService,
     transactionManager: PlatformTransactionManager,
 ) {
     private val writeTransactionTemplate = TransactionTemplate(transactionManager)
@@ -100,6 +102,7 @@ class MealCommandService(
 
         if (isLastFood) {
             cascadeDeleteMealRecord(mealRecordDbId, userId)
+            userStreakService.refreshAfterMealDeleted(userId)
         } else {
             mealFoodRepository.delete(mealFood)
         }
@@ -113,6 +116,7 @@ class MealCommandService(
         val mealRecord = mealRecordRepository.findByExternalIdAndUser_Id(externalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         cascadeDeleteMealRecord(mealRecord.id!!, userId)
+        userStreakService.refreshAfterMealDeleted(userId)
     }
 
     // 도감 SAFE 제거 → 증상 삭제 → MealFood 삭제 → MealRecord 삭제
@@ -140,6 +144,7 @@ class MealCommandService(
     ): MealFoodRecordDetailDTO {
         val eatenAt = mealRecordConverter.parseEatenAt(rawEatenAt)
         val mealRecord = mealRecordRepository.save(MealRecord(user = user, eatenAt = eatenAt))
+        userStreakService.updateOnMealRecorded(user.id!!, eatenAt.toLocalDate())
         val saved = mealFoodRepository.save(
             MealFood(
                 user = user,
