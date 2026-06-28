@@ -14,6 +14,7 @@ import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.streak.service.UserStreakService
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
@@ -72,6 +73,9 @@ class MealRecordCommandServiceTest {
     @Mock
     private lateinit var dictionaryCommandService: DictionaryCommandService
 
+    @Mock
+    private lateinit var userStreakService: UserStreakService
+
     private lateinit var service: MealCommandService
 
     private val objectMapper = ObjectMapper()
@@ -90,6 +94,7 @@ class MealRecordCommandServiceTest {
             objectMapper = objectMapper,
             symptomRepository = symptomRepository,
             dictionaryCommandService = dictionaryCommandService,
+            userStreakService = userStreakService,
             transactionManager = transactionManager,
         )
     }
@@ -134,6 +139,7 @@ class MealRecordCommandServiceTest {
             assertThat(analysis.allergyAnalysis.ment).isEqualTo("자극 가능성이 있어요")
             assertThat(analysis.allergyAnalysis.content).isEqualTo("식후 바로 눕지 마세요")
             assertThat(result.mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
+            verify(userStreakService).updateOnMealRecorded(userId, MealRecordFixture.EATEN_AT.toLocalDate())
 
             // 판정(LLM 호출 가능)은 트랜잭션 밖에서 수행 — 커넥션을 점유하지 않는다. 트랜잭션은 저장용 쓰기 tx 하나뿐
             val definitions = argumentCaptor<TransactionDefinition>()
@@ -192,6 +198,7 @@ class MealRecordCommandServiceTest {
                 verify(mealFoodRepository).deleteAll(foods)
                 verify(mealRecordRepository).delete(mealRecord)
             }
+            verify(userStreakService).refreshAfterMealDeleted(userId)
         }
 
         @Test
@@ -206,6 +213,7 @@ class MealRecordCommandServiceTest {
 
             verify(mealFoodRepository).delete(mealFood)
             verify(mealRecordRepository, never()).delete(any())
+            verify(userStreakService, never()).refreshAfterMealDeleted(any())
         }
     }
 
@@ -229,6 +237,7 @@ class MealRecordCommandServiceTest {
             verify(dictionaryCommandService, never()).removeSafeEntries(any(), any())
             verify(mealFoodRepository).deleteAll(foods)
             verify(mealRecordRepository).delete(mealRecord)
+            verify(userStreakService).refreshAfterMealDeleted(userId)
         }
 
         @Test
