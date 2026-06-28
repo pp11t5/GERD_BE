@@ -14,6 +14,22 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
 
     fun findByExternalIdAndUser_Id(externalId: UUID, userId: Long): Symptom?
 
+    @Query("""
+        SELECT DISTINCT CAST(s.occurred_at AS date) AS record_date
+        FROM symptom_records s
+        WHERE s.user_id = :userId
+          AND s.symptom_state IN ('COMFORTABLE', 'GOOD')
+          AND s.deleted_at IS NULL
+          AND CAST(s.occurred_at AS date) < :beforeDate
+        ORDER BY record_date DESC
+        LIMIT :limit
+    """, nativeQuery = true)
+    fun findComfortableRecordDatesBefore(
+        @Param("userId") userId: Long,
+        @Param("beforeDate") beforeDate: java.time.LocalDate,
+        @Param("limit") limit: Int,
+    ): List<java.time.LocalDate>
+
     // 연결된 식사 기록 찾기
     @Query("SELECT s.mealRecordId FROM Symptom s WHERE s.user.id = :userId AND s.mealRecordId IS NOT NULL")
     fun findLinkedMealRecordIdsByUserId(@Param("userId") userId: Long): List<Long>
