@@ -9,12 +9,14 @@ import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.domain.timeline.dto.TimeLineItemDTO
 import com.gerd.domain.timeline.dto.TimeLineResponseDTO
 import com.gerd.domain.timeline.dto.WeeklyJudgementResponseDTO
+import com.gerd.domain.timeline.enums.TimeLineIcon
 import com.gerd.domain.timeline.enums.TimeLineType
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 
@@ -61,6 +63,7 @@ class TimeLineService(
                 val food = foods.firstOrNull()
                 TimeLineItemDTO.Single(
                     timeLineType = TimeLineType.SINGLE,
+                    timeIcon = timeIcon(record.eatenAt),
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     mealFoodName = food?.let { foodNameById[it.foodId] } ?: "",
@@ -77,6 +80,7 @@ class TimeLineService(
 
                 TimeLineItemDTO.Group(
                     timeLineType = TimeLineType.GROUP,
+                    timeIcon = timeIcon(record.eatenAt),
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     representativeFoods = foods.take(2).map { foodNameById[it.foodId] ?: "" },
@@ -99,6 +103,7 @@ class TimeLineService(
 
             TimeLineItemDTO.Symptom(
                 timeLineType = TimeLineType.SYMPTOM,
+                timeIcon = timeIcon(s.occurredAt),
                 symptomId = s.externalId?.toString() ?: "",
                 symptomState = s.symptomState,
                 afterMealMinutes = afterMealMinutes,
@@ -133,6 +138,15 @@ class TimeLineService(
         )
     }
 
+    private fun timeIcon(dateTime: LocalDateTime): TimeLineIcon {
+        val time = dateTime.toLocalTime()
+        return if (!time.isBefore(DAY_START) && time.isBefore(NIGHT_START)) {
+            TimeLineIcon.SUN
+        } else {
+            TimeLineIcon.MOON
+        }
+    }
+
     fun getWeeklyJudgements(userId: Long, date: LocalDate): List<WeeklyJudgementResponseDTO> {
         val sunday = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
         val saturday = sunday.plusDays(6)
@@ -151,5 +165,10 @@ class TimeLineService(
                 judgementList = gradesByDate[day]?.mapNotNull { it.judgedGrade } ?: emptyList()
             )
         }
+    }
+
+    companion object {
+        private val DAY_START: LocalTime = LocalTime.of(6, 0)
+        private val NIGHT_START: LocalTime = LocalTime.of(18, 0)
     }
 }
