@@ -26,9 +26,8 @@ class ReportBatchProcessor(
         val startedAt = System.currentTimeMillis()
 
         do {
-            val page = userRepository.findAll(PageRequest.of(pageNumber, PAGE_SIZE))
-            page.content.forEach { user ->
-                val userId = user.id ?: return@forEach
+            val page = userRepository.findAllIds(PageRequest.of(pageNumber, PAGE_SIZE))
+            page.content.forEach { userId ->
                 try {
                     reportService.getOrCreate(userId)
                     success++
