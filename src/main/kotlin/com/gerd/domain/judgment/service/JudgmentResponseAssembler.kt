@@ -24,12 +24,7 @@ class JudgmentResponseAssembler {
         override: OverrideResult,
         substitutes: List<SubstituteDTO>,
     ): CachedJudgment {
-        // LLM이 UNKNOWN을 낸 경우 같이 생성된 items는 버린다 — "왜 모르는지"를 LLM이 창작하지 않게(환각 차단, spec §4)
-        val baseItems = if (llmJudgment.grade == JudgmentGrade.UNKNOWN) {
-            UNKNOWN_FALLBACK_ITEMS
-        } else {
-            llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
-        }
+        val baseItems = llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
         // 알레르겐 매치는 LLM이 언급을 놓쳐도 슬롯 [1](알레르기·복용약)을 결정적 카피로 보장한다
         val items = if (override.allergenMatches.isNotEmpty()) {
             val labels = override.allergenMatches.joinToString(", ") { it.label }
@@ -55,10 +50,9 @@ class JudgmentResponseAssembler {
     }
 
     // LLM 제목은 LLM이 판정한 등급의 톤으로 쓰였다 — 오버라이드로 등급이 바뀌면 톤이 어긋나므로 고정 제목으로 폴백.
-    // UNKNOWN은 items와 같은 이유(왜 모르는지 창작 금지)로 LLM 제목을 쓰지 않는다
     private fun resolveTitle(llmJudgment: LlmJudgmentDTO, override: OverrideResult): String =
         llmJudgment.personalTitle
-            ?.takeIf { it.isNotBlank() && llmJudgment.grade != JudgmentGrade.UNKNOWN && override.grade == llmJudgment.grade }
+            ?.takeIf { it.isNotBlank() && override.grade == llmJudgment.grade }
             ?: FALLBACK_TITLES.getValue(override.grade)
 
     fun toResponse(cached: CachedJudgment): JudgmentResponseDTO =
@@ -73,15 +67,15 @@ class JudgmentResponseAssembler {
             substitutes = cached.substitutes,
         )
 
-    // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 UNKNOWN 폴백 — 캐시하지 않는다
-    fun assembleUnknownFallback(context: JudgmentContext): JudgmentResponseDTO =
+    // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 CAUTION으로 안내, 캐시하지 않는다
+    fun assembleFallback(context: JudgmentContext): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = context.foodExternalId,
             foodName = context.food.name,
             category = context.category,
-            grade = JudgmentGrade.UNKNOWN,
-            personalTitle = FALLBACK_TITLES.getValue(JudgmentGrade.UNKNOWN),
-            items = UNKNOWN_FALLBACK_ITEMS,
+            grade = JudgmentGrade.CAUTION,
+            personalTitle = FALLBACK_TITLE,
+            items = FALLBACK_ITEMS,
             stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
             substitutes = emptyList(),
         )
@@ -93,11 +87,7 @@ class JudgmentResponseAssembler {
     ): CachedJudgment {
         // TODO: 텍스트 음식은 알레르겐이 LLM 추출이라, PItem-2의 "알레르기 없어요" 같은 negative 단정 톤 다운 필요
         //  (검수 음식과 달리 "없음"을 보장할 수 없음 — "확인된 알레르겐 없음"류로 완화)
-        val baseItems = if (llmJudgment.grade == JudgmentGrade.UNKNOWN) {
-            UNKNOWN_FALLBACK_ITEMS
-        } else {
-            llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
-        }
+        val baseItems = llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
         return CachedJudgment(
             foodExternalId = null,
             foodName = foodName,
@@ -119,12 +109,12 @@ class JudgmentResponseAssembler {
             substitutes = emptyList(),
         )
 
-    fun assembleTextUnknownFallback(foodName: String): TextJudgmentResponseDTO =
+    fun assembleTextFallback(foodName: String): TextJudgmentResponseDTO =
         TextJudgmentResponseDTO(
             foodName = foodName,
-            grade = JudgmentGrade.UNKNOWN,
-            personalTitle = FALLBACK_TITLES.getValue(JudgmentGrade.UNKNOWN),
-            items = UNKNOWN_FALLBACK_ITEMS,
+            grade = JudgmentGrade.CAUTION,
+            personalTitle = FALLBACK_TITLE,
+            items = FALLBACK_ITEMS,
             stateRecords = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),
             substitutes = emptyList(),
         )
@@ -133,16 +123,18 @@ class JudgmentResponseAssembler {
         // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약 (기획 PItem-1 / PItem-2)
         private const val ALLERGY_SLOT = 1
 
-        // LLM 제목을 쓸 수 없는 경우(누락·공백·UNKNOWN·등급 강등)의 등급별 고정 제목
+        // LLM 제목을 쓸 수 없는 경우(누락·공백·등급 강등)의 등급별 고정 제목
         private val FALLBACK_TITLES = mapOf(
             JudgmentGrade.RECOMMEND to "좋은 선택이에요!",
             JudgmentGrade.CAUTION to "속이 편안할 수 있도록 천천히 드세요!",
             JudgmentGrade.RISK to "오늘은 다른 메뉴가 더 편할 거예요",
-            JudgmentGrade.UNKNOWN to "이 음식은 정보가 충분하지 않아요",
         )
 
-        // UNKNOWN의 items는 LLM 생성 없이 고정 카피 — 두 발생 경로(⓪게이트·LLM UNKNOWN) 공용 (spec §4)
-        private val UNKNOWN_FALLBACK_ITEMS = listOf(
+        // 분석 근거가 없는 폴백(⓪게이트·LLM 실패)의 고정 제목 — 정보 부족을 솔직히 안내
+        private const val FALLBACK_TITLE = "이 음식은 정보가 충분하지 않아요"
+
+        // 분석 근거가 없는 폴백의 items는 LLM 생성 없이 고정 카피 — 두 발생 경로(⓪게이트·LLM 실패) 공용 (spec §4)
+        private val FALLBACK_ITEMS = listOf(
             JudgmentItemDTO(
                 emphasis = "정보가 부족해요",
                 body = "이 음식은 아직 분석할 수 있는 정보가 충분하지 않아요. 처음이라면 소량부터 천천히 드셔보는 게 좋아요.",

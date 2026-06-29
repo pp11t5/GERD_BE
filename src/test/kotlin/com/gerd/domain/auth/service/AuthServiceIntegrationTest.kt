@@ -39,7 +39,9 @@ class AuthServiceIntegrationTest @Autowired constructor(
 
         @Test
         fun `저장되지 않은 유효한 리프레시 토큰이면 전체 세션 삭제가 먼저 커밋된다`() {
-            val user = userRepository.save(User(email = "refresh-user@test.com", role = UserRole.USER))
+            val user = userRepository.save(
+                User(email = "refresh-user@test.com", nickname = "refresh-user", role = UserRole.USER),
+            )
             val storedToken = jwtProvider.createRefreshToken(user)
             refreshTokenRepository.save(
                 RefreshToken(

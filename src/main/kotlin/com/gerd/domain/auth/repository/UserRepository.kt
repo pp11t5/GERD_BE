@@ -2,6 +2,7 @@ package com.gerd.domain.auth.repository
 
 import com.gerd.domain.auth.entity.User
 import jakarta.persistence.LockModeType
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
@@ -21,6 +22,9 @@ interface UserRepository : JpaRepository<User, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :userId")
     fun findByIdForUpdate(@Param("userId") userId: Long): User?
+
+    @Query("SELECT u.id FROM User u WHERE u.id > :lastId ORDER BY u.id")
+    fun findIdsAfter(@Param("lastId") lastId: Long, pageable: Pageable): List<Long>
 
     // @SQLRestriction 우회해 DB에서 물리 삭제 — 14일 유예 후 스케줄러에서 호출
     @Modifying

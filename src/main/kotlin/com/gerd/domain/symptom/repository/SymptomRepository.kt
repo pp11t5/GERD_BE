@@ -15,6 +15,23 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
     fun findByExternalIdAndUser_Id(externalId: UUID, userId: Long): Symptom?
 
     @Query("""
+        SELECT DISTINCT s
+        FROM Symptom s
+        WHERE s.user.id = :userId
+          AND s.mealRecordId IN (
+              SELECT mf.mealRecord.id
+              FROM MealFood mf
+              WHERE mf.user.id = :userId
+                AND mf.foodId = :foodId
+          )
+        ORDER BY s.occurredAt DESC, s.id DESC
+    """)
+    fun findLinkedSymptomsByUserIdAndFoodId(
+        @Param("userId") userId: Long,
+        @Param("foodId") foodId: Long,
+    ): List<Symptom>
+
+    @Query("""
         SELECT DISTINCT CAST(s.occurred_at AS date) AS record_date
         FROM symptom_records s
         WHERE s.user_id = :userId
@@ -29,6 +46,13 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
         @Param("beforeDate") beforeDate: java.time.LocalDate,
         @Param("limit") limit: Int,
     ): List<java.time.LocalDate>
+
+    @Query("SELECT new com.gerd.domain.report.dto.SymptomStateRow(CAST(s.occurredAt AS LocalDate), s.symptomState) FROM Symptom s WHERE s.user.id = :userId AND s.occurredAt BETWEEN :start AND :end")
+    fun findStatesByUserAndPeriod(
+        @Param("userId") userId: Long,
+        @Param("start") start: LocalDateTime,
+        @Param("end") end: LocalDateTime,
+    ): List<com.gerd.domain.report.dto.SymptomStateRow>
 
     // 연결된 식사 기록 찾기
     @Query("SELECT s.mealRecordId FROM Symptom s WHERE s.user.id = :userId AND s.mealRecordId IS NOT NULL")

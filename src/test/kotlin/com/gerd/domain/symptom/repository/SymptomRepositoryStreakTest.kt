@@ -104,8 +104,38 @@ class SymptomRepositoryStreakTest @Autowired constructor(
         }
     }
 
+    @Nested
+    inner class `리포트 증상 상태 집계 조회` {
+
+        @Test
+        fun `사용자와 기간에 해당하는 증상 상태만 날짜와 함께 조회한다`() {
+            val user = saveUser("report-symptom@test.com")
+            val otherUser = saveUser("other-symptom@test.com")
+            saveSymptom(user, SymptomState.COMFORTABLE, LocalDate.of(2026, 6, 21))
+            saveSymptom(user, SymptomState.UNCOMFORTABLE, LocalDate.of(2026, 6, 22))
+            saveSymptom(user, SymptomState.GOOD, LocalDate.of(2026, 6, 28))
+            saveSymptom(otherUser, SymptomState.SEVERE, LocalDate.of(2026, 6, 22))
+            flushAndClear()
+
+            val result = symptomRepository.findStatesByUserAndPeriod(
+                user.id!!,
+                LocalDateTime.of(2026, 6, 21, 0, 0),
+                LocalDateTime.of(2026, 6, 27, 23, 59),
+            )
+
+            assertThat(result.map { it.date }).containsExactlyInAnyOrder(
+                LocalDate.of(2026, 6, 21),
+                LocalDate.of(2026, 6, 22),
+            )
+            assertThat(result.map { it.state }).containsExactlyInAnyOrder(
+                SymptomState.COMFORTABLE,
+                SymptomState.UNCOMFORTABLE,
+            )
+        }
+    }
+
     private fun saveUser(email: String = "user@test.com"): User =
-        User(email = email, role = UserRole.USER).also {
+        User(email = email, nickname = email.substringBefore("@"), role = UserRole.USER).also {
             em.persist(it)
         }
 

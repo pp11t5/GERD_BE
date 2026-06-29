@@ -87,13 +87,6 @@ class GeminiClientTest {
             assertThat(text).contains("\"grade\":\"CAUTION\"")
             assertThat(text).contains("오늘은 천천히 즐겨보세요")
         }
-
-        @Test
-        fun `UNKNOWN도 text 그대로 반환한다`() {
-            responseBody = envelope("""{"grade":"UNKNOWN","reasons":[],"items":[]}""")
-
-            assertThat(call()).contains("\"grade\":\"UNKNOWN\"")
-        }
     }
 
     @Nested

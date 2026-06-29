@@ -8,8 +8,14 @@ import com.gerd.domain.judgment.dto.JudgmentResponseDTO.StateRecordsDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
+import com.gerd.domain.symptom.dto.FoodSymptomResponseDTO
+import com.gerd.domain.symptom.entity.enums.SymptomState
+import com.gerd.domain.symptom.entity.enums.SymptomType
+import com.gerd.domain.symptom.service.FoodSymptomQueryService
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
+import com.gerd.global.fixture.MealRecordFixture
+import com.gerd.global.fixture.SymptomFixture
 import com.gerd.global.security.WithCustomUser
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -29,6 +35,7 @@ class JudgmentControllerTest @Autowired constructor(
 ) {
 
     @MockitoBean private lateinit var foodJudgmentQueryService: FoodJudgmentQueryService
+    @MockitoBean private lateinit var foodSymptomQueryService: FoodSymptomQueryService
     @MockitoBean private lateinit var jwtProvider: JwtProvider
 
     private val foodExternalId = FoodFixture.EXTERNAL_ID.toString()
@@ -88,6 +95,37 @@ class JudgmentControllerTest @Autowired constructor(
                     jsonPath("$.isSuccess") { value(false) }
                     jsonPath("$.code") { value("FOOD404_1") }
                 }
+            }
+        }
+    }
+
+    @Nested
+    inner class `GET food symptoms` {
+
+        @Test
+        @WithCustomUser
+        fun `음식에 연결된 증상 목록을 반환한다`() {
+            whenever(foodSymptomQueryService.getSymptoms(any(), any())).thenReturn(
+                listOf(
+                    FoodSymptomResponseDTO(
+                        symptomId = SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(),
+                        symptomState = SymptomState.UNCOMFORTABLE,
+                        symptomTypes = listOf(SymptomType.ACID_REFLUX),
+                        occurredAt = "2026-06-21T13:00:00",
+                        mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
+                        afterMealMinutes = 70,
+                    ),
+                ),
+            )
+
+            mockMvc.get("/api/v1/foods/$foodExternalId/symptoms").andExpect {
+                status { isOk() }
+                jsonPath("$.isSuccess") { value(true) }
+                jsonPath("$.result[0].symptomId") { value(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString()) }
+                jsonPath("$.result[0].symptomState") { value("uncomfortable") }
+                jsonPath("$.result[0].symptomTypes[0]") { value("acid_reflux") }
+                jsonPath("$.result[0].mealRecordId") { value(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()) }
+                jsonPath("$.result[0].afterMealMinutes") { value(70) }
             }
         }
     }

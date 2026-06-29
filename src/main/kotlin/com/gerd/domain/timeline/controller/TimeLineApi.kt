@@ -21,7 +21,10 @@ import java.time.LocalDate
 @RequestMapping("/api/v1/timeline")
 interface TimeLineApi {
 
-    @Operation(summary = "일별 타임라인 조회", description = "특정 날짜의 식사 기록과 증상 기록을 시간 순으로 조회합니다.")
+    @Operation(summary = "일별 타임라인 조회", description = """
+        특정 날짜의 식사 기록과 증상 기록을 시간 순으로 조회합니다.
+        timeLineType: single(음식 1개 식사), group(음식 2개 이상 식사), symptom(증상)
+    """)
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
     @GetMapping
     fun getTimeLine(

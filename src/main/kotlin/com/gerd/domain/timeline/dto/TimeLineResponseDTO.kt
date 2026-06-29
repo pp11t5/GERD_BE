@@ -13,7 +13,7 @@ data class TimeLineResponseDTO(
 sealed class TimeLineItemDTO {
 
     data class Single(
-        @field:Schema(description = "타임라인 타입", example = "single")
+        @field:Schema(description = "타임라인 타입: single(음식 1개 식사), group(음식 2개 이상 식사), symptom(증상)", example = "single")
         val timeLineType: TimeLineType,
         @field:Schema(description = "식사 기록 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         val mealRecordId: String,
@@ -21,14 +21,14 @@ sealed class TimeLineItemDTO {
         val mealRecordDateTime: String,
         @field:Schema(description = "대표 음식 이름", example = "김치찌개")
         val mealFoodName: String,
-        @field:Schema(description = "판정 등급", example = "NORMAL")
+        @field:Schema(description = "판정 등급: RECOMMEND(추천), CAUTION(주의), RISK(위험)", example = "CAUTION")
         val grade: JudgmentGrade,
         @field:Schema(description = "기타 음식 개수", example = "3")
         val etcCount: Int,
     ) : TimeLineItemDTO()
 
     data class Group(
-        @field:Schema(description = "타임라인 타입", example = "group")
+        @field:Schema(description = "타임라인 타입: single(음식 1개 식사), group(음식 2개 이상 식사), symptom(증상)", example = "group")
         val timeLineType: TimeLineType,
         @field:Schema(description = "식사 기록 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         val mealRecordId: String,
@@ -42,9 +42,11 @@ sealed class TimeLineItemDTO {
     ) : TimeLineItemDTO()
 
     data class Symptom(
-        @field:Schema(description = "타임라인 타입", example = "symptom")
+        @field:Schema(description = "타임라인 타입: single(음식 1개 식사), group(음식 2개 이상 식사), symptom(증상)", example = "symptom")
         val timeLineType: TimeLineType,
-        @field:Schema(description = "증상 상태", example = "MILD")
+        @field:Schema(description = "증상 기록 외부 식별자(UUID) — 상세 진입용", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        val symptomId: String,
+        @field:Schema(description = "증상 상태: comfortable(편안), good(양호), normal(보통), uncomfortable(불편), severe(심각)", example = "uncomfortable")
         val symptomState: SymptomState,
         @field:Schema(description = "식사 후 경과 시간 (분)", example = "30")
         val afterMealMinutes: Int,
@@ -53,13 +55,13 @@ sealed class TimeLineItemDTO {
     ) : TimeLineItemDTO()
 
     data class ConnectedSymptom(
-        @field:Schema(description = "대표 증상 기록 외부 식별자(UUID) — 상세 진입용", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        @field:Schema(description = "증상 기록 외부 식별자(UUID) — 상세 진입용", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         val symptomId: String,
-        @field:Schema(description = "대표 증상의 속 상태", example = "UNCOMFORTABLE")
+        @field:Schema(description = "대표 증상의 속 상태: comfortable(편안), good(양호), normal(보통), uncomfortable(불편), severe(심각)", example = "uncomfortable")
         val symptomState: SymptomState,
         @field:Schema(description = "식사 후 경과 시간 (분)", example = "70")
         val afterMealMinutes: Int,
-        @field:Schema(description = "연결 증상 유형 최대 2개", example = "[\"acid_reflux\", \"chest_tightness\"]")
+        @field:Schema(description = "연결 증상 유형 최대 2개: throat_foreign_body(목 이물감), acid_reflux(신물), cough(기침), chest_tightness(가슴 답답함)", example = "[\"acid_reflux\", \"chest_tightness\"]")
         val representativeSymptoms: List<SymptomType>,
         @field:Schema(description = "표시되지 않은 나머지 증상 유형 개수", example = "1")
         val etcCount: Int,

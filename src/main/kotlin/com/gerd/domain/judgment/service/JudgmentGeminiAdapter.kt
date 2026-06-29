@@ -1,7 +1,6 @@
 package com.gerd.domain.judgment.service
 
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO
-import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.global.ai.gemini.GeminiClient
 import com.gerd.global.ai.gemini.GeminiRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -31,7 +30,7 @@ class JudgmentGeminiAdapter(
 
         return try {
             val judgment = objectMapper.readValue(text, LlmJudgmentDTO::class.java)
-            if (judgment.grade != JudgmentGrade.UNKNOWN && judgment.items.size != REQUIRED_ITEM_COUNT) {
+            if (judgment.items.size != REQUIRED_ITEM_COUNT) {
                 log.warn { "Gemini 판정 items 슬롯 수 불일치: ${judgment.items.size}" }
                 return null
             }

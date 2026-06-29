@@ -90,12 +90,12 @@ class FoodJudgmentQueryServiceTest {
     inner class `⓪ 출처 게이트` {
 
         @Test
-        fun `유저 입력 음식은 LLM 호출 없이 UNKNOWN 폴백을 반환한다`() {
+        fun `유저 입력 음식은 LLM 호출 없이 CAUTION 폴백을 반환한다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(userFoodContext())
 
             val (response, isCached) = service.getJudgment(foodExternalId, userId)
 
-            assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
+            assertThat(response.grade).isEqualTo(JudgmentGrade.CAUTION)
             assertThat(isCached).isFalse()
             verify(judgmentGeminiAdapter, never()).generateJudgment(any(), any(), any())
         }
@@ -120,14 +120,14 @@ class FoodJudgmentQueryServiceTest {
         }
 
         @Test
-        fun `LLM 실패는 UNKNOWN 폴백을 반환하고 캐시에 남기지 않는다`() {
+        fun `LLM 실패는 CAUTION 폴백을 반환하고 캐시에 남기지 않는다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
             whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(null)
 
             val (first, _) = service.getJudgment(foodExternalId, userId)
             val (second, secondCached) = service.getJudgment(foodExternalId, userId)
 
-            assertThat(first.grade).isEqualTo(JudgmentGrade.UNKNOWN)
+            assertThat(first.grade).isEqualTo(JudgmentGrade.CAUTION)
             assertThat(secondCached).isFalse()
             // 실패가 캐시되지 않았으므로 재호출 시 LLM을 다시 시도한다
             verify(judgmentGeminiAdapter, times(2)).generateJudgment(any(), any(), any())
@@ -136,20 +136,6 @@ class FoodJudgmentQueryServiceTest {
 
     @Nested
     inner class `판정 파이프라인` {
-
-        @Test
-        fun `LLM이 UNKNOWN이면 items를 고정 폴백으로 교체하고 대체식단을 조회하지 않는다`() {
-            whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
-            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
-                .thenReturn(LlmJudgmentDTO(JudgmentGrade.UNKNOWN))
-
-            val (response, _) = service.getJudgment(foodExternalId, userId)
-
-            assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
-            assertThat(response.items[0].emphasis).isEqualTo("정보가 부족해요")
-            assertThat(response.substitutes).isEmpty()
-            verify(judgmentContextReader, never()).loadSubstituteCandidates(any())
-        }
 
         @Test
         fun `알레르겐 매치 시 RISK로 강등하고 대체식단을 조회한다`() {

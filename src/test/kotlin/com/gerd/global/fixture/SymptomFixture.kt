@@ -17,7 +17,7 @@ object SymptomFixture {
 
     fun user(
         id: Long = 1L,
-        nickname: String? = "유진",
+        nickname: String = "유진",
     ): User = User(
         email = "user@test.com",
         nickname = nickname,

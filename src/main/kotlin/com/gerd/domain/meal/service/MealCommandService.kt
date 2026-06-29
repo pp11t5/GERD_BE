@@ -95,13 +95,18 @@ class MealCommandService(
     @Transactional
     fun delete(mealFoodId: String, userId: Long) {
         val mealFood = resolveOwnedFood(mealFoodId, userId)
-        val mealRecordDbId = mealFood.mealRecord.id!!
+        val mealRecord = mealFood.mealRecord
+        val mealRecordDbId = mealRecord.id!!
         val isLastFood = mealFoodRepository.countByMealRecordId(mealRecordDbId) == 1L
 
         if (isLastFood) {
             cascadeDeleteMealRecord(mealRecordDbId, userId)
         } else {
             mealFoodRepository.delete(mealFood)
+            val remainingGrades = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordDbId)
+                .mapNotNull { it.judgedGrade }
+            mealRecord.recalculateGrade(remainingGrades)
+            mealRecordRepository.save(mealRecord)
         }
     }
 
@@ -139,7 +144,8 @@ class MealCommandService(
         user: User,
     ): MealFoodRecordDetailDTO {
         val eatenAt = mealRecordConverter.parseEatenAt(rawEatenAt)
-        val mealRecord = mealRecordRepository.save(MealRecord(user = user, eatenAt = eatenAt))
+        val mealRecord = MealRecord(user = user, eatenAt = eatenAt).also { it.initGrade(grade) }
+        mealRecordRepository.save(mealRecord)
         val saved = mealFoodRepository.save(
             MealFood(
                 user = user,
@@ -172,6 +178,8 @@ class MealCommandService(
                 analysisJson = analysisJson,
             ),
         )
+        mealRecord.updateGrade(grade)
+        mealRecordRepository.save(mealRecord)
         return mealRecordConverter.toSummary(saved, food)
     }
 

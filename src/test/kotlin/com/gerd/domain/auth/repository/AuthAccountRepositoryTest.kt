@@ -22,7 +22,7 @@ class AuthAccountRepositoryTest @Autowired constructor(
 
     @Test
     fun `provider 와 providerAccountId 로 인증 계정을 조회한다`() {
-        val user = userRepository.save(User(email = "user@test.com", role = UserRole.USER))
+        val user = userRepository.save(User(email = "user@test.com", nickname = "user", role = UserRole.USER))
         val authAccount = authAccountRepository.save(
             AuthAccount(
                 user = user,

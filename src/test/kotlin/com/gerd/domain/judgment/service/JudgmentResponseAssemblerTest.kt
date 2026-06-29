@@ -59,20 +59,6 @@ class JudgmentResponseAssemblerTest {
         }
 
         @Test
-        fun `LLM이 UNKNOWN이면 items와 제목을 버리고 고정 폴백 카피를 쓴다`() {
-            val cached = assembler.assembleCacheable(
-                context = context,
-                llmJudgment = LlmJudgmentDTO(JudgmentGrade.UNKNOWN, personalTitle = "잘 모르겠는 음식이에요", items = llmItems),
-                override = overrideOf(JudgmentGrade.UNKNOWN),
-                substitutes = emptyList(),
-            )
-
-            assertThat(cached.items[0].emphasis).isEqualTo("정보가 부족해요")
-            assertThat(cached.items[1].emphasis).isEqualTo("알레르기 확인이 어려워요")
-            assertThat(cached.personalTitle).isEqualTo("이 음식은 정보가 충분하지 않아요")
-        }
-
-        @Test
         fun `등급이 유지되면 LLM 제목을 그대로 쓴다`() {
             val cached = assembler.assembleCacheable(
                 context = context,
@@ -162,13 +148,13 @@ class JudgmentResponseAssemblerTest {
     }
 
     @Nested
-    inner class `assembleUnknownFallback` {
+    inner class `assembleFallback` {
 
         @Test
-        fun `UNKNOWN 폴백 응답을 조립한다(대체식단 없음)`() {
-            val response = assembler.assembleUnknownFallback(context)
+        fun `분석 근거 없는 폴백 응답을 조립한다(CAUTION, 대체식단 없음)`() {
+            val response = assembler.assembleFallback(context)
 
-            assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
+            assertThat(response.grade).isEqualTo(JudgmentGrade.CAUTION)
             assertThat(response.category).isEqualTo("beverage")
             assertThat(response.personalTitle).isEqualTo("이 음식은 정보가 충분하지 않아요")
             assertThat(response.items).hasSize(2)

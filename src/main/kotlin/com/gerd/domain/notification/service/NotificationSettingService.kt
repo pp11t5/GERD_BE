@@ -3,7 +3,6 @@ package com.gerd.domain.notification.service
 import com.gerd.domain.notification.dto.NotificationSettingResponseDTO
 import com.gerd.domain.notification.entity.enums.DailyNotificationTime
 import com.gerd.domain.notification.entity.enums.NotificationSettingType
-import com.gerd.domain.notification.entity.enums.NotificationSettingType.*
 import com.gerd.domain.notification.exception.NotificationErrorCode
 import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.global.apiPayload.GeneralException
@@ -32,9 +31,9 @@ class NotificationSettingService(
             GeneralException(NotificationErrorCode.NOTIFICATION_SETTING_NOT_FOUND)
         }
         when (type) {
-            POST_MEAL     -> setting.updatePostMealNotificationEnabled(!setting.postMealNotificationEnabled)
-            DAILY_RECORD  -> setting.updateDailyRecordNotificationEnabled(!setting.dailyRecordNotificationEnabled)
-            WEEKLY_REPORT -> setting.updateWeeklyReportEnabled(!setting.weeklyReportEnabled)
+            NotificationSettingType.POST_MEAL -> setting.updatePostMealNotificationEnabled(!setting.postMealNotificationEnabled)
+            NotificationSettingType.DAILY_RECORD -> setting.updateDailyRecordNotificationEnabled(!setting.dailyRecordNotificationEnabled)
+            NotificationSettingType.WEEKLY_REPORT -> setting.updateWeeklyReportEnabled(!setting.weeklyReportEnabled)
         }
         log.info { "알림 설정 토글: userId=$userId, type=$type" }
     }

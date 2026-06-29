@@ -5,6 +5,7 @@ import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 
 import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
+import com.gerd.domain.symptom.dto.FoodSymptomResponseDTO
 import com.gerd.global.annotation.ApiErrorExample
 import com.gerd.global.annotation.CurrentUser
 import com.gerd.global.apiPayload.ApiResponse
@@ -27,10 +28,10 @@ interface JudgmentApi {
         summary = "음식 ID로 음식 신호등 판정",
         description = """
             사용자 건강 컨텍스트(트리거·알레르기·복용약·증상)를 반영해 음식의 신호등 등급과 개인화 분석을 반환합니다.
-            - grade: RECOMMEND(🟢) | CAUTION(🟡) | RISK(🔴) | UNKNOWN(⚪)
+            - grade: RECOMMEND(🟢) | CAUTION(🟡) | RISK(🔴)
             - items: 항상 2슬롯 — [0]=트리거·증상 분석, [1]=알레르기·복용약 분석
             - substitutes: CAUTION/RISK일 때만 대체 식단 노출(없으면 빈 배열). 사용자가 등록한 트리거·알레르기 성분을 가진 음식은 제외됩니다.
-            - 본인이 직접 추가한 음식(source=user)은 검수 정보가 없어 항상 UNKNOWN입니다.
+            - 본인이 직접 추가한 음식(source=user)은 검수 정보가 없어 항상 CAUTION으로 안내됩니다.
             - 동일한 (음식 × 사용자 상태)는 24시간 캐시됩니다. 캐시 히트 여부는 X-Cache: HIT/MISS 헤더로 확인할 수 있습니다.
             - 증상 기록은 최대 3개까지 미리보기 표시됩니다. 
         """,
@@ -45,11 +46,28 @@ interface JudgmentApi {
     ): ResponseEntity<ApiResponse<JudgmentResponseDTO>>
 
     @Operation(
+        summary = "음식 ID로 연결 증상 목록 조회",
+        description = """
+            해당 음식을 포함한 식사에 연결된 증상 기록을 최신순으로 조회합니다.
+            신호등 상세 화면의 증상 기록 전체보기와 증상 상세 진입에 사용합니다.
+            symptomId로 GET /api/v1/symptoms/{symptomId}를 호출하면 증상 상세를 조회할 수 있습니다.
+        """,
+    )
+    @ApiErrorExample(FoodErrorCode::class, "FOOD_NOT_FOUND")
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공(없으면 빈 배열)"))
+    @GetMapping("/{foodExternalId}/symptoms")
+    fun getSymptomsByFoodId(
+        @CurrentUser userDetails: CustomUserDetails,
+        @Parameter(description = "음식 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        @PathVariable foodExternalId: String,
+    ): ResponseEntity<ApiResponse<List<FoodSymptomResponseDTO>>>
+
+    @Operation(
         summary = "음식 텍스트로 신호등 판정",
         description = """
             찾으려는 음식이 검색 결과에 없는 경우, 음식 이름을 자유 텍스트로 입력받아 신호등 등급과 개인화 분석을 반환합니다.
             - DB에 등록되지 않은 음식도 판정 가능합니다.
-            - grade: RECOMMEND(🟢) | CAUTION(🟡) | RISK(🔴) | UNKNOWN(⚪)
+            - grade: RECOMMEND(🟢) | CAUTION(🟡) | RISK(🔴)
             - items: 항상 2슬롯 — [0]=트리거·증상 분석, [1]=알레르기·복용약 분석 (LLM이 알레르기 포함 여부를 추론)
             - substitutes: 텍스트 입력은 DB 음식 엔티티가 없어 항상 빈 배열입니다.
             - 동일한 (음식명 × 사용자 상태)는 24시간 캐시됩니다. 캐시 히트 여부는 X-Cache: HIT/MISS 헤더로 확인할 수 있습니다.

@@ -51,7 +51,7 @@ class UserAccountRegistrarIntegrationTest @Autowired constructor(
                                 userAccountRegistrar.findOrRegister(email, provider, providerAccountId) {
                                     ready.countDown()
                                     start.await(5, TimeUnit.SECONDS)
-                                    User(email = email)
+                                    User(email = email, nickname = "race")
                                 }
                             }
                         },
