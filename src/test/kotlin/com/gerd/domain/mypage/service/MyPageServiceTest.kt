@@ -30,6 +30,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDateTime
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class MyPageServiceTest {
@@ -78,8 +79,8 @@ class MyPageServiceTest {
 
         @Test
         fun `저장된 주간 요약이 있으면 프로필과 음식 히스토리를 함께 반환한다`() {
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user())
-            whenever(userProfileRepository.getReferenceById(userId)).thenReturn(userProfile())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user()))
+            whenever(userProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile()))
             whenever(userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.SAFE))
                 .thenReturn(5L)
             whenever(userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.CAUTION))
@@ -105,8 +106,8 @@ class MyPageServiceTest {
 
         @Test
         fun `저장된 주간 요약이 없으면 주간 값은 0으로 채운다`() {
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user())
-            whenever(userProfileRepository.getReferenceById(userId)).thenReturn(userProfile())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user()))
+            whenever(userProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile()))
             whenever(userFoodDictionaryRepository.countByUser_IdAndDictionaryType(any(), any())).thenReturn(0L)
             whenever(reportService.getWeeklySummary(userId)).thenReturn(null)
 
@@ -125,9 +126,9 @@ class MyPageServiceTest {
         @Test
         fun `알레르기를 복용약보다 우선 대표 건강 정보로 반환한다`() {
             val profile = userProfile()
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user(email = "user@test.com"))
-            whenever(userProfileRepository.getReferenceById(userId)).thenReturn(profile)
-            whenever(authAccountRepository.getReferenceById(userId)).thenReturn(authAccount())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user(email = "user@test.com")))
+            whenever(userProfileRepository.findById(userId)).thenReturn(Optional.of(profile))
+            whenever(authAccountRepository.findById(userId)).thenReturn(Optional.of(authAccount()))
             whenever(userAllergenRepository.findAllergensByUserId(userId)).thenReturn(
                 listOf(Allergen(code = "milk", displayName = "우유")),
             )

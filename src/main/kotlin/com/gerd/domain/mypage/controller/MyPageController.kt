@@ -1,7 +1,11 @@
 package com.gerd.domain.mypage.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
+import com.gerd.domain.mypage.dto.MedicalInfoResponseDTO
 import com.gerd.domain.mypage.dto.MedicalInfoUpdateRequestDTO
+import com.gerd.domain.mypage.dto.MyPageSummaryResponseDTO
+import com.gerd.domain.mypage.dto.ProfileDetailResponseDTO
+import com.gerd.domain.mypage.dto.WeeklyReportResponseDTO
 import com.gerd.domain.mypage.service.MyPageService
 import com.gerd.domain.report.service.ReportService
 import com.gerd.global.annotation.CurrentUser
@@ -20,21 +24,21 @@ class MyPageController(
 
     override fun getMyPageSummary(
         @CurrentUser userDetails: CustomUserDetails,
-    ): ResponseEntity<ApiResponse<*>> {
+    ): ResponseEntity<ApiResponse<MyPageSummaryResponseDTO>> {
         val result = myPageService.getProfileSummary(userDetails.userId)
         return ResponseEntity.ok(ApiResponse.onSuccess(result, CommonSuccessCode.OK))
     }
 
     override fun getProfile(
         @CurrentUser userDetails: CustomUserDetails,
-    ): ResponseEntity<ApiResponse<*>> {
+    ): ResponseEntity<ApiResponse<ProfileDetailResponseDTO>> {
         val result = myPageService.getProfile(userDetails.userId)
         return ResponseEntity.ok(ApiResponse.onSuccess(result, CommonSuccessCode.OK))
     }
 
     override fun getHealthInfo(
         @CurrentUser userDetails: CustomUserDetails,
-    ): ResponseEntity<ApiResponse<*>> {
+    ): ResponseEntity<ApiResponse<MedicalInfoResponseDTO>> {
         val result = myPageService.getHealthInfo(userDetails.userId)
         return ResponseEntity.ok(ApiResponse.onSuccess(result, CommonSuccessCode.OK))
     }
@@ -49,7 +53,7 @@ class MyPageController(
 
     override fun getReport(
         @CurrentUser userDetails: CustomUserDetails,
-    ): ResponseEntity<ApiResponse<*>> {
+    ): ResponseEntity<ApiResponse<WeeklyReportResponseDTO?>> {
         val result = reportService.getReport(userDetails.userId)
         return ResponseEntity.ok(ApiResponse.onSuccess(result, CommonSuccessCode.OK))  // null이면 data: null
     }

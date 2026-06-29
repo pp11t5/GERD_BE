@@ -2,6 +2,7 @@ package com.gerd.domain.mypage.service
 
 import com.gerd.domain.auth.entity.AuthAccount
 import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
@@ -19,6 +20,7 @@ import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.report.service.ReportService
+import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -36,8 +38,10 @@ class MyPageService(
 ) {
 
     fun getProfileSummary(userId: Long): MyPageSummaryResponseDTO {
-        val user: User = userRepository.getReferenceById(userId)
-        val userProfile: UserProfile = userProfileRepository.getReferenceById(userId)
+        val user: User = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
+        val userProfile: UserProfile = userProfileRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
 
         val safeCount = userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.SAFE)
         val cautionCount = userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.CAUTION)
@@ -63,10 +67,13 @@ class MyPageService(
         )
     }
 
-    fun getProfile(userId: Long) : ProfileDetailResponseDTO{
-        val user : User = userRepository.getReferenceById(userId)
-        val userProfile : UserProfile = userProfileRepository.getReferenceById(userId)
-        val authAccount : AuthAccount = authAccountRepository.getReferenceById(userId)
+    fun getProfile(userId: Long): ProfileDetailResponseDTO {
+        val user: User = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
+        val userProfile: UserProfile = userProfileRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
+        val authAccount: AuthAccount = authAccountRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         // 알레르기, 복용약 조회해서 있는걸 알레르기->복용약 내림차순으로 조회해서 있는걸 먼저 반환, count도
         val allergens = userAllergenRepository.findAllergensByUserId(userId)
         val medications = userMedicationRepository.findByUserProfileUserId(userId)
