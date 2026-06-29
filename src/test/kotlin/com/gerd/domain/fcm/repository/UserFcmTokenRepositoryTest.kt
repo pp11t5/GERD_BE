@@ -33,7 +33,7 @@ class UserFcmTokenRepositoryTest @Autowired constructor(
 
     @BeforeEach
     fun setUp() {
-        user = userRepository.save(User(email = "user@test.com", role = UserRole.USER))
+        user = userRepository.save(User(email = "user@test.com", nickname = "user", role = UserRole.USER))
         savedToken = userFcmTokenRepository.save(
             UserFcmToken(user = user, platform = DevicePlatform.IOS, token = "fcm-token-abc")
         )
@@ -49,7 +49,8 @@ class UserFcmTokenRepositoryTest @Autowired constructor(
         withdrawn: Boolean = false,
     ): User {
         val saved = userRepository.save(
-            User(email = email, role = UserRole.USER).also { if (withdrawn) it.withdraw() }
+            User(email = email, nickname = email.substringBefore("@"), role = UserRole.USER)
+                .also { if (withdrawn) it.withdraw() }
         )
         userNotificationSettingRepository.save(
             UserNotificationSetting(

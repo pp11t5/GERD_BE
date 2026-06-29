@@ -11,6 +11,7 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
 import com.gerd.domain.meal.entity.MealFood
+import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -107,7 +108,11 @@ class MealRecordCommandServiceTest {
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
             whenever(foodJudgmentQueryService.getJudgment(foodExternalId.toString(), userId)).thenReturn(judgment() to true)
             whenever(mealRecordConverter.parseEatenAt("2026-06-11T12:30:00+09:00")).thenReturn(MealRecordFixture.EATEN_AT)
-            whenever(mealRecordRepository.save(any())).thenReturn(mealRecord)
+            whenever(mealRecordRepository.save(any())).thenAnswer { invocation ->
+                (invocation.arguments[0] as MealRecord).apply {
+                    ReflectionTestUtils.setField(this, "id", MealRecordFixture.MEAL_RECORD_ID)
+                }
+            }
             whenever(mealFoodRepository.save(any())).thenAnswer { invocation ->
                 (invocation.arguments[0] as MealFood).apply {
                     ReflectionTestUtils.setField(this, "id", 1L)
@@ -197,14 +202,19 @@ class MealRecordCommandServiceTest {
         @Test
         fun `삭제 후 다른 음식이 남아 있으면 음식만 삭제하고 끼니는 유지한다`() {
             val mealFood = MealRecordFixture.mealFood()
+            val remainingFood = MealRecordFixture.mealFood(id = 2L, judgedGrade = JudgmentGrade.CAUTION)
             whenever(mealRecordConverter.parseUuid(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()))
                 .thenReturn(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID)
             whenever(mealFoodRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID, userId)).thenReturn(mealFood)
             whenever(mealFoodRepository.countByMealRecordId(MealRecordFixture.MEAL_RECORD_ID)).thenReturn(2L)
+            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(MealRecordFixture.MEAL_RECORD_ID))
+                .thenReturn(listOf(remainingFood))
+            whenever(mealRecordRepository.save(any())).thenAnswer { it.arguments[0] }
 
             service.delete(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(), userId)
 
             verify(mealFoodRepository).delete(mealFood)
+            assertThat(mealFood.mealRecord.grade).isEqualTo(JudgmentGrade.CAUTION)
             verify(mealRecordRepository, never()).delete(any())
         }
     }

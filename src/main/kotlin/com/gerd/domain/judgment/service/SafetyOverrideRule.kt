@@ -7,9 +7,8 @@ import org.springframework.stereotype.Component
 /**
  * 안전 오버라이드 — 룰은 강등만 하고 LLM 등급을 올리지 않는다 (spec §4 ②)
  *
- * - 알레르겐 교집합: 의학적 금기라 등급 불문 무조건 RISK (LLM이 UNKNOWN이어도 강등)
+ * - 알레르겐 교집합: 의학적 금기라 등급 불문 무조건 RISK
  * - 트리거 교집합: GERD 트리거는 양·조리법·개인차로 영향이 갈려 일률 RISK는 과잉 — RECOMMEND만 CAUTION으로 강등
- *   단 UNKNOWN은 "판정 근거 부족" 신호라 CAUTION으로 바꾸면 거짓 확신이 되므로 유지한다 (알레르겐과 비대칭 — 의도)
  */
 @Component
 class SafetyOverrideRule {

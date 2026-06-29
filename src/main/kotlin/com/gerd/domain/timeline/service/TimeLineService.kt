@@ -64,7 +64,7 @@ class TimeLineService(
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     mealFoodName = food?.let { foodNameById[it.foodId] } ?: "",
-                    grade = food?.judgedGrade ?: JudgmentGrade.UNKNOWN,
+                    grade = food?.judgedGrade ?: JudgmentGrade.CAUTION,
                     etcCount = 0,
                 )
             } else {
@@ -99,6 +99,7 @@ class TimeLineService(
 
             TimeLineItemDTO.Symptom(
                 timeLineType = TimeLineType.SYMPTOM,
+                symptomId = s.externalId?.toString() ?: "",
                 symptomState = s.symptomState,
                 afterMealMinutes = afterMealMinutes,
                 occurredAt = s.occurredAt.toString(),

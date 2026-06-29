@@ -4,6 +4,8 @@ import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
+import com.gerd.domain.symptom.dto.FoodSymptomResponseDTO
+import com.gerd.domain.symptom.service.FoodSymptomQueryService
 import com.gerd.global.annotation.CurrentUser
 import com.gerd.global.apiPayload.ApiResponse
 import com.gerd.global.apiPayload.code.CommonSuccessCode
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class JudgmentController(
     private val foodJudgmentQueryService: FoodJudgmentQueryService,
+    private val foodSymptomQueryService: FoodSymptomQueryService,
 ) : JudgmentApi {
 
     override fun getJudgmentById(
@@ -36,4 +39,12 @@ class JudgmentController(
             .header("X-Cache", if (isCached) "HIT" else "MISS")
             .body(ApiResponse.onSuccess(response, CommonSuccessCode.OK))
     }
+
+    override fun getSymptomsByFoodId(
+        @CurrentUser userDetails: CustomUserDetails,
+        foodExternalId: String,
+    ): ResponseEntity<ApiResponse<List<FoodSymptomResponseDTO>>> =
+        ResponseEntity
+            .status(CommonSuccessCode.OK.httpStatus)
+            .body(ApiResponse.onSuccess(foodSymptomQueryService.getSymptoms(foodExternalId, userDetails.userId), CommonSuccessCode.OK))
 }

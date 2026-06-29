@@ -169,9 +169,8 @@ class DictionaryCommandServiceTest {
         }
 
         @Test
-        fun `RECOMMEND 또는 UNKNOWN 판정이면 저장하지 않는다`() {
+        fun `RECOMMEND 판정이면 저장하지 않는다`() {
             service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.RECOMMEND)
-            service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.UNKNOWN)
 
             verify(dictionaryRepository, never()).save(any())
         }

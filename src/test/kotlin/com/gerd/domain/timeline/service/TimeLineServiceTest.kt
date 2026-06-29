@@ -95,7 +95,7 @@ class TimeLineServiceTest {
         }
 
         @Test
-        fun `판정 등급이 없는 음식은 UNKNOWN으로 매핑된다`() {
+        fun `판정 등급이 없는 음식은 CAUTION으로 매핑된다`() {
             val mealRecord = MealRecordFixture.mealRecord()
             val mealFood = MealRecordFixture.mealFood(judgedGrade = null)
             val food = FoodFixture.food(id = 1L)
@@ -108,7 +108,7 @@ class TimeLineServiceTest {
             val result = service.getTimeLine(userId, date)
 
             val item = result.items.first() as TimeLineItemDTO.Single
-            assertThat(item.grade).isEqualTo(JudgmentGrade.UNKNOWN)
+            assertThat(item.grade).isEqualTo(JudgmentGrade.CAUTION)
         }
 
         @Test
@@ -130,6 +130,7 @@ class TimeLineServiceTest {
             val result = service.getTimeLine(userId, date)
 
             val symptomItem = result.items.filterIsInstance<TimeLineItemDTO.Symptom>().first()
+            assertThat(symptomItem.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
             assertThat(symptomItem.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
             assertThat(symptomItem.afterMealMinutes).isEqualTo(30)
         }
@@ -266,6 +267,7 @@ class TimeLineServiceTest {
 
             assertThat(result.items).hasSize(1)
             val symptomItem = result.items.first() as TimeLineItemDTO.Symptom
+            assertThat(symptomItem.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
             assertThat(symptomItem.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
             assertThat(symptomItem.afterMealMinutes).isEqualTo(0)
         }

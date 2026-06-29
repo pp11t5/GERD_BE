@@ -66,19 +66,6 @@ class SafetyOverrideRuleTest {
                 assertThat(result.grade).isEqualTo(llmGrade)
             }
         }
-
-        @Test
-        fun `트리거가 매치돼도 UNKNOWN은 유지한다(거짓 확신 방지 비대칭)`() {
-            val result = rule.apply(
-                llmGrade = JudgmentGrade.UNKNOWN,
-                foodTriggers = listOf(caffeine),
-                foodAllergens = emptyList(),
-                userTriggers = listOf(caffeine),
-                userAllergens = emptyList(),
-            )
-
-            assertThat(result.grade).isEqualTo(JudgmentGrade.UNKNOWN)
-        }
     }
 
     @Nested

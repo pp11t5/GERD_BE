@@ -15,6 +15,23 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
     fun findByExternalIdAndUser_Id(externalId: UUID, userId: Long): Symptom?
 
     @Query("""
+        SELECT DISTINCT s
+        FROM Symptom s
+        WHERE s.user.id = :userId
+          AND s.mealRecordId IN (
+              SELECT mf.mealRecord.id
+              FROM MealFood mf
+              WHERE mf.user.id = :userId
+                AND mf.foodId = :foodId
+          )
+        ORDER BY s.occurredAt DESC, s.id DESC
+    """)
+    fun findLinkedSymptomsByUserIdAndFoodId(
+        @Param("userId") userId: Long,
+        @Param("foodId") foodId: Long,
+    ): List<Symptom>
+
+    @Query("""
         SELECT DISTINCT CAST(s.occurred_at AS date) AS record_date
         FROM symptom_records s
         WHERE s.user_id = :userId

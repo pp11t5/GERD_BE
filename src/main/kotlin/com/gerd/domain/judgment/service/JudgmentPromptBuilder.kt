@@ -9,7 +9,7 @@ import tools.jackson.databind.ObjectMapper
 /**
  * Gemini 호출용 프롬프트·스키마 빌더 (spec §5, §6)
  *
- * - 말투 규칙과 UNKNOWN 출력 조건은 system instruction에 명시
+ * - 말투 규칙은 system instruction에 명시
  * - 출력은 responseSchema로 강제 — grade enum, items 정확히 2개, confidence 없음 (ADR-0013)
  */
 @Component
@@ -47,9 +47,7 @@ class JudgmentPromptBuilder(
             - RECOMMEND: 사용자의 트리거·알레르기·기록에 비추어 부담 없이 권할 수 있는 음식
             - CAUTION: 먹을 수는 있으나 양·속도·시점 조절이 필요한 음식
             - RISK: 사용자의 트리거·알레르기·기록상 오늘은 피하는 편이 나은 음식
-            - UNKNOWN: 음식 이름과 카테고리만으로도 어떤 음식인지 전혀 특정할 수 없거나,
-              GERD 관점에서 일반적으로도 알려진 정보가 전혀 없는 경우에만 사용하세요.
-              triggerTags·allergenTags·knownAttributes가 비어있어도 음식 이름으로 판단 가능하면 일반 식품 지식을 활용해 판정하세요.
+            - triggerTags·allergenTags·knownAttributes가 비어있어도 음식 이름으로 판단 가능하면 일반 식품 지식을 활용해 판정하세요.
 
             [personalTitle 작성 규칙]
             - 결과 카드 상단에 표시되는 한 줄 제목 — 등급 톤에 맞춰 이 사용자의 상황(증상·트리거·알레르기·최근 기록)이 드러나게 작성하세요
@@ -90,7 +88,7 @@ class JudgmentPromptBuilder(
             "properties" to mapOf(
                 "grade" to mapOf(
                     "type" to "STRING",
-                    "enum" to listOf("RECOMMEND", "CAUTION", "RISK", "UNKNOWN"),
+                    "enum" to listOf("RECOMMEND", "CAUTION", "RISK"),
                 ),
                 "personalTitle" to mapOf("type" to "STRING"),
                 "items" to mapOf(

@@ -36,7 +36,7 @@ class WeeklyReportNotificationUseCaseTest {
 
     private fun token(userId: Long, token: String): UserFcmToken =
         UserFcmToken(
-            user = User(id = userId, email = "user$userId@test.com", role = UserRole.USER),
+            user = User(id = userId, email = "user$userId@test.com", nickname = "user$userId", role = UserRole.USER),
             userId = userId,
             platform = DevicePlatform.IOS,
             token = token,

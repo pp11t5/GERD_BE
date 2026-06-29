@@ -13,6 +13,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
 import jakarta.persistence.EntityManager
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @ActiveProfiles("test")
@@ -60,8 +61,63 @@ class MealRecordRepositoryTest @Autowired constructor(
         }
     }
 
+    @Nested
+    inner class `리포트 식사 등급 집계 조회` {
+
+        @Test
+        fun `사용자와 기간에 해당하는 끼니 등급만 날짜와 함께 조회한다`() {
+            val user = saveUser("report@test.com")
+            val otherUser = saveUser("other-report@test.com")
+            mealRecordRepository.save(
+                mealRecord(
+                    user = user,
+                    eatenAt = LocalDateTime.of(2026, 6, 21, 8, 0),
+                    grade = JudgmentGrade.RECOMMEND,
+                ),
+            )
+            mealRecordRepository.save(
+                mealRecord(
+                    user = user,
+                    eatenAt = LocalDateTime.of(2026, 6, 22, 12, 0),
+                    grade = JudgmentGrade.RISK,
+                ),
+            )
+            mealRecordRepository.save(
+                mealRecord(
+                    user = user,
+                    eatenAt = LocalDateTime.of(2026, 6, 28, 8, 0),
+                    grade = JudgmentGrade.CAUTION,
+                ),
+            )
+            mealRecordRepository.save(
+                mealRecord(
+                    user = otherUser,
+                    eatenAt = LocalDateTime.of(2026, 6, 22, 12, 0),
+                    grade = JudgmentGrade.CAUTION,
+                ),
+            )
+            em.flush()
+            em.clear()
+
+            val result = mealRecordRepository.findGradesByUserAndPeriod(
+                user.id!!,
+                LocalDateTime.of(2026, 6, 21, 0, 0),
+                LocalDateTime.of(2026, 6, 27, 23, 59),
+            )
+
+            assertThat(result.map { it.date }).containsExactlyInAnyOrder(
+                LocalDate.of(2026, 6, 21),
+                LocalDate.of(2026, 6, 22),
+            )
+            assertThat(result.map { it.grade }).containsExactlyInAnyOrder(
+                JudgmentGrade.RECOMMEND,
+                JudgmentGrade.RISK,
+            )
+        }
+    }
+
     private fun saveUser(email: String = "user@test.com"): User =
-        User(email = email).also {
+        User(email = email, nickname = email.substringBefore("@")).also {
             em.persist(it)
             em.flush()
         }
@@ -69,7 +125,8 @@ class MealRecordRepositoryTest @Autowired constructor(
     private fun mealRecord(
         user: User,
         eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
-    ) = MealRecord(user = user, eatenAt = eatenAt)
+        grade: JudgmentGrade? = null,
+    ) = MealRecord(user = user, eatenAt = eatenAt, grade = grade)
 
     private fun mealFood(
         user: User,

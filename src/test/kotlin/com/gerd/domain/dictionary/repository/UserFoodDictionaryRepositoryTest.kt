@@ -193,7 +193,7 @@ class UserFoodDictionaryRepositoryTest @Autowired constructor(
     }
 
     private fun saveUser(email: String = "user@test.com"): User =
-        User(email = email).also {
+        User(email = email, nickname = email.substringBefore("@")).also {
             em.persist(it)
             em.flush()
         }

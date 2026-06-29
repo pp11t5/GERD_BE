@@ -52,14 +52,6 @@ class JudgmentGeminiAdapterTest {
             assertThat(judgment?.personalTitle).isEqualTo("오늘은 천천히 즐겨보세요")
             assertThat(judgment?.items).hasSize(2)
         }
-
-        @Test
-        fun `UNKNOWN은 items 슬롯 수와 무관하게 유효하다`() {
-            whenever(geminiClient.generateJson(any()))
-                .thenReturn("""{"grade":"UNKNOWN","items":[]}""")
-
-            assertThat(call()?.grade).isEqualTo(JudgmentGrade.UNKNOWN)
-        }
     }
 
     @Nested
@@ -80,7 +72,7 @@ class JudgmentGeminiAdapterTest {
         }
 
         @Test
-        fun `UNKNOWN이 아닌데 items가 2개가 아니면 null을 반환한다`() {
+        fun `items가 2개가 아니면 null을 반환한다`() {
             whenever(geminiClient.generateJson(any()))
                 .thenReturn("""{"grade":"CAUTION","items":[{"emphasis":"하나","body":"뿐"}]}""")
 
