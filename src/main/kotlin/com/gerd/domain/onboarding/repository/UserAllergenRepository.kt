@@ -11,4 +11,6 @@ interface UserAllergenRepository : JpaRepository<UserAllergen, UserAllergenId> {
     // 판정 입력 조립 시 사용자의 알레르겐 마스터를 한 번에 로딩 (N+1 방지)
     @Query("select ua.allergen from UserAllergen ua where ua.id.userId = :userId")
     fun findAllergensByUserId(userId: Long): List<Allergen>
+
+    fun deleteAllByUserProfileUserId(userId: Long)
 }

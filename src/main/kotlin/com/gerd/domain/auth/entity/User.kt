@@ -31,7 +31,7 @@ class User(
     var role: UserRole = UserRole.USER,
 
     @Column
-    var nickname: String? = null,
+    var nickname: String = "위장이",
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

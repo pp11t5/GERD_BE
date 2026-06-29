@@ -8,21 +8,21 @@ object UserFixture {
 
     // Service 단위테스트용 — ID 있음
     fun user(): User {
-        val user = User(email = "user@test.com", role = UserRole.USER)
+        val user = User(email = "user@test.com", nickname = "user", role = UserRole.USER)
         ReflectionTestUtils.setField(user, "id", 1L)
         return user
     }
 
     // 권한/소유권 분기 테스트용
     fun anotherUser(): User {
-        val user = User(email = "other@test.com", role = UserRole.USER)
+        val user = User(email = "other@test.com", nickname = "other", role = UserRole.USER)
         ReflectionTestUtils.setField(user, "id", 2L)
         return user
     }
 
     // 관리자 권한 테스트용
     fun adminUser(): User {
-        val user = User(email = "admin@test.com", role = UserRole.ADMIN)
+        val user = User(email = "admin@test.com", nickname = "admin", role = UserRole.ADMIN)
         ReflectionTestUtils.setField(user, "id", 3L)
         return user
     }

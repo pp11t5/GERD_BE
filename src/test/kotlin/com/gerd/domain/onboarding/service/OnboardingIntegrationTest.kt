@@ -66,7 +66,7 @@ class OnboardingIntegrationTest @Autowired constructor(
 
     // user_profiles는 users와 @MapsId 공유 PK라 온보딩 전에 실제 User row가 있어야 한다
     private fun seedUser(email: String): Long =
-        userRepository.save(User(email = email, role = UserRole.USER)).id!!
+        userRepository.save(User(email = email, nickname = email.substringBefore("@"), role = UserRole.USER)).id!!
 
     @Nested
     inner class `동의-제출-조회 흐름` {

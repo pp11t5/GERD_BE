@@ -1,9 +1,12 @@
 package com.gerd.domain.onboarding.entity
 
 import com.gerd.domain.auth.entity.User
+import com.gerd.domain.onboarding.entity.enums.DiseaseType
 import com.gerd.global.common.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
@@ -30,6 +33,11 @@ class UserProfile(
     @JoinColumn(name = "user_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     val user: User,
+
+    // 현재 다른 질환 지원X 이므로 디폴트값 설정
+    @Column(name = "disease_type")
+    @Enumerated(EnumType.STRING)
+    var diseaseType: DiseaseType = DiseaseType.GERD,
 
     // 07 트리거 자유입력 원문 — 파싱 없이 그대로 저장
     @Column(name = "custom_trigger_text")

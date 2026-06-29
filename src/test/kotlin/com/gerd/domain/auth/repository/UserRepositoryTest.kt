@@ -25,7 +25,7 @@ class UserRepositoryTest @Autowired constructor(
 
         @Test
         fun `이메일로 사용자를 조회한다`() {
-            val saved = userRepository.save(User(email = "user@test.com", role = UserRole.USER))
+            val saved = userRepository.save(User(email = "user@test.com", nickname = "user", role = UserRole.USER))
 
             val result = userRepository.findByEmail("user@test.com")
 
@@ -47,7 +47,7 @@ class UserRepositoryTest @Autowired constructor(
 
         @Test
         fun `이메일이 존재하면 true를 반환한다`() {
-            userRepository.save(User(email = "user@test.com", role = UserRole.USER))
+            userRepository.save(User(email = "user@test.com", nickname = "user", role = UserRole.USER))
 
             assertThat(userRepository.existsByEmail("user@test.com")).isTrue()
         }

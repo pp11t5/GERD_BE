@@ -27,6 +27,14 @@ class UserMedication(
     @OnDelete(action = OnDeleteAction.CASCADE)
     val userProfile: UserProfile,
 
+    name: String,
+) : BaseEntity() {
+
     @Column(nullable = false)
-    val name: String,
-) : BaseEntity()
+    var name: String = name
+        protected set
+
+    fun update(name: String) {
+        this.name = name
+    }
+}
