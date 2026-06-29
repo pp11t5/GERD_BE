@@ -50,6 +50,7 @@ dependencies {
 
 // web
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-json")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 
     // security

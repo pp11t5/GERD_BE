@@ -30,6 +30,13 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
         @Param("limit") limit: Int,
     ): List<java.time.LocalDate>
 
+    @Query("SELECT new com.gerd.domain.report.dto.SymptomStateRow(CAST(s.occurredAt AS LocalDate), s.symptomState) FROM Symptom s WHERE s.user.id = :userId AND s.occurredAt BETWEEN :start AND :end")
+    fun findStatesByUserAndPeriod(
+        @Param("userId") userId: Long,
+        @Param("start") start: LocalDateTime,
+        @Param("end") end: LocalDateTime,
+    ): List<com.gerd.domain.report.dto.SymptomStateRow>
+
     // 연결된 식사 기록 찾기
     @Query("SELECT s.mealRecordId FROM Symptom s WHERE s.user.id = :userId AND s.mealRecordId IS NOT NULL")
     fun findLinkedMealRecordIdsByUserId(@Param("userId") userId: Long): List<Long>
