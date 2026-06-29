@@ -22,7 +22,8 @@ class ReportBatchProcessor(
     fun createAllReports() {
         var lastUserId = 0L
         var success = 0
-        val failedUserIds = mutableListOf<Long>()
+        var failureCount = 0
+        val sampledFailedUserIds = mutableListOf<Long>()
         val startedAt = System.currentTimeMillis()
 
         while (true) {
@@ -34,7 +35,10 @@ class ReportBatchProcessor(
                     reportService.getOrCreate(userId)
                     success++
                 } catch (e: Exception) {
-                    failedUserIds += userId
+                    failureCount++
+                    if (sampledFailedUserIds.size < FAILURE_SAMPLE_SIZE) {
+                        sampledFailedUserIds += userId
+                    }
                     log.error("주간 리포트 생성 실패 - userId={}", userId, e)
                 }
             }
@@ -42,17 +46,18 @@ class ReportBatchProcessor(
         }
 
         val elapsedMs = System.currentTimeMillis() - startedAt
-        if (failedUserIds.isEmpty()) {
+        if (failureCount == 0) {
             log.info("주간 리포트 일괄 생성 완료 - 성공 {}건, 실패 0건 ({}ms)", success, elapsedMs)
         } else {
             log.warn(
-                "주간 리포트 일괄 생성 완료 - 성공 {}건, 실패 {}건 ({}ms), 실패 userId={}",
-                success, failedUserIds.size, elapsedMs, failedUserIds,
+                "주간 리포트 일괄 생성 완료 - 성공 {}건, 실패 {}건 ({}ms), 실패 userId 샘플={}",
+                success, failureCount, elapsedMs, sampledFailedUserIds,
             )
         }
     }
 
     companion object {
         private const val PAGE_SIZE = 200
+        private const val FAILURE_SAMPLE_SIZE = 100
     }
 }
