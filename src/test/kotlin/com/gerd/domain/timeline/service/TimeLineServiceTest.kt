@@ -8,6 +8,7 @@ import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.entity.enums.SymptomType
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.domain.timeline.dto.TimeLineItemDTO
+import com.gerd.domain.timeline.enums.TimeLineIcon
 import com.gerd.global.fixture.FoodFixture
 import com.gerd.global.fixture.MealRecordFixture
 import com.gerd.global.fixture.SymptomFixture
@@ -69,6 +70,28 @@ class TimeLineServiceTest {
             assertThat(item.mealFoodName).isEqualTo("된장찌개")
             assertThat(item.grade).isEqualTo(JudgmentGrade.RECOMMEND)
             assertThat(item.etcCount).isEqualTo(0)
+        }
+
+        @Test
+        fun `타임라인 아이콘은 06시 이상 18시 미만이면 해 그 외에는 달로 매핑된다`() {
+            val mealRecord = MealRecordFixture.mealRecord(eatenAt = LocalDateTime.of(2026, 6, 17, 6, 0, 0))
+            val mealFood = MealRecordFixture.mealFood()
+            val symptom = SymptomFixture.symptom(
+                mealRecordId = null,
+                occurredAt = LocalDateTime.of(2026, 6, 17, 18, 0, 0),
+            )
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(FoodFixture.food()))
+
+            val result = service.getTimeLine(userId, date)
+
+            val mealItem = result.items.filterIsInstance<TimeLineItemDTO.Single>().first()
+            val symptomItem = result.items.filterIsInstance<TimeLineItemDTO.Symptom>().first()
+            assertThat(mealItem.timeIcon).isEqualTo(TimeLineIcon.SUN)
+            assertThat(symptomItem.timeIcon).isEqualTo(TimeLineIcon.MOON)
         }
 
         @Test

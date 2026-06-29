@@ -3,6 +3,7 @@ package com.gerd.domain.timeline.dto
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.entity.enums.SymptomType
+import com.gerd.domain.timeline.enums.TimeLineIcon
 import com.gerd.domain.timeline.enums.TimeLineType
 import io.swagger.v3.oas.annotations.media.Schema
 
@@ -15,6 +16,8 @@ sealed class TimeLineItemDTO {
     data class Single(
         @field:Schema(description = "타임라인 타입: single(음식 1개 식사), group(음식 2개 이상 식사), symptom(증상)", example = "single")
         val timeLineType: TimeLineType,
+        @field:Schema(description = "좌측 시간대 아이콘: sun(06:00 이상 18:00 미만), moon(18:00 이상 06:00 미만)", example = "sun")
+        val timeIcon: TimeLineIcon,
         @field:Schema(description = "식사 기록 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         val mealRecordId: String,
         @field:Schema(description = "식사 시각 (ISO 8601)", example = "2026-06-21T12:30:00")
@@ -30,6 +33,8 @@ sealed class TimeLineItemDTO {
     data class Group(
         @field:Schema(description = "타임라인 타입: single(음식 1개 식사), group(음식 2개 이상 식사), symptom(증상)", example = "group")
         val timeLineType: TimeLineType,
+        @field:Schema(description = "좌측 시간대 아이콘: sun(06:00 이상 18:00 미만), moon(18:00 이상 06:00 미만)", example = "sun")
+        val timeIcon: TimeLineIcon,
         @field:Schema(description = "식사 기록 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         val mealRecordId: String,
         @field:Schema(description = "식사 시각 (ISO 8601)", example = "2026-06-21T12:30:00")
@@ -44,6 +49,8 @@ sealed class TimeLineItemDTO {
     data class Symptom(
         @field:Schema(description = "타임라인 타입: single(음식 1개 식사), group(음식 2개 이상 식사), symptom(증상)", example = "symptom")
         val timeLineType: TimeLineType,
+        @field:Schema(description = "좌측 시간대 아이콘: sun(06:00 이상 18:00 미만), moon(18:00 이상 06:00 미만)", example = "moon")
+        val timeIcon: TimeLineIcon,
         @field:Schema(description = "증상 기록 외부 식별자(UUID) — 상세 진입용", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         val symptomId: String,
         @field:Schema(description = "증상 상태: comfortable(편안), good(양호), normal(보통), uncomfortable(불편), severe(심각)", example = "uncomfortable")
