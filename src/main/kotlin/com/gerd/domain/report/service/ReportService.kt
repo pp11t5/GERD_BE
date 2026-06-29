@@ -18,6 +18,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
+import java.time.temporal.WeekFields
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Service
@@ -68,7 +70,7 @@ class ReportService(
         var comfortableDays = 0
 
         // 스트릭 계산
-        for (day in start.datesUntil(end.plusDays(1))) {
+        start.datesUntil(end.plusDays(1)).forEach { day ->
             val daySymptoms = symptomsByDate[day] ?: emptyList()
             if (daySymptoms.isNotEmpty()) {
                 // 증상 기록이 있는지 확인
@@ -129,8 +131,9 @@ class ReportService(
 
     // 주별로 매핑
     private fun weekLabel(date: LocalDate): String {
+        val weekOfMonth = date.get(WeekFields.of(Locale.KOREAN).weekOfMonth())
         val ordinals = listOf("첫째", "둘째", "셋째", "넷째", "다섯째")
-        val ordinal = ordinals.getOrElse((date.dayOfMonth - 1) / 7) { "${(date.dayOfMonth - 1) / 7 + 1}번째" }
+        val ordinal = ordinals.getOrElse(weekOfMonth - 1) { "${weekOfMonth}번째" }
         return "${date.year}년 ${date.monthValue}월 ${ordinal}주"
     }
 
