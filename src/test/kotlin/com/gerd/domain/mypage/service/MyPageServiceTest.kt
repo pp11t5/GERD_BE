@@ -16,17 +16,21 @@ import com.gerd.domain.mypage.dto.WeeklySummaryResponseDTO
 import com.gerd.domain.onboarding.entity.UserMedication
 import com.gerd.domain.onboarding.entity.UserProfile
 import com.gerd.domain.onboarding.entity.enums.DiseaseType
+import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.report.service.ReportService
+import com.gerd.global.apiPayload.GeneralException
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDateTime
@@ -168,6 +172,28 @@ class MyPageServiceTest {
             verify(userAllergenRepository).saveAll(any<Iterable<com.gerd.domain.onboarding.entity.UserAllergen>>())
             verify(userMedicationRepository).saveAll(any<Iterable<UserMedication>>())
         }
+
+        @Test
+        fun `존재하지 않는 알레르기가 있으면 기존 건강 정보를 삭제하지 않는다`() {
+            whenever(allergenRepository.findByCodeIn(listOf("milk", "peanut"))).thenReturn(
+                listOf(Allergen(code = "milk", displayName = "우유")),
+            )
+            val request = MedicalInfoUpdateRequestDTO(
+                allergens = listOf(AllergenCode.MILK, AllergenCode.PEANUT),
+                medications = listOf("PPI"),
+            )
+
+            assertThatThrownBy { service.updateHealthInfo(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(OnboardingErrorCode.INVALID_ALLERGEN)
+
+            verify(userAllergenRepository, never()).deleteAllByUserProfileUserId(any())
+            verify(userMedicationRepository, never()).deleteAllByUserProfileUserId(any())
+            verify(userAllergenRepository, never()).saveAll(any<Iterable<com.gerd.domain.onboarding.entity.UserAllergen>>())
+            verify(userMedicationRepository, never()).saveAll(any<Iterable<UserMedication>>())
+        }
+
     }
 
     @Nested

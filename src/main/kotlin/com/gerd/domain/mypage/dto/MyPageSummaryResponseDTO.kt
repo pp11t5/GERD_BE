@@ -8,7 +8,7 @@ data class MyPageSummaryResponseDTO(
     val profile: ProfileSummary,
     @field:Schema(description = "음식 히스토리(도감 기준)")
     val foodHistory: FoodHistory,
-    @field:Schema(description = "이번 주 기록 요약")
+    @field:Schema(description = "지난주 기록 요약")
     val weeklySummary: WeeklySummary,
 ) {
     data class ProfileSummary(
@@ -28,9 +28,9 @@ data class MyPageSummaryResponseDTO(
     )
 
     data class WeeklySummary(
-        @field:Schema(description = "이번 주 식사 기록 횟수(끼니 단위)", example = "14")
+        @field:Schema(description = "지난주 식사 기록 횟수(끼니 단위)", example = "14")
         val mealRecordCount: Int,
-        @field:Schema(description = "이번 주 증상 기록 횟수", example = "5")
+        @field:Schema(description = "지난주 증상 기록 횟수", example = "5")
         val recentSymptomCount: Int,
         @field:Schema(description = "현재 연속 기록 스트릭 일수", example = "7")
         val streakCount: Int,

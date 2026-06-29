@@ -7,6 +7,8 @@ import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
+import com.gerd.domain.food.entity.Allergen
+import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.repository.AllergenRepository
 import com.gerd.domain.mypage.dto.MealCount
 import com.gerd.domain.mypage.dto.MedicalInfoResponseDTO
@@ -16,6 +18,7 @@ import com.gerd.domain.mypage.dto.ProfileDetailResponseDTO
 import com.gerd.domain.onboarding.entity.UserAllergen
 import com.gerd.domain.onboarding.entity.UserMedication
 import com.gerd.domain.onboarding.entity.UserProfile
+import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
@@ -103,11 +106,11 @@ class MyPageService(
 
     @Transactional
     fun updateHealthInfo(userId: Long, request: MedicalInfoUpdateRequestDTO): MedicalInfoResponseDTO {
+        val newAllergens = resolveAllergens(request.allergens)
         val userProfile = userProfileRepository.getReferenceById(userId)
 
         // 알레르기 전체 교체
         userAllergenRepository.deleteAllByUserProfileUserId(userId)
-        val newAllergens = allergenRepository.findByCodeIn(request.allergens.map { it.code })
         userAllergenRepository.saveAll(newAllergens.map { UserAllergen(userProfile = userProfile, allergen = it) })
 
         // 복용약 전체 교체
@@ -119,6 +122,16 @@ class MyPageService(
             allergies = newAllergens.map { it.displayName },
             medications = request.medications,
         )
+    }
+
+    private fun resolveAllergens(codes: List<AllergenCode>): List<Allergen> {
+        if (codes.isEmpty()) return emptyList()
+        val distinctCodes = codes.map { it.code }.distinct()
+        val allergens = allergenRepository.findByCodeIn(distinctCodes)
+        if (allergens.size < distinctCodes.size) {
+            throw GeneralException(OnboardingErrorCode.INVALID_ALLERGEN)
+        }
+        return allergens
     }
 
 }
