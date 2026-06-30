@@ -9,7 +9,6 @@ spring:
       ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     open-in-view: false
 
@@ -33,7 +32,7 @@ sentry:
   exception-resolver-order: -2147483647
   max-request-body-size: always
   send-default-pii: false
-  traces-sample-rate: 0.0
+  traces-sample-rate: 0.1
 
 management:
   endpoints:

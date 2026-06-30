@@ -39,7 +39,7 @@ repositories {
 dependencies {
     // monitoring
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("io.sentry:sentry:7.14.0")
+    implementation("io.sentry:sentry-spring-boot-starter-jakarta:7.14.0")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
     // cache
