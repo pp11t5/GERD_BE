@@ -39,7 +39,7 @@ repositories {
 dependencies {
     // monitoring
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("io.sentry:sentry-spring-boot-starter-jakarta:7.14.0")
+    implementation("io.sentry:sentry-spring-boot-starter-jakarta:8.16.0")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
     // cache
@@ -48,7 +48,7 @@ dependencies {
     // retry
     implementation("org.springframework.retry:spring-retry:2.0.12")
 
-// web
+    // web
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-json")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
@@ -107,11 +107,6 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     mockitoAgent("org.mockito:mockito-core:5.20.0") { isTransitive = false }
-
-    // kotest
-    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
-    testImplementation("io.kotest:kotest-assertions-core:5.9.1")
-    testImplementation("io.mockk:mockk:1.13.12")
 }
 
 kotlin {
