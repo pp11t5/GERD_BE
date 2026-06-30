@@ -88,7 +88,7 @@ Spring Boot 기반의 서버로 구성되어 있으며, 위식도역류질환(GE
 | **Framework** | Spring Boot 4.0.5, Spring MVC, Spring Data JPA, QueryDSL |
 | **Security** | Spring Security, JWT, Kakao OIDC |
 | **Database** | PostgreSQL |
-| **Test** | JUnit 5, Kotest, Mockito, MockK, Testcontainers PostgreSQL |
+| **Test** | JUnit 5, Mockito, MockK, Testcontainers PostgreSQL |
 | **Monitoring** | Spring Actuator, Sentry, Logback JSON |
 | **Deployment / Infra** | Docker, Railway, GitHub Actions |
 | **Documentation** | Swagger(OpenAPI) |
@@ -181,4 +181,3 @@ src
 - 기본 API 문서는 Swagger(`/swagger-ui/index.html`)로 관리
 - 컨트롤러는 얇게 유지하고 비즈니스 로직은 서비스 계층에 배치
 - 커밋 메시지는 `타입: #이슈번호 작업 내용` 형식을 기본으로 사용
-
