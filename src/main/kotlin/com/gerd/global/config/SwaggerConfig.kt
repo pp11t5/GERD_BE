@@ -79,7 +79,8 @@ class SwaggerConfig {
         return buildString {
             appendLine()
             appendLine("---")
-            appendLine("### 도메인별 에러코드")
+            appendLine("<details>")
+            appendLine("<summary><h3>도메인별 에러코드</h3></summary>")
             appendLine()
 
             errorEnums.forEach { errorEnum ->
@@ -99,6 +100,8 @@ class SwaggerConfig {
                 appendLine("</details>")
                 appendLine()
             }
+
+            appendLine("</details>")
         }
     }
 
