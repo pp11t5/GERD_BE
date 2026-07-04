@@ -134,7 +134,8 @@ class TimeLineService(
         mealEatenAt: LocalDateTime,
         symptoms: List<Symptom>,
     ): TimeLineItemDTO.ConnectedSymptom {
-        val mostRecent = symptoms.maxBy { it.occurredAt }
+        val mostRecent = symptoms.maxByOrNull { it.occurredAt }
+            ?: error("buildConnectedSymptom requires non-empty symptoms")
         val allTypes = symptoms.flatMap { it.symptomTypes }.distinct()
         val afterMealMinutes = ChronoUnit.MINUTES.between(mealEatenAt, mostRecent.occurredAt).toInt()
         return TimeLineItemDTO.ConnectedSymptom(

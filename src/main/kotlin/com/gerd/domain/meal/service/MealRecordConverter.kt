@@ -130,7 +130,7 @@ class MealRecordConverter(
         // 한 끼니에 증상이 여러 개면 대표 1건(가장 최근 발생)을 사용
         val stateByRecordId = symptoms
             .groupBy { it.mealRecordId }
-            .mapNotNull { (recordId, group) -> recordId?.let { it to group.maxBy { s -> s.occurredAt }.symptomState } }
+            .mapNotNull { (recordId, group) -> recordId?.let { it to group.maxByOrNull { s -> s.occurredAt }?.symptomState } }
             .toMap()
 
         return mealFoods.map { mealFood ->
