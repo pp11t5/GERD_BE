@@ -6,9 +6,11 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
+import com.gerd.domain.meal.dto.MealFoodSummaryDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
 import com.gerd.domain.meal.dto.UnRecordedSymptomCountDTO
 import com.gerd.domain.meal.exception.MealErrorCode
+import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.meal.service.MealCommandService
 import com.gerd.domain.meal.service.MealQueryService
 import com.gerd.global.apiPayload.GeneralException
@@ -318,6 +320,38 @@ class MealRecordControllerTest @Autowired constructor(
                 }
 
             verify(mealQueryService).getUnRecordedSymptomCount(1L)
+        }
+
+        @Test
+        @WithCustomUser
+        fun `최근 음식별 요약을 조회한다 - 증상 상태는 code로 직렬화되고 미연결이면 null`() {
+            whenever(mealQueryService.getRecentFoodSummaries(any())).thenReturn(
+                listOf(
+                    MealFoodSummaryDTO(
+                        foodName = "된장찌개",
+                        category = "soup_stew",
+                        eatenAt = "2026-06-11T12:30:00+09:00",
+                        symptomState = SymptomState.UNCOMFORTABLE,
+                    ),
+                    MealFoodSummaryDTO(
+                        foodName = "김치",
+                        category = "",
+                        eatenAt = "2026-06-11T12:30:00+09:00",
+                        symptomState = null,
+                    ),
+                ),
+            )
+
+            mockMvc.get("/api/v1/meal-records/recent-foods")
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.result[0].foodName") { value("된장찌개") }
+                    jsonPath("$.result[0].symptomState") { value("uncomfortable") }
+                    jsonPath("$.result[1].foodName") { value("김치") }
+                    jsonPath("$.result[1].symptomState") { value(null) }
+                }
+
+            verify(mealQueryService).getRecentFoodSummaries(1L)
         }
     }
 

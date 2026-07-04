@@ -26,4 +26,6 @@ interface MealFoodRepository : JpaRepository<MealFood, Long> {
     fun countByMealRecordId(@Param("mealRecordId") mealRecordId: Long): Long
 
     fun findByUser_IdAndEatenAtBetween(userId: Long, start: LocalDateTime, end: LocalDateTime): List<MealFood>
+
+    fun findByUser_IdAndEatenAtAfterOrderByEatenAtDesc(userId: Long, cutoff: LocalDateTime): List<MealFood>
 }

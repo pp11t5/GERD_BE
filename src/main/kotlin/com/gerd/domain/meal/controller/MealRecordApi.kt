@@ -3,6 +3,7 @@ package com.gerd.domain.meal.controller
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
+import com.gerd.domain.meal.dto.MealFoodSummaryDTO
 import com.gerd.domain.meal.dto.MealRecordByIDRequestDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
 import com.gerd.domain.meal.dto.MealRecordTextRequestDTO
@@ -142,6 +143,20 @@ interface MealRecordApi {
     fun getUnRecordedSymptomCount(
         @CurrentUser userDetails: CustomUserDetails,
     ): ResponseEntity<ApiResponse<UnRecordedSymptomCountDTO>>
+
+    @Operation(
+        summary = "최근 음식별 요약 조회",
+        description = """
+            진입점: 홈화면
+            최근 72시간 이내 먹은 음식을 음식 단위로 반환합니다.
+            각 음식이 속한 끼니에 증상이 연결됐다면 상태를 함께 내려주고, 없으면 symptomState는 null입니다.
+        """,
+    )
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공(없으면 빈 배열)"))
+    @GetMapping("/recent-foods")
+    fun getRecentFoodSummaries(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<List<MealFoodSummaryDTO>>>
 
     @Operation(
         summary = "끼니 상세 조회",

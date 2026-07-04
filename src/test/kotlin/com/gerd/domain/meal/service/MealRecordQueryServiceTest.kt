@@ -133,4 +133,36 @@ class MealRecordQueryServiceTest {
             assertThat(result.count).isEqualTo(3)
         }
     }
+
+    @Nested
+    inner class `최근 음식별 요약 조회` {
+
+        @Test
+        fun `최근 음식이 없으면 빈 배열을 반환하고 추가 조회하지 않는다`() {
+            whenever(mealFoodRepository.findByUser_IdAndEatenAtAfterOrderByEatenAtDesc(eq(userId), any()))
+                .thenReturn(emptyList())
+
+            val result = service.getRecentFoodSummaries(userId)
+
+            assertThat(result).isEmpty()
+            verify(symptomRepository, never()).findByMealRecordIdIn(any())
+            verify(mealRecordConverter, never()).toFoodSummaries(any(), any())
+        }
+
+        @Test
+        fun `음식이 속한 끼니 ID로 증상을 조회해 변환에 넘긴다`() {
+            val mealFood = MealRecordFixture.mealFood()
+            val symptoms = emptyList<com.gerd.domain.symptom.entity.Symptom>()
+            whenever(mealFoodRepository.findByUser_IdAndEatenAtAfterOrderByEatenAtDesc(eq(userId), any()))
+                .thenReturn(listOf(mealFood))
+            whenever(symptomRepository.findByMealRecordIdIn(listOf(MealRecordFixture.MEAL_RECORD_ID)))
+                .thenReturn(symptoms)
+            whenever(mealRecordConverter.toFoodSummaries(listOf(mealFood), symptoms)).thenReturn(emptyList())
+
+            service.getRecentFoodSummaries(userId)
+
+            verify(symptomRepository).findByMealRecordIdIn(listOf(MealRecordFixture.MEAL_RECORD_ID))
+            verify(mealRecordConverter).toFoodSummaries(listOf(mealFood), symptoms)
+        }
+    }
 }
