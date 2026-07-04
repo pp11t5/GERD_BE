@@ -28,6 +28,7 @@ sealed class TimeLineItemDTO {
         val grade: JudgmentGrade,
         @field:Schema(description = "기타 음식 개수", example = "3")
         val etcCount: Int,
+        val connectedSymptoms: ConnectedSymptom?,
     ) : TimeLineItemDTO()
 
     data class Group(
