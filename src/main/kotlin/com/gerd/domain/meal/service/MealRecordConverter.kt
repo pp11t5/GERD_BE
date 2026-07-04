@@ -135,8 +135,9 @@ class MealRecordConverter(
 
         return mealFoods.map { mealFood ->
             val food = foodMap[mealFood.foodId]
+                ?: error("meal food ${mealFood.id} references missing food ${mealFood.foodId}")
             MealFoodSummaryDTO(
-                foodName = food?.name ?: "",
+                foodName = food.name,
                 category = categories[mealFood.foodId] ?: "",
                 eatenAt = formatEatenAt(mealFood.eatenAt),
                 symptomState = stateByRecordId[mealFood.mealRecord.id],
