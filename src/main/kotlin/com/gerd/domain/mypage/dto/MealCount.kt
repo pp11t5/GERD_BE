@@ -9,4 +9,6 @@ data class MealCount(
     val cautionCount: Int,
     @field:Schema(description = "지난주 신호등 위험(RISK) 끼니 수", example = "1")
     val riskCount: Int,
+    @field:Schema(description = "지난주 신호등 판단 불가(UNKNOWN) 끼니 수", example = "2")
+    val unknownCount: Int,
 )

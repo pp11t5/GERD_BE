@@ -15,7 +15,7 @@ data class JudgmentResponseDTO(
     @field:Schema(description = "대표 음식 분류 code", example = "beverage", nullable = true)
     val category: String?,
 
-    @field:Schema(description = "신호등 등급", example = "CAUTION")
+    @field:Schema(description = "신호등 등급: RECOMMEND(추천)·CAUTION(주의)·RISK(위험)·UNKNOWN(판단 불가)", example = "CAUTION")
     val grade: JudgmentGrade,
 
     @field:Schema(description = "개인화 제목 — LLM 생성, 등급 강등·생성 실패 시 등급별 고정 제목", example = "속이 편안할 수 있도록 천천히 드세요!")

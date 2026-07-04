@@ -93,12 +93,13 @@ class ReportService(
         val recommendCount = gradeCounts[JudgmentGrade.RECOMMEND] ?: 0
         val cautionCount   = gradeCounts[JudgmentGrade.CAUTION] ?: 0
         val riskCount      = gradeCounts[JudgmentGrade.RISK] ?: 0
+        val unknownCount   = gradeCounts[JudgmentGrade.UNKNOWN] ?: 0
         val percentage = if (symptomDays > 0)
             (comfortableDays * 1000.0 / symptomDays).roundToInt() / 10.0
         else 0.0
 
         // 식단 분포
-        val mealCount = MealCount(recommendCount, cautionCount, riskCount)
+        val mealCount = MealCount(recommendCount, cautionCount, riskCount, unknownCount)
 
         val summaryDto = WeeklySummaryResponseDTO(
             mealRecordCount = allMeals.size,

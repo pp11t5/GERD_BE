@@ -67,7 +67,7 @@ class TimeLineService(
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     mealFoodName = food?.let { foodNameById[it.foodId] } ?: "",
-                    grade = food?.judgedGrade ?: JudgmentGrade.CAUTION,
+                    grade = food?.judgedGrade ?: JudgmentGrade.UNKNOWN,
                     etcCount = 0,
                 )
             } else {

@@ -127,7 +127,7 @@ class ReportServiceTest {
                     mealRecordCount = 4,
                     recentSymptomCount = 4,
                     streakCount = 0,
-                    mealCount = MealCount(2, 1, 1),
+                    mealCount = MealCount(2, 1, 1, 0),
                 ),
             )
             verify(objectMapper).writeValueAsString(
@@ -140,7 +140,7 @@ class ReportServiceTest {
                         recommendedMealCount = 2,
                         percentage = 50.0,
                     ),
-                    mealCount = MealCount(2, 1, 1),
+                    mealCount = MealCount(2, 1, 1, 0),
                 ),
             )
         }
@@ -163,7 +163,7 @@ class ReportServiceTest {
         fun `저장된 요약 JSON을 DTO로 역직렬화한다`() {
             val (start, end) = lastWeekRange()
             val report = weeklyReport(start, end, summaryJson = "summary-json")
-            val summary = WeeklySummaryResponseDTO(1, 2, 3, MealCount(1, 0, 0))
+            val summary = WeeklySummaryResponseDTO(1, 2, 3, MealCount(1, 0, 0, 0))
             whenever(weeklyReportRepository.findByUserIdAndStartDate(userId, start)).thenReturn(report)
             whenever(objectMapper.readValue("summary-json", WeeklySummaryResponseDTO::class.java)).thenReturn(summary)
 
