@@ -53,28 +53,36 @@ class TimeLineService(
             .filter { it.mealRecordId != null }
             .groupBy { it.mealRecordId!! }
 
-        // Group 식사에 연결된 증상 ID 집합 — 이 증상들은 카드에 임베드되므로 standalone 목록에서 제외
-        val groupEmbeddedMealIds = mutableSetOf<Long>()
+        // 카드에 임베드된 증상의 meal ID 집합 — 이 증상들은 standalone 목록에서 제외
+        val embeddedMealIds = mutableSetOf<Long>()
 
         val mealItems = mealRecords.map { record ->
             val foods = mealFoodsByRecordId[record.id] ?: emptyList()
 
             if (foods.size <= 1) {
                 val food = foods.firstOrNull()
+                val linkedSymptoms = linkedSymptomsByMealId[record.id] ?: emptyList()
+                val connectedSymptomDTO = if (linkedSymptoms.isEmpty()) null
+                else {
+                    record.id?.let { embeddedMealIds.add(it) }
+                    buildConnectedSymptom(record.eatenAt, linkedSymptoms)
+                }
+
                 TimeLineItemDTO.Single(
                     timeLineType = TimeLineType.SINGLE,
                     timeIcon = timeIcon(record.eatenAt),
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     mealFoodName = food?.let { foodNameById[it.foodId] } ?: "",
-                    grade = food?.judgedGrade ?: JudgmentGrade.CAUTION,
+                    grade = food?.judgedGrade ?: JudgmentGrade.UNKNOWN,
                     etcCount = 0,
+                    connectedSymptoms = connectedSymptomDTO,
                 )
             } else {
                 val linkedSymptoms = linkedSymptomsByMealId[record.id] ?: emptyList()
                 val connectedSymptomDTO = if (linkedSymptoms.isEmpty()) null
                 else {
-                    record.id?.let { groupEmbeddedMealIds.add(it) }
+                    record.id?.let { embeddedMealIds.add(it) }
                     buildConnectedSymptom(record.eatenAt, linkedSymptoms)
                 }
 
@@ -90,9 +98,9 @@ class TimeLineService(
             }
         }
 
-        // Single 연결 증상 + 미연결 증상만 standalone으로 표시 (Group 임베드 증상 제외)
+        // 미연결 증상만 standalone으로 표시 (카드에 임베드된 증상 제외)
         val standaloneSymptoms = symptoms.filter { s ->
-            s.mealRecordId == null || s.mealRecordId !in groupEmbeddedMealIds
+            s.mealRecordId == null || s.mealRecordId !in embeddedMealIds
         }
 
         val symptomItems = standaloneSymptoms.map { s ->
@@ -126,7 +134,8 @@ class TimeLineService(
         mealEatenAt: LocalDateTime,
         symptoms: List<Symptom>,
     ): TimeLineItemDTO.ConnectedSymptom {
-        val mostRecent = symptoms.maxBy { it.occurredAt }
+        val mostRecent = symptoms.maxByOrNull { it.occurredAt }
+            ?: error("buildConnectedSymptom requires non-empty symptoms")
         val allTypes = symptoms.flatMap { it.symptomTypes }.distinct()
         val afterMealMinutes = ChronoUnit.MINUTES.between(mealEatenAt, mostRecent.occurredAt).toInt()
         return TimeLineItemDTO.ConnectedSymptom(

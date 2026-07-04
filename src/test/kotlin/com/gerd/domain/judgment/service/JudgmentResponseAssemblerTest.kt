@@ -151,10 +151,10 @@ class JudgmentResponseAssemblerTest {
     inner class `assembleFallback` {
 
         @Test
-        fun `분석 근거 없는 폴백 응답을 조립한다(CAUTION, 대체식단 없음)`() {
+        fun `분석 근거 없는 폴백 응답을 조립한다(UNKNOWN, 대체식단 없음)`() {
             val response = assembler.assembleFallback(context)
 
-            assertThat(response.grade).isEqualTo(JudgmentGrade.CAUTION)
+            assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(response.category).isEqualTo("beverage")
             assertThat(response.personalTitle).isEqualTo("이 음식은 정보가 충분하지 않아요")
             assertThat(response.items).hasSize(2)

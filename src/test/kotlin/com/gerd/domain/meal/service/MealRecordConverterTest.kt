@@ -107,6 +107,68 @@ class MealRecordConverterTest {
         }
     }
 
+    @Nested
+    inner class `최근 음식별 요약 변환` {
+
+        @Test
+        fun `증상이 연결된 끼니 음식은 상태를, 미연결 끼니 음식은 null을 반환한다`() {
+            val user = UserFixture.user()
+            val recordWithSymptom = MealRecordFixture.mealRecord(id = 10L, user = user)
+            val recordWithoutSymptom = MealRecordFixture.mealRecord(id = 20L, user = user)
+            val foodWithSymptom = MealRecordFixture.mealFood(
+                id = 1L, user = user, foodId = 1L, mealRecord = recordWithSymptom,
+            )
+            val foodWithoutSymptom = MealRecordFixture.mealFood(
+                id = 2L, user = user, foodId = 2L, mealRecord = recordWithoutSymptom,
+                externalId = UUID.fromString("1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"),
+            )
+            val symptom = symptom(mealRecordId = 10L, state = SymptomState.UNCOMFORTABLE, occurredAt = LocalDateTime.of(2026, 6, 11, 14, 0))
+
+            whenever(foodRepository.findAllByIdsIncludingDeleted(listOf(1L, 2L)))
+                .thenReturn(listOf(FoodFixture.food(id = 1L, name = "된장찌개"), FoodFixture.food(id = 2L, name = "김치")))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(1L, 2L)))
+                .thenReturn(mapOf(1L to "soup_stew"))
+
+            val result = converter.toFoodSummaries(listOf(foodWithSymptom, foodWithoutSymptom), listOf(symptom))
+
+            assertThat(result).hasSize(2)
+            assertThat(result[0].foodName).isEqualTo("된장찌개")
+            assertThat(result[0].category).isEqualTo("soup_stew")
+            assertThat(result[0].symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
+            // 카테고리 없는 음식은 빈 문자열, 증상 미연결 끼니는 null
+            assertThat(result[1].foodName).isEqualTo("김치")
+            assertThat(result[1].category).isEqualTo("")
+            assertThat(result[1].symptomState).isNull()
+        }
+
+        @Test
+        fun `한 끼니에 증상이 여러 개면 가장 최근 발생 증상을 대표로 사용한다`() {
+            val user = UserFixture.user()
+            val record = MealRecordFixture.mealRecord(id = 10L, user = user)
+            val food = MealRecordFixture.mealFood(id = 1L, user = user, foodId = 1L, mealRecord = record)
+            val older = symptom(mealRecordId = 10L, state = SymptomState.GOOD, occurredAt = LocalDateTime.of(2026, 6, 11, 13, 0))
+            val latest = symptom(mealRecordId = 10L, state = SymptomState.SEVERE, occurredAt = LocalDateTime.of(2026, 6, 11, 15, 0))
+
+            whenever(foodRepository.findAllByIdsIncludingDeleted(listOf(1L)))
+                .thenReturn(listOf(FoodFixture.food(id = 1L)))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(1L)))
+                .thenReturn(mapOf(1L to "soup_stew"))
+
+            val result = converter.toFoodSummaries(listOf(food), listOf(older, latest))
+
+            assertThat(result[0].symptomState).isEqualTo(SymptomState.SEVERE)
+        }
+    }
+
+    private fun symptom(mealRecordId: Long, state: SymptomState, occurredAt: LocalDateTime): Symptom =
+        Symptom(
+            user = UserFixture.user(),
+            symptomState = state,
+            symptomTypes = setOf(SymptomType.ACID_REFLUX),
+            occurredAt = occurredAt,
+            mealRecordId = mealRecordId,
+        )
+
     private fun mealAnalysis() = MealAnalysisSnapshotDTO(
         judgmentGrade = JudgmentGrade.CAUTION,
         triggerAnalysis = MealAnalysisSnapshotDTO.AnalysisItemDTO(

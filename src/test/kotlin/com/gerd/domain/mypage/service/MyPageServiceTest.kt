@@ -94,7 +94,7 @@ class MyPageServiceTest {
                     mealRecordCount = 7,
                     recentSymptomCount = 4,
                     streakCount = 3,
-                    mealCount = MealCount(4, 2, 1),
+                    mealCount = MealCount(4, 2, 1, 0),
                 ),
             )
 
@@ -120,7 +120,7 @@ class MyPageServiceTest {
             assertThat(result.weeklySummary.mealRecordCount).isZero()
             assertThat(result.weeklySummary.recentSymptomCount).isZero()
             assertThat(result.weeklySummary.streakCount).isZero()
-            assertThat(result.weeklySummary.mealCount).isEqualTo(MealCount(0, 0, 0))
+            assertThat(result.weeklySummary.mealCount).isEqualTo(MealCount(0, 0, 0, 0))
         }
     }
 

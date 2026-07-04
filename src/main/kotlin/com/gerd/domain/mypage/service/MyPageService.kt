@@ -65,7 +65,7 @@ class MyPageService(
                 mealRecordCount = weeklySummary?.mealRecordCount ?: 0,
                 recentSymptomCount = weeklySummary?.recentSymptomCount ?: 0,
                 streakCount = weeklySummary?.streakCount ?: 0,
-                mealCount = weeklySummary?.mealCount ?: MealCount(0, 0, 0),
+                mealCount = weeklySummary?.mealCount ?: MealCount(0, 0, 0, 0),
             ),
         )
     }

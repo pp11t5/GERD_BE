@@ -160,7 +160,7 @@ class MyPageControllerTest @Autowired constructor(
             mealRecordCount = 5,
             recentSymptomCount = 4,
             streakCount = 3,
-            mealCount = MealCount(3, 1, 1),
+            mealCount = MealCount(3, 1, 1, 0),
         ),
     )
 
@@ -173,6 +173,6 @@ class MyPageControllerTest @Autowired constructor(
             recommendedMealCount = 4,
             percentage = 66.7,
         ),
-        mealCount = MealCount(4, 2, 1),
+        mealCount = MealCount(4, 2, 1, 0),
     )
 }

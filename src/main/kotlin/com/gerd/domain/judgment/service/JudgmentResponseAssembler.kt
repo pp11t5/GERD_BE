@@ -67,13 +67,13 @@ class JudgmentResponseAssembler {
             substitutes = cached.substitutes,
         )
 
-    // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 CAUTION으로 안내, 캐시하지 않는다
+    // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 UNKNOWN(판단 불가)으로 안내, 캐시하지 않는다
     fun assembleFallback(context: JudgmentContext): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = context.foodExternalId,
             foodName = context.food.name,
             category = context.category,
-            grade = JudgmentGrade.CAUTION,
+            grade = JudgmentGrade.UNKNOWN,
             personalTitle = FALLBACK_TITLE,
             items = FALLBACK_ITEMS,
             stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
@@ -112,7 +112,7 @@ class JudgmentResponseAssembler {
     fun assembleTextFallback(foodName: String): TextJudgmentResponseDTO =
         TextJudgmentResponseDTO(
             foodName = foodName,
-            grade = JudgmentGrade.CAUTION,
+            grade = JudgmentGrade.UNKNOWN,
             personalTitle = FALLBACK_TITLE,
             items = FALLBACK_ITEMS,
             stateRecords = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),

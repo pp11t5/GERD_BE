@@ -2,7 +2,9 @@ package com.gerd.domain.meal.service
 
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
+import com.gerd.domain.meal.dto.MealFoodSummaryDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
+import com.gerd.domain.meal.dto.UnRecordedSymptomCountDTO
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -52,5 +54,22 @@ class MealQueryService(
         if (candidates.isEmpty()) return emptyList()
         val foods = mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(candidates.map { it.id!! })
         return mealRecordConverter.toCandidates(candidates, foods)
+    }
+
+    // 최근 24시간 내 끼니 중 증상이 연결되지 않은 끼니 개수 (미기록 식사 개수)
+    fun getUnRecordedSymptomCount(userId: Long): UnRecordedSymptomCountDTO {
+        val cutoff = LocalDateTime.now().minusHours(24)
+        val count = mealRecordRepository.countUnlinkedByUser_IdAndEatenAtAfter(userId, cutoff)
+        return UnRecordedSymptomCountDTO(count = count.toInt())
+    }
+
+    // 최근 72시간 내 음식별 요약 + 끼니 증상 상태 (증상 없으면 null)
+    fun getRecentFoodSummaries(userId: Long): List<MealFoodSummaryDTO> {
+        val cutoff = LocalDateTime.now().minusHours(72)
+        val mealFoods = mealFoodRepository.findByUser_IdAndEatenAtAfterOrderByEatenAtDesc(userId, cutoff)
+        if (mealFoods.isEmpty()) return emptyList()
+        val mealRecordIds = mealFoods.map { it.mealRecord.id!! }.distinct()
+        val symptoms = symptomRepository.findByMealRecordIdIn(mealRecordIds)
+        return mealRecordConverter.toFoodSummaries(mealFoods, symptoms)
     }
 }

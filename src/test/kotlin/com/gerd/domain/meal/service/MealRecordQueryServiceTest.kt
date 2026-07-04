@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -117,6 +118,51 @@ class MealRecordQueryServiceTest {
             service.getCandidates(userId)
 
             verify(mealFoodRepository).findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id!!))
+        }
+    }
+
+    @Nested
+    inner class `미기록 식사 개수 조회` {
+
+        @Test
+        fun `증상 미연결 끼니 개수를 그대로 반환한다`() {
+            whenever(mealRecordRepository.countUnlinkedByUser_IdAndEatenAtAfter(eq(userId), any())).thenReturn(3L)
+
+            val result = service.getUnRecordedSymptomCount(userId)
+
+            assertThat(result.count).isEqualTo(3)
+        }
+    }
+
+    @Nested
+    inner class `최근 음식별 요약 조회` {
+
+        @Test
+        fun `최근 음식이 없으면 빈 배열을 반환하고 추가 조회하지 않는다`() {
+            whenever(mealFoodRepository.findByUser_IdAndEatenAtAfterOrderByEatenAtDesc(eq(userId), any()))
+                .thenReturn(emptyList())
+
+            val result = service.getRecentFoodSummaries(userId)
+
+            assertThat(result).isEmpty()
+            verify(symptomRepository, never()).findByMealRecordIdIn(any())
+            verify(mealRecordConverter, never()).toFoodSummaries(any(), any())
+        }
+
+        @Test
+        fun `음식이 속한 끼니 ID로 증상을 조회해 변환에 넘긴다`() {
+            val mealFood = MealRecordFixture.mealFood()
+            val symptoms = emptyList<com.gerd.domain.symptom.entity.Symptom>()
+            whenever(mealFoodRepository.findByUser_IdAndEatenAtAfterOrderByEatenAtDesc(eq(userId), any()))
+                .thenReturn(listOf(mealFood))
+            whenever(symptomRepository.findByMealRecordIdIn(listOf(MealRecordFixture.MEAL_RECORD_ID)))
+                .thenReturn(symptoms)
+            whenever(mealRecordConverter.toFoodSummaries(listOf(mealFood), symptoms)).thenReturn(emptyList())
+
+            service.getRecentFoodSummaries(userId)
+
+            verify(symptomRepository).findByMealRecordIdIn(listOf(MealRecordFixture.MEAL_RECORD_ID))
+            verify(mealRecordConverter).toFoodSummaries(listOf(mealFood), symptoms)
         }
     }
 }

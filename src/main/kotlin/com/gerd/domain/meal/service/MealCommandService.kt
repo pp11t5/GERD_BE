@@ -202,8 +202,7 @@ class MealCommandService(
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
     }
 
-    // 텍스트 음식 이름 정규화 — 중복 USER 음식 생성·캐시 키 불일치 방지.
-    // NFC(자모 결합 통일) → 앞뒤 공백 제거 → 내부 연속 공백 1칸으로 축소
+    // 텍스트 음식 이름 정규화 — 중복 USER 음식 생성·캐시 키 불일치 방지
     private fun normalizeFoodName(raw: String): String =
         Normalizer.normalize(raw, Normalizer.Form.NFC).trim().replace(WHITESPACE_RUN, " ")
 

@@ -3,9 +3,11 @@ package com.gerd.domain.meal.controller
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
+import com.gerd.domain.meal.dto.MealFoodSummaryDTO
 import com.gerd.domain.meal.dto.MealRecordByIDRequestDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
 import com.gerd.domain.meal.dto.MealRecordTextRequestDTO
+import com.gerd.domain.meal.dto.UnRecordedSymptomCountDTO
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.global.annotation.ApiErrorExample
 import com.gerd.global.annotation.CurrentUser
@@ -121,13 +123,40 @@ interface MealRecordApi {
 
     @Operation(
         summary = "증상 미연결 끼니 목록 조회",
-        description = "최근 24시간 이내 식사 중 증상 기록이 연결되지 않은 끼니를 날짜별로 반환, 증상 기록 시 원인 식사 선택에 사용",
+        description = "최근 24시간 이내 식사 중 증상 기록이 연결되지 않은 끼니를 날짜별로 반환, 증상 기록 시 원인 식사 선택에 사용합니다.",
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공(없으면 빈 배열)"))
     @GetMapping("/candidates")
     fun getCandidates(
         @CurrentUser userDetails: CustomUserDetails,
     ): ResponseEntity<ApiResponse<List<MealCandidatesDTO>>>
+
+    @Operation(
+        summary = "미기록 식사 개수 조회",
+        description = """
+            진입점: 홈화면
+            최근 24시간 이내 식사 중 증상 기록이 연결되지 않은 끼니 개수를 반환합니다.
+        """,
+    )
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
+    @GetMapping("/unrecorded-count")
+    fun getUnRecordedSymptomCount(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<UnRecordedSymptomCountDTO>>
+
+    @Operation(
+        summary = "최근 음식별 요약 조회",
+        description = """
+            진입점: 홈화면
+            최근 72시간 이내 먹은 음식을 음식 단위로 반환합니다.
+            각 음식이 속한 끼니에 증상이 연결됐다면 상태를 함께 내려주고, 없으면 symptomState는 null입니다.
+        """,
+    )
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공(없으면 빈 배열)"))
+    @GetMapping("/recent-foods")
+    fun getRecentFoodSummaries(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<List<MealFoodSummaryDTO>>>
 
     @Operation(
         summary = "끼니 상세 조회",
@@ -151,4 +180,7 @@ interface MealRecordApi {
         @Parameter(description = "끼니 식별자(UUID)", example = "c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         @PathVariable mealRecordId: String,
     ): ResponseEntity<ApiResponse<Unit>>
+
+
+
 }

@@ -6,6 +6,7 @@ import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
+import com.gerd.domain.meal.dto.MealFoodSummaryDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
 import com.gerd.domain.meal.dto.StateRecordDTO
 import com.gerd.domain.meal.entity.MealFood
@@ -119,6 +120,29 @@ class MealRecordConverter(
                     },
                 )
             }
+    }
+
+    // 최근 음식별 요약 — 음식 1건이 1행, symptomState는 그 음식이 속한 끼니의 증상(없으면 null)
+    fun toFoodSummaries(mealFoods: List<MealFood>, symptoms: List<Symptom>): List<MealFoodSummaryDTO> {
+        val foodIds = mealFoods.map { it.foodId }.distinct()
+        val foodMap = loadFoodsIncludingDeleted(foodIds).associateBy { it.id }
+        val categories = foodCategoryReader.loadPrimaryByFoodIds(foodIds)
+        // 한 끼니에 증상이 여러 개면 대표 1건(가장 최근 발생)을 사용
+        val stateByRecordId = symptoms
+            .groupBy { it.mealRecordId }
+            .mapNotNull { (recordId, group) -> recordId?.let { it to group.maxByOrNull { s -> s.occurredAt }?.symptomState } }
+            .toMap()
+
+        return mealFoods.map { mealFood ->
+            val food = foodMap[mealFood.foodId]
+                ?: error("meal food ${mealFood.id} references missing food ${mealFood.foodId}")
+            MealFoodSummaryDTO(
+                foodName = food.name,
+                category = categories[mealFood.foodId] ?: "",
+                eatenAt = formatEatenAt(mealFood.eatenAt),
+                symptomState = stateByRecordId[mealFood.mealRecord.id],
+            )
+        }
     }
 
     private fun deserializeAnalysis(json: String?): MealAnalysisSnapshotDTO? =

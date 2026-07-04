@@ -118,7 +118,7 @@ class TimeLineServiceTest {
         }
 
         @Test
-        fun `판정 등급이 없는 음식은 CAUTION으로 매핑된다`() {
+        fun `판정 등급이 없는 음식은 UNKNOWN으로 매핑된다`() {
             val mealRecord = MealRecordFixture.mealRecord()
             val mealFood = MealRecordFixture.mealFood(judgedGrade = null)
             val food = FoodFixture.food(id = 1L)
@@ -131,16 +131,17 @@ class TimeLineServiceTest {
             val result = service.getTimeLine(userId, date)
 
             val item = result.items.first() as TimeLineItemDTO.Single
-            assertThat(item.grade).isEqualTo(JudgmentGrade.CAUTION)
+            assertThat(item.grade).isEqualTo(JudgmentGrade.UNKNOWN)
         }
 
         @Test
-        fun `Single 식사에 연결된 증상은 standalone Symptom 아이템으로 표시된다`() {
+        fun `Single 식사에 연결된 증상은 connectedSymptoms에 임베드되고 standalone 아이템에서 제외된다`() {
             val mealRecord = MealRecordFixture.mealRecord(eatenAt = LocalDateTime.of(2026, 6, 17, 12, 0, 0))
             val symptom = SymptomFixture.symptom(
                 mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
                 occurredAt = LocalDateTime.of(2026, 6, 17, 12, 30, 0),
                 symptomState = SymptomState.UNCOMFORTABLE,
+                symptomTypes = setOf(SymptomType.ACID_REFLUX),
             )
             val mealFood = MealRecordFixture.mealFood()
             val food = FoodFixture.food(id = 1L)
@@ -152,10 +153,29 @@ class TimeLineServiceTest {
 
             val result = service.getTimeLine(userId, date)
 
-            val symptomItem = result.items.filterIsInstance<TimeLineItemDTO.Symptom>().first()
-            assertThat(symptomItem.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
-            assertThat(symptomItem.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
-            assertThat(symptomItem.afterMealMinutes).isEqualTo(30)
+            assertThat(result.items.filterIsInstance<TimeLineItemDTO.Symptom>()).isEmpty()
+            val singleItem = result.items.first() as TimeLineItemDTO.Single
+            val connected = singleItem.connectedSymptoms!!
+            assertThat(connected.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
+            assertThat(connected.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
+            assertThat(connected.afterMealMinutes).isEqualTo(30)
+        }
+
+        @Test
+        fun `Single 식사에 연결된 증상이 없으면 connectedSymptoms는 null이다`() {
+            val mealRecord = MealRecordFixture.mealRecord()
+            val mealFood = MealRecordFixture.mealFood()
+            val food = FoodFixture.food(id = 1L)
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
+
+            val result = service.getTimeLine(userId, date)
+
+            val singleItem = result.items.first() as TimeLineItemDTO.Single
+            assertThat(singleItem.connectedSymptoms).isNull()
         }
 
         @Test
@@ -300,7 +320,7 @@ class TimeLineServiceTest {
             val earlyRecord = MealRecordFixture.mealRecord(id = 1L, eatenAt = LocalDateTime.of(2026, 6, 17, 8, 0, 0))
             val lateRecord = MealRecordFixture.mealRecord(id = 2L, eatenAt = LocalDateTime.of(2026, 6, 17, 18, 0, 0))
             val midSymptom = SymptomFixture.symptom(
-                mealRecordId = 1L,
+                mealRecordId = null,
                 occurredAt = LocalDateTime.of(2026, 6, 17, 12, 0, 0),
             )
             val food = MealRecordFixture.mealFood(mealRecordId = 1L)
@@ -313,7 +333,7 @@ class TimeLineServiceTest {
 
             val result = service.getTimeLine(userId, date)
 
-            // Single(8:00) → Symptom(12:00, Single 연결) → Single(18:00)
+            // Single(8:00) → Symptom(12:00, 미연결) → Single(18:00)
             assertThat(result.items[0]).isInstanceOf(TimeLineItemDTO.Single::class.java)
             assertThat(result.items[1]).isInstanceOf(TimeLineItemDTO.Symptom::class.java)
             assertThat(result.items[2]).isInstanceOf(TimeLineItemDTO.Single::class.java)
