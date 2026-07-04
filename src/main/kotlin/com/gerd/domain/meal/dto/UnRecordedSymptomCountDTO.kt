@@ -1,3 +1,5 @@
 package com.gerd.domain.meal.dto
 
-data class UnRecorededSymptomCountDTO()
+data class UnRecordedSymptomCountDTO(
+    val count: Int
+)

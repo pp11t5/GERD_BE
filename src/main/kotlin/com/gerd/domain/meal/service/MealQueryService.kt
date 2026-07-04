@@ -3,6 +3,7 @@ package com.gerd.domain.meal.service
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
+import com.gerd.domain.meal.dto.UnRecordedSymptomCountDTO
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -52,5 +53,12 @@ class MealQueryService(
         if (candidates.isEmpty()) return emptyList()
         val foods = mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(candidates.map { it.id!! })
         return mealRecordConverter.toCandidates(candidates, foods)
+    }
+
+    // 최근 24시간 내 끼니 중 증상이 연결되지 않은 끼니 개수 (미기록 식사 개수)
+    fun getUnRecordedSymptomCount(userId: Long): UnRecordedSymptomCountDTO {
+        val cutoff = LocalDateTime.now().minusHours(24)
+        val count = mealRecordRepository.countUnlinkedByUser_IdAndEatenAtAfter(userId, cutoff)
+        return UnRecordedSymptomCountDTO(count = count.toInt())
     }
 }

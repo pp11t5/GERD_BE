@@ -6,6 +6,7 @@ import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
 import com.gerd.domain.meal.dto.MealRecordByIDRequestDTO
 import com.gerd.domain.meal.dto.MealRecordTextRequestDTO
+import com.gerd.domain.meal.dto.UnRecordedSymptomCountDTO
 import com.gerd.domain.meal.service.MealCommandService
 import com.gerd.domain.meal.service.MealQueryService
 import com.gerd.global.annotation.CurrentUser
@@ -83,6 +84,13 @@ class MealRecordController(
         ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
             .body(ApiResponse.onSuccess(mealQueryService.getCandidates(userDetails.userId), CommonSuccessCode.OK))
+
+    override fun getUnRecordedSymptomCount(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<UnRecordedSymptomCountDTO>> =
+        ResponseEntity
+            .status(CommonSuccessCode.OK.httpStatus)
+            .body(ApiResponse.onSuccess(mealQueryService.getUnRecordedSymptomCount(userDetails.userId), CommonSuccessCode.OK))
 
     override fun getGroupDetail(
         @CurrentUser userDetails: CustomUserDetails,

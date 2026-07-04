@@ -7,6 +7,7 @@ import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
+import com.gerd.domain.meal.dto.UnRecordedSymptomCountDTO
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.service.MealCommandService
 import com.gerd.domain.meal.service.MealQueryService
@@ -301,6 +302,22 @@ class MealRecordControllerTest @Autowired constructor(
                     jsonPath("$.result[0].meals[0].mealRecordId") { value(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()) }
                     jsonPath("$.result[0].meals[0].otherFoodCount") { value(1) }
                 }
+        }
+
+        @Test
+        @WithCustomUser
+        fun `미기록 식사 개수를 조회한다`() {
+            whenever(mealQueryService.getUnRecordedSymptomCount(any())).thenReturn(UnRecordedSymptomCountDTO(count = 3))
+
+            mockMvc.get("/api/v1/meal-records/unrecorded-count")
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.isSuccess") { value(true) }
+                    jsonPath("$.code") { value("COMMON200") }
+                    jsonPath("$.result.count") { value(3) }
+                }
+
+            verify(mealQueryService).getUnRecordedSymptomCount(1L)
         }
     }
 

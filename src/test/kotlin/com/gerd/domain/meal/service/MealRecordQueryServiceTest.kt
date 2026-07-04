@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -117,6 +118,19 @@ class MealRecordQueryServiceTest {
             service.getCandidates(userId)
 
             verify(mealFoodRepository).findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(listOf(unlinked.id!!))
+        }
+    }
+
+    @Nested
+    inner class `미기록 식사 개수 조회` {
+
+        @Test
+        fun `증상 미연결 끼니 개수를 그대로 반환한다`() {
+            whenever(mealRecordRepository.countUnlinkedByUser_IdAndEatenAtAfter(eq(userId), any())).thenReturn(3L)
+
+            val result = service.getUnRecordedSymptomCount(userId)
+
+            assertThat(result.count).isEqualTo(3)
         }
     }
 }

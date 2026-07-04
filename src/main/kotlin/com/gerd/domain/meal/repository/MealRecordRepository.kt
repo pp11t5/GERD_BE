@@ -14,6 +14,16 @@ interface MealRecordRepository : JpaRepository<MealRecord, Long> {
     fun findByUser_IdAndEatenAtAfter(userId: Long, cutoff: LocalDateTime): List<MealRecord>
     fun findByUser_IdAndEatenAtBetween(userId: Long, start: LocalDateTime, end: LocalDateTime): List<MealRecord>
 
+    // 최근 cutoff 이후 끼니 중 증상이 연결되지 않은 끼니 수 (미기록 식사 개수)
+    @Query(
+        "SELECT COUNT(m) FROM MealRecord m WHERE m.user.id = :userId AND m.eatenAt > :cutoff " +
+            "AND m.id NOT IN (SELECT s.mealRecordId FROM Symptom s WHERE s.user.id = :userId AND s.mealRecordId IS NOT NULL)",
+    )
+    fun countUnlinkedByUser_IdAndEatenAtAfter(
+        @Param("userId") userId: Long,
+        @Param("cutoff") cutoff: LocalDateTime,
+    ): Long
+
     @Query("SELECT new com.gerd.domain.report.dto.MealGradeRow(CAST(m.eatenAt AS LocalDate), m.grade) FROM MealRecord m WHERE m.user.id = :userId AND m.eatenAt BETWEEN :start AND :end")
     fun findGradesByUserAndPeriod(
         @Param("userId") userId: Long,
