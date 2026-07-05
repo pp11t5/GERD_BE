@@ -39,6 +39,7 @@ repositories {
 dependencies {
     // monitoring
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-otlp")
     implementation("io.sentry:sentry-spring-jakarta:8.16.0")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
