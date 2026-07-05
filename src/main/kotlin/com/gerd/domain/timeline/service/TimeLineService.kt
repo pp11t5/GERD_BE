@@ -1,6 +1,7 @@
 package com.gerd.domain.timeline.service
 
 import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -27,6 +28,7 @@ class TimeLineService(
     private val mealRecordRepository: MealRecordRepository,
     private val mealFoodRepository: MealFoodRepository,
     private val foodRepository: FoodRepository,
+    private val foodCategoryReader: FoodCategoryReader,
 ) {
 
     fun getTimeLine(userId: Long, date: LocalDate): TimeLineResponseDTO {
@@ -48,6 +50,7 @@ class TimeLineService(
         val foodIds = mealFoodsByRecordId.values.flatten().map { it.foodId }.distinct()
         val foodNameById = if (foodIds.isEmpty()) emptyMap()
         else foodRepository.findAllByIdsIncludingDeleted(foodIds).associate { it.id!! to it.name }
+        val foodCategoryById = foodCategoryReader.loadPrimaryByFoodIds(foodIds)
 
         val linkedSymptomsByMealId: Map<Long, List<Symptom>> = symptoms
             .filter { it.mealRecordId != null }
@@ -74,6 +77,7 @@ class TimeLineService(
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     mealFoodName = food?.let { foodNameById[it.foodId] } ?: "",
+                    mealFoodCategory = food?.let { foodCategoryById[it.foodId]} ?: "",
                     grade = food?.judgedGrade ?: JudgmentGrade.UNKNOWN,
                     etcCount = 0,
                     connectedSymptoms = connectedSymptomDTO,
