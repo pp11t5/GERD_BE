@@ -17,7 +17,6 @@ import java.time.LocalDateTime
  * 사용자 탈퇴를 처리하는 서비스
  */
 @Service
-@Transactional
 class WithdrawService(
     private val userRepository: UserRepository,
     private val authAccountRepository: AuthAccountRepository,
@@ -28,6 +27,7 @@ class WithdrawService(
 ) {
 
     // status = DELETED로 접근 차단 + deleted_at 기록 + 모든 기기 로그아웃
+    @Transactional
     fun withdraw(userId: Long) {
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
@@ -39,6 +39,7 @@ class WithdrawService(
     }
 
     // 유예기간 후 스케줄러에서 호출 — 카카오 연동이 있으면 unlink 후 물리 삭제
+    // 외부 API(unlink)가 DB 트랜잭션을 점유하지 않도록 의도적으로 비트랜잭션 (물리 삭제는 hardDelete 자체 트랜잭션)
     fun withdrawHardDelete(userId: Long) {
         authAccountRepository.findById(userId)
             .filter { it.provider == AuthProvider.KAKAO }

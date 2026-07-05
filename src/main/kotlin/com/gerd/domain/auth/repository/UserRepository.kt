@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.Optional
 
@@ -39,6 +40,8 @@ interface UserRepository : JpaRepository<User, Long> {
     ): List<Long>
 
     // @SQLRestriction 우회해 DB에서 물리 삭제 — 14일 유예 후 스케줄러에서 호출
+    // 외부 API 호출(unlink)과 트랜잭션을 분리하기 위해 물리 삭제만 자체 트랜잭션으로 처리
+    @Transactional
     @Modifying
     @Query(value = "DELETE FROM users WHERE user_id = :userId", nativeQuery = true)
     fun hardDelete(@Param("userId") userId: Long)
