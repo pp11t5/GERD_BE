@@ -72,4 +72,4 @@ management:
         step: 30s
 logging:
   level:
-    io.micrometer.registry.otlp: DEBUG
+    io.micrometer.registry.otlp: TRACE
