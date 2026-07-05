@@ -7,7 +7,6 @@ import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.RefreshTokenRepository
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.global.apiPayload.GeneralException
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -22,8 +21,6 @@ class WithdrawService(
     private val authAccountRepository: AuthAccountRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val kakaoApiClient: KakaoApiClient,
-    // 탈퇴 유예기간 — prod 14일, staging 10분 (application*.yml에서 주입)
-    @Value("\${withdraw.grace-period}") private val gracePeriod: Duration,
 ) {
 
     // status = DELETED로 접근 차단 + deleted_at 기록 + 모든 기기 로그아웃
@@ -50,7 +47,12 @@ class WithdrawService(
 
     // 유예기간이 지난 DELETED 유저 ID를 keyset 페이지네이션으로 배치 조회
     fun findUsersForHardDelete(lastId: Long, limit: Int): List<Long> {
-        val threshold = LocalDateTime.now().minus(gracePeriod)
+        val threshold = LocalDateTime.now().minus(GRACE_PERIOD)
         return userRepository.findIdsForHardDelete(threshold, lastId, limit)
+    }
+
+    companion object {
+        // 탈퇴 유예기간 — 정책상 고정값
+        private val GRACE_PERIOD: Duration = Duration.ofDays(14)
     }
 }

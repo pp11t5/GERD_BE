@@ -24,7 +24,7 @@ sealed class TimeLineItemDTO {
         val mealRecordDateTime: String,
         @field:Schema(description = "대표 음식 이름", example = "김치찌개")
         val mealFoodName: String,
-        @field:Schema(description = "대표 음식 카테고리", example = "김치찌개")
+        @field:Schema(description = "대표 음식 카테고리 code", example = "SOUP")
         val mealFoodCategory: String,
         @field:Schema(description = "판정 등급: RECOMMEND(추천), CAUTION(주의), RISK(위험), UNKNOWN(판단 불가)", example = "CAUTION")
         val grade: JudgmentGrade,
@@ -42,7 +42,7 @@ sealed class TimeLineItemDTO {
         val mealRecordDateTime: String,
         @field:Schema(description = "대표 음식, 최대 2개", example = "[\"김치찌개\", \"된장찌개\"]")
         val representativeFoods: List<String>,
-        @field:Schema(description = "대표 음식 카테고리", example = "김치찌개")
+        @field:Schema(description = "대표 음식 카테고리 code", example = "SOUP")
         val mealFoodCategory: String,
         @field:Schema(description = "기타 음식 개수", example = "3")
         val etcCount: Int,

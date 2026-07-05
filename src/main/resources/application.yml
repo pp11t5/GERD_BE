@@ -26,8 +26,6 @@ notification:
     enabled: false
 
 withdraw:
-  # 탈퇴 유예기간 — 이 기간이 지나면 스케줄러가 물리 삭제 (예: 14d, 10m). 기본은 prod 기준 14일
-  grace-period: ${WITHDRAW_GRACE_PERIOD:14d}
   scheduler:
     # 물리 삭제 스케줄러 — local/dev에서 실수로 삭제되지 않도록 기본 off, staging/prod에서만 on
     enabled: ${WITHDRAW_SCHEDULER_ENABLED:false}
