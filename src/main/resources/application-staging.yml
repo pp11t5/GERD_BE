@@ -70,3 +70,6 @@ management:
         headers:
           Authorization: Bearer ${BETTERSTACK_SOURCE_TOKEN}
         step: 30s
+logging:
+  level:
+    io.micrometer.registry.otlp: DEBUG
