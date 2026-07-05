@@ -62,3 +62,11 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+  otlp:
+    metrics:
+      export:
+        enabled: true
+        url: ${BETTERSTACK_OTLP_URL}/v1/metrics
+        headers:
+          Authorization: Bearer ${BETTERSTACK_SOURCE_TOKEN}
+        step: 30s
