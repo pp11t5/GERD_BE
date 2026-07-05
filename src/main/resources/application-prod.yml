@@ -20,6 +20,11 @@ notification:
   scheduler:
     enabled: false
 
+withdraw:
+  # prod는 유예기간 14일(base 기본값) 유지, 물리 삭제 스케줄러 on
+  scheduler:
+    enabled: ${WITHDRAW_SCHEDULER_ENABLED:true}
+
 jwt:
   secret: ${JWT_SECRET}
   access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}

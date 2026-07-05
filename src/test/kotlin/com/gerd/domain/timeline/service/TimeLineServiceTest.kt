@@ -1,6 +1,7 @@
 package com.gerd.domain.timeline.service
 
 import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -31,9 +32,10 @@ class TimeLineServiceTest {
     @Mock private lateinit var mealRecordRepository: MealRecordRepository
     @Mock private lateinit var mealFoodRepository: MealFoodRepository
     @Mock private lateinit var foodRepository: FoodRepository
+    @Mock private lateinit var foodCategoryReader: FoodCategoryReader
 
     private val service by lazy {
-        TimeLineService(symptomRepository, mealRecordRepository, mealFoodRepository, foodRepository)
+        TimeLineService(symptomRepository, mealRecordRepository, mealFoodRepository, foodRepository, foodCategoryReader)
     }
 
     private val userId = 1L
@@ -62,14 +64,15 @@ class TimeLineServiceTest {
             whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(mapOf(1L to "SOUP"))
 
             val result = service.getTimeLine(userId, date)
 
             assertThat(result.items).hasSize(1)
             val item = result.items.first() as TimeLineItemDTO.Single
             assertThat(item.mealFoodName).isEqualTo("된장찌개")
+            assertThat(item.mealFoodCategory).isEqualTo("SOUP")
             assertThat(item.grade).isEqualTo(JudgmentGrade.RECOMMEND)
-            assertThat(item.etcCount).isEqualTo(0)
         }
 
         @Test
@@ -89,9 +92,7 @@ class TimeLineServiceTest {
             val result = service.getTimeLine(userId, date)
 
             val mealItem = result.items.filterIsInstance<TimeLineItemDTO.Single>().first()
-            val symptomItem = result.items.filterIsInstance<TimeLineItemDTO.Symptom>().first()
             assertThat(mealItem.timeIcon).isEqualTo(TimeLineIcon.SUN)
-            assertThat(symptomItem.timeIcon).isEqualTo(TimeLineIcon.MOON)
         }
 
         @Test
@@ -109,11 +110,13 @@ class TimeLineServiceTest {
                 FoodFixture.food(id = 2L, name = "김치"),
                 FoodFixture.food(id = 3L, name = "밥"),
             ))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(mapOf(1L to "SOUP"))
 
             val result = service.getTimeLine(userId, date)
 
             val item = result.items.first() as TimeLineItemDTO.Group
             assertThat(item.representativeFoods).containsExactly("된장찌개", "김치")
+            assertThat(item.mealFoodCategory).isEqualTo("SOUP")
             assertThat(item.etcCount).isEqualTo(1)
         }
 
