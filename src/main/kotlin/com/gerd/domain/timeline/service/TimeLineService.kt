@@ -79,7 +79,6 @@ class TimeLineService(
                     mealFoodName = food?.let { foodNameById[it.foodId] } ?: "",
                     mealFoodCategory = food?.let { foodCategoryById[it.foodId]} ?: "",
                     grade = food?.judgedGrade ?: JudgmentGrade.UNKNOWN,
-                    etcCount = 0,
                     connectedSymptoms = connectedSymptomDTO,
                 )
             } else {
@@ -96,6 +95,7 @@ class TimeLineService(
                     mealRecordId = record.externalId.toString(),
                     mealRecordDateTime = record.eatenAt.toString(),
                     representativeFoods = foods.take(2).map { foodNameById[it.foodId] ?: "" },
+                    mealFoodCategory = foods.firstOrNull()?.let { foodCategoryById[it.foodId] } ?: "",
                     etcCount = maxOf(0, foods.size - 2),
                     connectedSymptoms = connectedSymptomDTO,
                 )
@@ -115,7 +115,6 @@ class TimeLineService(
 
             TimeLineItemDTO.Symptom(
                 timeLineType = TimeLineType.SYMPTOM,
-                timeIcon = timeIcon(s.occurredAt),
                 symptomId = s.externalId?.toString() ?: "",
                 symptomState = s.symptomState,
                 afterMealMinutes = afterMealMinutes,
