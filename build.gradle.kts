@@ -42,6 +42,7 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-otlp")
     implementation("io.sentry:sentry-spring-jakarta:8.16.0")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+    implementation("org.springframework.boot:spring-boot-opentelemetry")
 
     // cache
     implementation("com.github.ben-manes.caffeine:caffeine")
