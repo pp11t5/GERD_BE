@@ -8,6 +8,8 @@ import com.gerd.domain.auth.entity.enums.UserStatus
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.RefreshTokenRepository
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.notification.entity.UserNotificationSetting
+import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.auth.util.HashUtils
@@ -26,12 +28,18 @@ class AuthService(
     private val refreshTokenRevoker: RefreshTokenRevoker,
     private val jwtProvider: JwtProvider,
     private val jwtProperties: JwtProperties,
+    private val notificationSettingRepository: UserNotificationSettingRepository,
 ) {
 
     @Transactional
     fun devLogin(nickname: String): AuthTokenResponseDTO {
+        var isNew = false
         val user = userRepository.findByNickname(nickname).orElseGet {
+            isNew = true
             userRepository.save(User(email = "dev-$nickname@gerd.local", nickname = nickname))
+        }
+        if (isNew) {
+            notificationSettingRepository.save(UserNotificationSetting(user = user))
         }
         if (user.status == UserStatus.INACTIVE) throw GeneralException(AuthErrorCode.ACCOUNT_INACTIVE)
         user.updateLastLoginAt()

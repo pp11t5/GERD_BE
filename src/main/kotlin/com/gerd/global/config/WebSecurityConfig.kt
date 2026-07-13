@@ -26,8 +26,6 @@ class WebSecurityConfig(
     companion object {
         val PUBLIC_URLS = arrayOf(
             "/actuator/health",
-            "/actuator/env/**",
-            "/actuator/configprops",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/health/**",
@@ -36,6 +34,7 @@ class WebSecurityConfig(
             "/api/v1/auth/refresh",
             "/api/v1/auth/*/login",
             "/api/v1/auth/*/recover",
+            "/api/v1/consent/terms",
         )
     }
 
