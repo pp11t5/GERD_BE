@@ -26,6 +26,7 @@ class WebSecurityConfig(
     companion object {
         val PUBLIC_URLS = arrayOf(
             "/actuator/health",
+            // 진단용 임시 — OTLP 설정 확인 후 제거 (staging만 노출됨)
             "/actuator/env/**",
             "/actuator/configprops",
             "/swagger-ui/**",
@@ -36,6 +37,7 @@ class WebSecurityConfig(
             "/api/v1/auth/refresh",
             "/api/v1/auth/*/login",
             "/api/v1/auth/*/recover",
+            "/api/v1/consent/terms",
         )
     }
 
