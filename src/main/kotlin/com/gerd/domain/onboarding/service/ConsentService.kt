@@ -1,7 +1,5 @@
 package com.gerd.domain.onboarding.service
 
-import com.gerd.domain.auth.repository.UserRepository
-import com.gerd.domain.notification.entity.UserNotificationSetting
 import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.domain.onboarding.dto.ConsentRequestDTO
 import com.gerd.domain.onboarding.entity.Term
@@ -21,7 +19,6 @@ class ConsentService(
     private val userConsentRepository: UserConsentRepository,
     private val termRepository: TermRepository,
     private val userNotificationSettingRepository: UserNotificationSettingRepository,
-    private val userRepository: UserRepository,
 ) {
 
     fun getTerms(): List<Term> = termRepository.findLatestAll()
@@ -34,38 +31,46 @@ class ConsentService(
         val consent = userConsentRepository.findLatestByUserIdAndTermCode(userId, "marketing")
             ?: throw GeneralException(OnboardingErrorCode.MARKETING_CONSENT_NOT_FOUND)
         consent.updateAgreement(!consent.agreed, LocalDateTime.now())
+        applyMarketingToNotificationSetting(userId, consent.agreed)
         return consent.agreed
     }
 
     @Transactional
     fun submitConsent(userId: Long, request: ConsentRequestDTO) {
-        val termIds = request.consents.map { it.termId }
-        val terms = termRepository.findAllById(termIds)
+        val latestTerms = termRepository.findLatestAll()
         val agreedByTermId = request.consents.associateBy { it.termId }
 
-        val allRequiredAgreed = terms
+        val allRequiredAgreed = latestTerms
             .filter { it.required }
             .all { agreedByTermId[it.id]?.agreed == true }
         if (!allRequiredAgreed) {
             throw GeneralException(OnboardingErrorCode.REQUIRED_CONSENT_NOT_AGREED)
         }
 
-        // 알림 설정은 마케팅 동의와 무관하게 기본값으로 생성 — 마스킹은 조회 시 처리
-        if (userNotificationSettingRepository.findById(userId).isEmpty) {
-            userNotificationSettingRepository.save(
-                UserNotificationSetting(user = userRepository.getReferenceById(userId)),
-            )
-        }
+        val marketingTerm = latestTerms.firstOrNull { it.code == "marketing" }
+        val marketingAgreed = marketingTerm?.let { agreedByTermId[it.id]?.agreed } ?: false
+        applyMarketingToNotificationSetting(userId, marketingAgreed)
 
         val now = LocalDateTime.now()
         val existingByTermId = userConsentRepository.findByIdUserId(userId)
             .associateBy { it.id.termId }
 
-        val consents = terms.map { term ->
+        val consents = latestTerms.map { term ->
             val agreed = agreedByTermId[term.id]?.agreed ?: false
             existingByTermId[term.id]?.apply { updateAgreement(agreed, now) }
                 ?: UserConsent(UserConsentId(userId, term.id), term, agreed, now)
         }
         userConsentRepository.saveAll(consents)
+    }
+
+    private fun applyMarketingToNotificationSetting(userId: Long, enabled: Boolean) {
+        userNotificationSettingRepository.findById(userId).ifPresent { setting ->
+            setting.update(
+                postMealNotificationEnabled = enabled,
+                dailyRecordNotificationEnabled = enabled,
+                dailyNotificationTime = setting.dailyNotificationTime,
+                weeklyReportEnabled = enabled,
+            )
+        }
     }
 }
