@@ -10,11 +10,11 @@ data class NotificationSettingResponseDTO(
     val weeklyReportEnabled: Boolean,
 ) {
     companion object {
-        fun from(setting: UserNotificationSetting) = NotificationSettingResponseDTO(
-            postMealNotificationEnabled = setting.postMealNotificationEnabled,
-            dailyRecordNotificationEnabled = setting.dailyRecordNotificationEnabled,
+        fun from(setting: UserNotificationSetting, marketingAgreed: Boolean) = NotificationSettingResponseDTO(
+            postMealNotificationEnabled = setting.postMealNotificationEnabled && marketingAgreed,
+            dailyRecordNotificationEnabled = setting.dailyRecordNotificationEnabled && marketingAgreed,
             dailyNotificationTime = setting.dailyNotificationTime,
-            weeklyReportEnabled = setting.weeklyReportEnabled,
+            weeklyReportEnabled = setting.weeklyReportEnabled && marketingAgreed,
         )
     }
 }
