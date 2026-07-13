@@ -1,6 +1,9 @@
 package com.gerd.domain.notification.service
 
+import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
+import com.gerd.domain.notification.entity.enums.NotificationType
 import com.gerd.domain.notification.repository.NotificationPendingRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
@@ -20,20 +23,37 @@ private val log = KotlinLogging.logger {}
 class PostMealNotificationUseCase(
     private val notificationPendingRepository: NotificationPendingRepository,
     private val postMealPendingSender: PostMealPendingSender,
+    private val userRepository: UserRepository,
 ) {
 
     // 리스너에서 호출 — 식후 알림 예약
     @Transactional
     fun enqueue(userId: Long, mealRecordId: Long) {
         val now = LocalDateTime.now()
+        val user = userRepository.getReferenceById(userId)
 
-        // 1) 야간 판정 먼저 — 식후 2h가 야간(22:00~09:00)에 걸리면 다음 09:00로 이연(delayed=true)
+        // 1) 야간 판정 먼저 — 식후 2h가 야간(22:00~09:00)에 걸리면 다음 09:00로 이연
         val (scheduledAt, delayed) = resolveSchedule(now.plusHours(POST_MEAL_DELAY_HOURS))
 
         // 2) 쿨다운은 '낮 즉시 발송분'에만 — 야간 이연분은 09:00 묶음 규칙이라 제외
-        // TODO: if (!delayed && 90분(COOLDOWN_MINUTES) 내 등록 이력 존재) return  (식사 기록 API 후 구현)
+        // 90분 내 이력 존재 시 return, 발송하지않음
+        if (!delayed &&
+            notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
+                userId, NotificationType.POST_MEAL, now.minusMinutes(COOLDOWN_MINUTES),
+            )
+        ) return
 
-        // 3) NotificationPending save (type = POST_MEAL 고정, mealRecordId·scheduledAt·delayed)
+        // 3) NotificationPending 저장
+        notificationPendingRepository.save(
+            NotificationPending(
+                user = user,
+                type = NotificationType.POST_MEAL,
+                mealRecordId = mealRecordId,
+                scheduledAt = scheduledAt,
+                delayed = delayed,
+            )
+        )
+
     }
 
     // 기준시각이 야간이면 다음 09:00로 이연
@@ -47,12 +67,13 @@ class PostMealNotificationUseCase(
         return date.atTime(DEFERRED_HOUR) to true
     }
 
-    // 기록 삭제 시 PENDING된 알림 취소
+    // 기록 삭제 시 PENDING된 알림 취소 (delayed 여부 무관 — 해당 식사의 미발송분 전체)
     @Transactional
     fun cancelByMealRecordId(userId: Long, mealRecordId: Long) {
-        // TODO 구현
-        // 1) mealRecordId로 PENDING 조회 (status=PENDING)
-        // 2) 각 PENDING cancel() → status=CANCELLED
+        notificationPendingRepository
+            .findByMealRecordIdAndUserIdAndStatus(mealRecordId, userId, PENDING)
+            .forEach { it.cancel() }
+        // managed 엔티티라 트랜잭션 커밋 시 status=CANCELLED가 자동 flush
     }
 
     // 크론에서 호출 — due PENDING을 유저별로 묶어 비동기 발송에 위임

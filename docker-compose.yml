@@ -14,5 +14,29 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  # ── APM: Grafana + Prometheus (OTLP 수신 올인원) ──────────────
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    profiles: ["apm", "loadtest"]
+    ports:
+      - "3001:3000"   # Grafana (host 3000은 프론트 dev 서버가 사용 → 3001)
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    environment:
+      TZ: Asia/Seoul
+    restart: unless-stopped
+
+  # ── k6 부하 생성기 (on-demand) ────────────────────────────────
+  k6:
+    image: grafana/k6:latest
+    profiles: ["loadtest"]
+    environment:
+      BASE_URL: ${BASE_URL:-http://host.docker.internal:8080}
+      TOKEN: ${TOKEN:-}
+    volumes:
+      - ./load-tests:/scripts
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   postgres_data:
