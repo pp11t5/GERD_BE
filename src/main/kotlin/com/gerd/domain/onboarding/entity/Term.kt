@@ -7,10 +7,14 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.LocalDate
 
 @Entity
-@Table(name = "terms")
+@Table(
+    name = "terms",
+    uniqueConstraints = [UniqueConstraint(name = "uq_terms_code_effective_date", columnNames = ["code", "effective_date"])],
+)
 class Term(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
