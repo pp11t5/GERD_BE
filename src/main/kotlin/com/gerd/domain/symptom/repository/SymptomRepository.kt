@@ -48,7 +48,7 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
     ): List<java.time.LocalDate>
 
     // 특정 기간 동안의 증상 상태 조회
-    @Query("SELECT DISTINCT s FROM Symptom s JOIN FETCH s.symptomTypes WHERE s.user.id = :userId AND s.occurredAt BETWEEN :start AND :end")
+    @Query("SELECT DISTINCT s FROM Symptom s LEFT JOIN FETCH s.symptomTypes WHERE s.user.id = :userId AND s.occurredAt BETWEEN :start AND :end")
     fun findByUserAndPeriod(
         @Param("userId") userId: Long,
         @Param("start") start: LocalDateTime,
