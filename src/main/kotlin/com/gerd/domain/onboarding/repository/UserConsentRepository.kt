@@ -15,7 +15,7 @@ interface UserConsentRepository : JpaRepository<UserConsent, UserConsentId> {
         JOIN uc.term t
         WHERE uc.id.userId = :userId
           AND t.code = :code
-          AND t.effectiveDate = (SELECT MAX(t2.effectiveDate) FROM Term t2 WHERE t2.code = :code)
+          AND t.effectiveDate = (SELECT MAX(t2.effectiveDate) FROM Term t2 WHERE t2.code = :code AND t2.effectiveDate <= CURRENT_DATE)
     """)
     fun findLatestByUserIdAndTermCode(@Param("userId") userId: Long, @Param("code") code: String): UserConsent?
 }
