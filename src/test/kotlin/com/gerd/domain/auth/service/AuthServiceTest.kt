@@ -8,6 +8,8 @@ import com.gerd.domain.auth.repository.RefreshTokenRepository
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.auth.util.HashUtils
+import com.gerd.domain.notification.entity.UserNotificationSetting
+import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.config.properties.JwtProperties
 import com.gerd.global.fixture.RefreshTokenFixture
@@ -50,6 +52,9 @@ class AuthServiceTest {
     @Mock
     private lateinit var jwtProperties: JwtProperties
 
+    @Mock
+    private lateinit var notificationSettingRepository: UserNotificationSettingRepository
+
     @InjectMocks
     private lateinit var authService: AuthService
 
@@ -81,7 +86,7 @@ class AuthServiceTest {
         inner class `신규 생성` {
 
             @Test
-            fun `닉네임에 해당하는 사용자가 없으면 개발용 사용자를 생성하고 토큰을 발급한다`() {
+            fun `닉네임에 해당하는 사용자가 없으면 개발용 사용자를 생성하고 알림 설정도 함께 생성한다`() {
                 val user = UserFixture.user()
                 whenever(userRepository.findByNickname("unknown")).thenReturn(Optional.empty())
                 whenever(userRepository.save(any<User>())).thenReturn(user)
@@ -94,6 +99,7 @@ class AuthServiceTest {
                 assertThat(result.accessToken).isEqualTo("access.token")
                 assertThat(result.refreshToken).isEqualTo("refresh.token")
                 assertThat(result.userId).isEqualTo("1")
+                verify(notificationSettingRepository).save(any<UserNotificationSetting>())
             }
         }
     }

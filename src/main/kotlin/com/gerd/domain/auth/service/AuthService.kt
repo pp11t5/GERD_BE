@@ -33,8 +33,9 @@ class AuthService(
 
     @Transactional
     fun devLogin(nickname: String): AuthTokenResponseDTO {
-        val isNew = userRepository.findByNickname(nickname).isEmpty
+        var isNew = false
         val user = userRepository.findByNickname(nickname).orElseGet {
+            isNew = true
             userRepository.save(User(email = "dev-$nickname@gerd.local", nickname = nickname))
         }
         if (isNew) {
