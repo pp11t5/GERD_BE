@@ -31,10 +31,10 @@ class UserNotificationSetting(
     @Column(name = "user_id")
     val userId: Long? = null,
 
-    postMealNotificationEnabled: Boolean = true,
-    dailyRecordNotificationEnabled: Boolean = true,
+    postMealNotificationEnabled: Boolean = false,
+    dailyRecordNotificationEnabled: Boolean = false,
     dailyNotificationTime: DailyNotificationTime = DailyNotificationTime.NIGHT_9,
-    weeklyReportEnabled: Boolean = true,
+    weeklyReportEnabled: Boolean = false,
 
 ) : BaseTimeEntity() {
 
