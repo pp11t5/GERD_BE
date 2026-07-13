@@ -174,5 +174,14 @@ class MyPageControllerTest @Autowired constructor(
             percentage = 66.7,
         ),
         mealCount = MealCount(4, 2, 1, 0),
+        recordedSymptom = WeeklyReportResponseDTO.RecordedSymptom(
+            symptomCount = 0,
+            averageTime = java.time.LocalTime.of(8, 0).atOffset(java.time.ZoneOffset.ofHours(9)),
+            averageLevel = 0,
+            throatForeignBodyCount = 0,
+            acidRefluxCount = 0,
+            coughCount = 0,
+            chestTightnessCount = 0,
+        ),
     )
 }
