@@ -7,7 +7,6 @@ import com.gerd.domain.onboarding.entity.id.UserConsentId
 import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.TermRepository
 import com.gerd.domain.onboarding.repository.UserConsentRepository
-import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.notification.entity.UserNotificationSetting
 import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.global.apiPayload.GeneralException
@@ -41,9 +40,6 @@ class ConsentServiceTest {
     @Mock
     private lateinit var userNotificationSettingRepository: UserNotificationSettingRepository
 
-    @Mock
-    private lateinit var userRepository: UserRepository
-
     @InjectMocks
     private lateinit var consentService: ConsentService
 
@@ -70,6 +66,8 @@ class ConsentServiceTest {
         ),
     )
 
+    private fun existingSetting() = UserNotificationSetting(user = UserFixture.user())
+
     @Nested
     inner class `submitConsent` {
 
@@ -77,45 +75,50 @@ class ConsentServiceTest {
         inner class `성공` {
 
             @Test
-            fun `기존 동의가 없으면 4개 약관을 신규 저장하고 알림 설정을 기본값으로 생성한다`() {
-                whenever(termRepository.findAllById(listOf(1L, 2L, 3L, 4L))).thenReturn(allTerms)
+            fun `마케팅 동의 시 알림 설정을 모두 true로 업데이트한다`() {
+                val setting = existingSetting()
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
+                whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
+                whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.of(setting))
+
+                consentService.submitConsent(1L, allConsentRequest(marketing = true))
+
+                assertThat(setting.postMealNotificationEnabled).isTrue()
+                assertThat(setting.weeklyReportEnabled).isTrue()
+            }
+
+            @Test
+            fun `마케팅 미동의 시 알림 설정을 모두 false로 업데이트한다`() {
+                val setting = existingSetting()
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
+                whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
+                whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.of(setting))
+
+                consentService.submitConsent(1L, allConsentRequest(marketing = false))
+
+                assertThat(setting.postMealNotificationEnabled).isFalse()
+                assertThat(setting.weeklyReportEnabled).isFalse()
+            }
+
+            @Test
+            fun `알림 설정이 없어도 약관 저장은 정상 수행된다`() {
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
                 whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
                 whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.empty())
-                whenever(userRepository.getReferenceById(1L)).thenReturn(UserFixture.user())
 
                 consentService.submitConsent(1L, allConsentRequest())
 
                 val captor = argumentCaptor<List<UserConsent>>()
                 verify(userConsentRepository).saveAll(captor.capture())
                 assertThat(captor.firstValue).hasSize(4)
-                assertThat(captor.firstValue.first { it.id.termId == 4L }.agreed).isFalse()
-
-                // 알림 설정은 마케팅 동의와 무관하게 기본값으로 생성
-                val settingCaptor = argumentCaptor<UserNotificationSetting>()
-                verify(userNotificationSettingRepository).save(settingCaptor.capture())
-                assertThat(settingCaptor.firstValue.postMealNotificationEnabled).isTrue()
-                assertThat(settingCaptor.firstValue.weeklyReportEnabled).isTrue()
-            }
-
-            @Test
-            fun `알림 설정이 이미 존재하면 새로 생성하지 않는다`() {
-                whenever(termRepository.findAllById(listOf(1L, 2L, 3L, 4L))).thenReturn(allTerms)
-                whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
-                whenever(userNotificationSettingRepository.findById(1L))
-                    .thenReturn(Optional.of(UserNotificationSetting(user = UserFixture.user())))
-
-                consentService.submitConsent(1L, allConsentRequest())
-
-                verify(userNotificationSettingRepository, never()).save(any())
             }
 
             @Test
             fun `기존 동의가 있으면 해당 행을 갱신한다`() {
                 val existing = UserConsent(UserConsentId(1L, 4L), marketingTerm, agreed = true, agreedAt = LocalDateTime.now())
-                whenever(termRepository.findAllById(listOf(1L, 2L, 3L, 4L))).thenReturn(allTerms)
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
                 whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(listOf(existing))
-                whenever(userNotificationSettingRepository.findById(1L))
-                    .thenReturn(Optional.of(UserNotificationSetting(user = UserFixture.user())))
+                whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.of(existingSetting()))
 
                 consentService.submitConsent(1L, allConsentRequest(marketing = false))
 
@@ -137,7 +140,7 @@ class ConsentServiceTest {
                         ConsentRequestDTO.ConsentItem(4L, false),
                     ),
                 )
-                whenever(termRepository.findAllById(listOf(1L, 2L, 3L, 4L))).thenReturn(allTerms)
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
 
                 assertThatThrownBy { consentService.submitConsent(1L, request) }
                     .isInstanceOf(GeneralException::class.java)
@@ -180,25 +183,32 @@ class ConsentServiceTest {
     inner class `toggleMarketing` {
 
         @Test
-        fun `마케팅 동의를 off에서 on으로 전환하고 변경된 상태를 반환한다`() {
+        fun `마케팅 동의를 off에서 on으로 전환하고 알림 설정을 활성화한다`() {
+            val setting = existingSetting()
             val consent = UserConsent(UserConsentId(1L, 4L), marketingTerm, agreed = false, agreedAt = LocalDateTime.now())
             whenever(userConsentRepository.findLatestByUserIdAndTermCode(1L, "marketing")).thenReturn(consent)
+            whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.of(setting))
 
             val result = consentService.toggleMarketing(1L)
 
             assertThat(result).isTrue()
             assertThat(consent.agreed).isTrue()
+            assertThat(setting.postMealNotificationEnabled).isTrue()
+            assertThat(setting.weeklyReportEnabled).isTrue()
         }
 
         @Test
-        fun `마케팅 동의를 on에서 off로 전환하고 변경된 상태를 반환한다`() {
+        fun `마케팅 동의를 on에서 off로 전환하고 알림 설정을 비활성화한다`() {
+            val setting = existingSetting()
             val consent = UserConsent(UserConsentId(1L, 4L), marketingTerm, agreed = true, agreedAt = LocalDateTime.now())
             whenever(userConsentRepository.findLatestByUserIdAndTermCode(1L, "marketing")).thenReturn(consent)
+            whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.of(setting))
 
             val result = consentService.toggleMarketing(1L)
 
             assertThat(result).isFalse()
             assertThat(consent.agreed).isFalse()
+            assertThat(setting.postMealNotificationEnabled).isFalse()
         }
 
         @Test
