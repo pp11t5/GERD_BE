@@ -1,6 +1,5 @@
 package com.gerd.domain.onboarding.service
 
-import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.domain.onboarding.dto.ConsentRequestDTO
 import com.gerd.domain.onboarding.entity.Term
 import com.gerd.domain.onboarding.entity.UserConsent
@@ -18,7 +17,6 @@ import java.time.LocalDateTime
 class ConsentService(
     private val userConsentRepository: UserConsentRepository,
     private val termRepository: TermRepository,
-    private val userNotificationSettingRepository: UserNotificationSettingRepository,
 ) {
 
     fun getTerms(): List<Term> = termRepository.findLatestAll()
@@ -31,7 +29,6 @@ class ConsentService(
         val consent = userConsentRepository.findLatestByUserIdAndTermCode(userId, "marketing")
             ?: throw GeneralException(OnboardingErrorCode.MARKETING_CONSENT_NOT_FOUND)
         consent.updateAgreement(!consent.agreed, LocalDateTime.now())
-        applyMarketingToNotificationSetting(userId, consent.agreed)
         return consent.agreed
     }
 
@@ -47,10 +44,6 @@ class ConsentService(
             throw GeneralException(OnboardingErrorCode.REQUIRED_CONSENT_NOT_AGREED)
         }
 
-        val marketingTerm = latestTerms.firstOrNull { it.code == "marketing" }
-        val marketingAgreed = marketingTerm?.let { agreedByTermId[it.id]?.agreed } ?: false
-        applyMarketingToNotificationSetting(userId, marketingAgreed)
-
         val now = LocalDateTime.now()
         val existingByTermId = userConsentRepository.findByIdUserId(userId)
             .associateBy { it.id.termId }
@@ -61,16 +54,5 @@ class ConsentService(
                 ?: UserConsent(UserConsentId(userId, term.id), term, agreed, now)
         }
         userConsentRepository.saveAll(consents)
-    }
-
-    private fun applyMarketingToNotificationSetting(userId: Long, enabled: Boolean) {
-        userNotificationSettingRepository.findById(userId).ifPresent { setting ->
-            setting.update(
-                postMealNotificationEnabled = enabled,
-                dailyRecordNotificationEnabled = enabled,
-                dailyNotificationTime = setting.dailyNotificationTime,
-                weeklyReportEnabled = enabled,
-            )
-        }
     }
 }
