@@ -35,6 +35,7 @@ class OAuthServiceTest {
     @Mock private lateinit var authService: AuthService
     @Mock private lateinit var oidcVerifierRegistry: OidcVerifierRegistry
     @Mock private lateinit var userAccountRegistrar: UserAccountRegistrar
+    @Mock private lateinit var nicknameService: NicknameService
 
     @InjectMocks private lateinit var oAuthService: OAuthService
 
@@ -43,7 +44,7 @@ class OAuthServiceTest {
 
         private val idToken = "id.token"
         private val provider = AuthProvider.KAKAO
-        private val claims = OidcClaims(sub = "kakao-123", email = "user@test.com", nickname = "qa_f_8c3e", picture = null)
+        private val claims = OidcClaims(sub = "kakao-123", email = "user@test.com")
 
         @Nested
         inner class `성공` {
@@ -117,7 +118,7 @@ class OAuthServiceTest {
 
             @Test
             fun `신규 유저에 email claim이 없으면 EMAIL_REQUIRED를 던진다`() {
-                val claimsWithoutEmail = OidcClaims(sub = "kakao-123", email = null, nickname = "qa_f_8c3e", picture = null)
+                val claimsWithoutEmail = OidcClaims(sub = "kakao-123", email = null)
                 val oidcVerifier = mock<OidcVerifier>()
 
                 whenever(oidcVerifierRegistry.resolve(provider)).thenReturn(oidcVerifier)
@@ -138,7 +139,7 @@ class OAuthServiceTest {
 
         private val idToken = "id.token"
         private val provider = AuthProvider.KAKAO
-        private val claims = OidcClaims(sub = "kakao-456", email = "deleted@test.com", nickname = "deleted-user", picture = null)
+        private val claims = OidcClaims(sub = "kakao-456", email = "deleted@test.com")
 
         @Nested
         inner class `성공` {
@@ -148,7 +149,7 @@ class OAuthServiceTest {
                 val deletedUser = UserFixture.deletedUser()
                 val authAccount = AuthAccount(userId = 4L, user = deletedUser, provider = provider, providerAccountId = claims.sub)
                 val oidcVerifier = mock<OidcVerifier>()
-                val tokenResponse = AuthTokenFixture.userTokenResponse(userId = "4", email = "deleted@test.com")
+                val tokenResponse = AuthTokenFixture.userTokenResponse(userId = "4")
 
                 whenever(oidcVerifierRegistry.resolve(provider)).thenReturn(oidcVerifier)
                 whenever(oidcVerifier.verify(idToken)).thenReturn(claims)

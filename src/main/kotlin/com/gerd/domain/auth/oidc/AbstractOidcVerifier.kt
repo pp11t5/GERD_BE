@@ -2,7 +2,6 @@ package com.gerd.domain.auth.oidc
 
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.global.apiPayload.GeneralException
-import io.jsonwebtoken.Claims
 import io.jsonwebtoken.ExpiredJwtException
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
@@ -68,8 +67,6 @@ abstract class AbstractOidcVerifier(
             OidcClaims(
                 sub = claims.subject,
                 email = claims["email"] as? String,
-                nickname = extractNickname(claims),
-                picture = claims["picture"] as? String,
             )
         } catch (e: ExpiredJwtException) {
             throw GeneralException(AuthErrorCode.EXPIRED_TOKEN)
@@ -78,6 +75,4 @@ abstract class AbstractOidcVerifier(
         }
     }
 
-    // 프로바이더마다 닉네임 클레임 키가 다르므로 재정의 허용
-    protected open fun extractNickname(claims: Claims): String? = claims["nickname"] as? String
 }

@@ -5,7 +5,6 @@ import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.AuthProvider
 import com.gerd.domain.auth.entity.enums.UserStatus
 import com.gerd.domain.auth.exception.AuthErrorCode
-import com.gerd.domain.auth.oidc.OidcClaims
 import com.gerd.domain.auth.oidc.OidcVerifierRegistry
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
@@ -27,6 +26,7 @@ class OAuthService(
     private val authService: AuthService,
     private val oidcVerifierRegistry: OidcVerifierRegistry,
     private val userAccountRegistrar: UserAccountRegistrar,
+    private val nicknameService: NicknameService,
 ) {
 
     // provider별 검증기로 분기 → 기존 계정이면 로그인, 신규면 가입 후 로그인
@@ -52,14 +52,12 @@ class OAuthService(
         }
 
         val email = claims.email ?: throw GeneralException(AuthErrorCode.EMAIL_REQUIRED)
-        val nickname = claims.nickname ?: throw GeneralException(AuthErrorCode.NICKNAME_REQUIRED)
 
-        // REQUIRES_NEW 트랜잭션에서 user + authAccount 생성 — 실패 시 이 트랜잭션만 롤백
         val userId = userAccountRegistrar.findOrRegister(
             email = email,
             provider = provider,
             providerAccountId = claims.sub,
-        ) { buildUser(claims, email, nickname) }
+        ) { buildUser(email) }
 
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
@@ -103,9 +101,5 @@ class OAuthService(
         }
     }
 
-    private fun buildUser(claims: OidcClaims, email: String, nickname: String) = User(
-        email = email,
-        nickname = nickname,
-        profileImage = claims.picture,
-    )
+    private fun buildUser(email: String) = User(email = email, nickname = nicknameService.generateUniqueNickname())
 }

@@ -6,6 +6,4 @@ package com.gerd.domain.auth.oidc
 data class OidcClaims(
     val sub: String,
     val email: String?,
-    val nickname: String?,
-    val picture: String?,
 )

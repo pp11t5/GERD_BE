@@ -116,7 +116,7 @@ class UserRepositoryTest @Autowired constructor(
 
         // status=DELETED로 만든 뒤 deleted_at을 원하는 시각으로 고정해 저장
         private fun persistDeletedUser(email: String, deletedAt: LocalDateTime): Long {
-            val user = User(email = email, nickname = "n", role = UserRole.USER)
+            val user = User(email = email, nickname = email.substringBefore("@"), role = UserRole.USER)
             user.withdraw()
             ReflectionTestUtils.setField(user, "deletedAt", deletedAt)
             val id = userRepository.saveAndFlush(user).id ?: error("saved user id must not be null")

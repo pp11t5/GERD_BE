@@ -21,6 +21,15 @@ interface UserRepository : JpaRepository<User, Long> {
     @Query(value = "SELECT * FROM users WHERE user_id = :userId", nativeQuery = true)
     fun findByIdIncludingDeleted(@Param("userId") userId: Long): Optional<User>
 
+    // @SQLRestriction 우회 — 탈퇴 유예 중인 유저의 닉네임도 점유로 간주해 중복 체크에 포함
+    // base는 NicknameWords 조합(고정 단어 목록)만 들어오므로 LIKE 와일드카드 이스케이프 불필요
+    @Query(value = "SELECT nickname FROM users WHERE nickname = :base OR nickname LIKE CONCAT(:base, '%')", nativeQuery = true)
+    fun findNicknamesByBaseIncludingDeleted(@Param("base") base: String): List<String>
+
+    // @SQLRestriction 우회 — 탈퇴 유예 중인 유저의 닉네임도 점유로 간주해 중복 체크 (본인 제외)
+    @Query(value = "SELECT EXISTS(SELECT 1 FROM users WHERE nickname = :nickname AND user_id <> :excludeUserId)", nativeQuery = true)
+    fun existsByNicknameIncludingDeleted(@Param("nickname") nickname: String, @Param("excludeUserId") excludeUserId: Long): Boolean
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :userId")
     fun findByIdForUpdate(@Param("userId") userId: Long): User?
