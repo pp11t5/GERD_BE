@@ -119,7 +119,7 @@ class ReportServiceTest {
     )
 
     private fun lastWeekRange(): Pair<LocalDate, LocalDate> {
-        val thisWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+        val thisWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         return thisWeekStart.minusWeeks(1) to thisWeekStart.minusDays(1)
     }
 }

@@ -194,7 +194,7 @@ class ReportService(
     private data class WeekRange(val start: LocalDate, val end: LocalDate)
 
     private fun lastWeekRange(): WeekRange {
-        val thisWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+        val thisWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         return WeekRange(
             start = thisWeekStart.minusWeeks(1),
             end = thisWeekStart.minusDays(1),
