@@ -21,9 +21,9 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 
 @ExtendWith(MockitoExtension::class)
 class TimeLineServiceTest {
@@ -344,64 +344,58 @@ class TimeLineServiceTest {
     }
 
     @Nested
-    inner class `주간 판정 등급 조회` {
+    inner class `월간 판정 등급 조회` {
 
         @Test
-        fun `항상 7개의 날짜를 반환한다`() {
+        fun `해당 월의 일수만큼 반환한다`() {
+            val june = YearMonth.of(2026, 6)
             whenever(mealFoodRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
 
-            val result = service.getWeeklyJudgements(userId, date)
+            val result = service.getMonthlyJudgements(userId, june)
 
-            assertThat(result).hasSize(7)
-        }
-
-        @Test
-        fun `화요일 기준으로 해당 주 일요일부터 토요일까지 반환한다`() {
-            val tuesday = LocalDate.of(2026, 6, 16)
-            whenever(mealFoodRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
-
-            val result = service.getWeeklyJudgements(userId, tuesday)
-
-            assertThat(result.first().date.dayOfWeek).isEqualTo(DayOfWeek.SUNDAY)
-            assertThat(result.last().date.dayOfWeek).isEqualTo(DayOfWeek.SATURDAY)
-            assertThat(result.first().date).isEqualTo(LocalDate.of(2026, 6, 14))
+            assertThat(result).hasSize(30)
+            assertThat(result.first().day).isEqualTo(1)
+            assertThat(result.last().day).isEqualTo(30)
         }
 
         @Test
         fun `식사 기록이 없는 날은 빈 judgementList를 반환한다`() {
+            val june = YearMonth.of(2026, 6)
             whenever(mealFoodRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
 
-            val result = service.getWeeklyJudgements(userId, date)
+            val result = service.getMonthlyJudgements(userId, june)
 
             assertThat(result).allMatch { it.judgementList.isEmpty() }
         }
 
         @Test
-        fun `날짜별 판정 등급이 올바르게 매핑된다`() {
+        fun `일자별 판정 등급이 올바르게 매핑된다`() {
+            val june = YearMonth.of(2026, 6)
             val wednesday = LocalDate.of(2026, 6, 17)
             val food1 = MealRecordFixture.mealFood(id = 1L, eatenAt = wednesday.atTime(8, 0), judgedGrade = JudgmentGrade.RECOMMEND)
             val food2 = MealRecordFixture.mealFood(id = 2L, eatenAt = wednesday.atTime(12, 0), judgedGrade = JudgmentGrade.RISK)
 
             whenever(mealFoodRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(food1, food2))
 
-            val result = service.getWeeklyJudgements(userId, wednesday)
+            val result = service.getMonthlyJudgements(userId, june)
 
-            val wednesdayResult = result.find { it.date == wednesday }!!
-            assertThat(wednesdayResult.judgementList).containsExactlyInAnyOrder(JudgmentGrade.RECOMMEND, JudgmentGrade.RISK)
+            val dayResult = result.find { it.day == 17 }!!
+            assertThat(dayResult.judgementList).containsExactlyInAnyOrder(JudgmentGrade.RECOMMEND, JudgmentGrade.RISK)
         }
 
         @Test
         fun `판정 등급이 null인 음식은 제외된다`() {
+            val june = YearMonth.of(2026, 6)
             val wednesday = LocalDate.of(2026, 6, 17)
             val graded = MealRecordFixture.mealFood(id = 1L, eatenAt = wednesday.atTime(8, 0), judgedGrade = JudgmentGrade.CAUTION)
             val ungraded = MealRecordFixture.mealFood(id = 2L, eatenAt = wednesday.atTime(12, 0), judgedGrade = null)
 
             whenever(mealFoodRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(graded, ungraded))
 
-            val result = service.getWeeklyJudgements(userId, wednesday)
+            val result = service.getMonthlyJudgements(userId, june)
 
-            val wednesdayResult = result.find { it.date == wednesday }!!
-            assertThat(wednesdayResult.judgementList).containsExactly(JudgmentGrade.CAUTION)
+            val dayResult = result.find { it.day == 17 }!!
+            assertThat(dayResult.judgementList).containsExactly(JudgmentGrade.CAUTION)
         }
     }
 }

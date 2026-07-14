@@ -7,19 +7,18 @@ import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.entity.Symptom
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.domain.timeline.dto.MonthlyJudgementResponseDTO
 import com.gerd.domain.timeline.dto.TimeLineItemDTO
 import com.gerd.domain.timeline.dto.TimeLineResponseDTO
-import com.gerd.domain.timeline.dto.WeeklyJudgementResponseDTO
 import com.gerd.domain.timeline.enums.TimeLineIcon
 import com.gerd.domain.timeline.enums.TimeLineType
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalAdjusters
 
 @Service
 @Transactional(readOnly = true)
@@ -159,20 +158,20 @@ class TimeLineService(
         }
     }
 
-    fun getWeeklyJudgements(userId: Long, date: LocalDate): List<WeeklyJudgementResponseDTO> {
-        val sunday = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
-        val saturday = sunday.plusDays(6)
+    fun getMonthlyJudgements(userId: Long, month: YearMonth): List<MonthlyJudgementResponseDTO> {
+        val firstDay = month.atDay(1)
+        val lastDay = month.atEndOfMonth()
 
         val mealFoods = mealFoodRepository.findByUser_IdAndEatenAtBetween(
-            userId, sunday.atStartOfDay(), saturday.plusDays(1).atStartOfDay()
+            userId, firstDay.atStartOfDay(), lastDay.plusDays(1).atStartOfDay()
         )
 
         val gradesByDate = mealFoods.groupBy { it.eatenAt.toLocalDate() }
 
-        return (0..6).map { i ->
-            val day = sunday.plusDays(i.toLong())
-            WeeklyJudgementResponseDTO(
-                date = day,
+        return (1..month.lengthOfMonth()).map { dayOfMonth ->
+            val day = month.atDay(dayOfMonth)
+            MonthlyJudgementResponseDTO(
+                day = dayOfMonth,
                 dayOfWeek = day.dayOfWeek.name,
                 judgementList = gradesByDate[day]?.mapNotNull { it.judgedGrade } ?: emptyList()
             )
