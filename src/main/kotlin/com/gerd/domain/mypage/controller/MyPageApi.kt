@@ -4,6 +4,7 @@ import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.mypage.dto.MedicalInfoResponseDTO
 import com.gerd.domain.mypage.dto.MedicalInfoUpdateRequestDTO
 import com.gerd.domain.mypage.dto.MyPageSummaryResponseDTO
+import com.gerd.domain.mypage.dto.NicknameUpdateRequestDTO
 import com.gerd.domain.mypage.dto.ProfileDetailResponseDTO
 import com.gerd.domain.mypage.dto.WeeklyReportResponseDTO
 import com.gerd.global.annotation.CurrentUser
@@ -29,7 +30,7 @@ interface MyPageApi {
         @CurrentUser userDetails: CustomUserDetails,
     ): ResponseEntity<ApiResponse<MyPageSummaryResponseDTO>>
 
-    @Operation(summary = "프로필 정보 조회", description = "닉네임, 이메일, 병명 등 프로필 전체를 조회합니다.")
+    @Operation(summary = "프로필 정보 조회", description = "닉네임, 소셜 로그인 제공자, 병명 등 프로필 전체를 조회합니다.")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
     @GetMapping("/profile")
     fun getProfile(
@@ -51,6 +52,13 @@ interface MyPageApi {
         @RequestBody request: MedicalInfoUpdateRequestDTO,
     ): ResponseEntity<ApiResponse<Unit>>
 
+    @Operation(summary = "닉네임 수정", description = "마이페이지에서 닉네임을 변경합니다. 이미 사용 중인 닉네임이면 409를 반환합니다.")
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "수정 성공"))
+    @PatchMapping("/nickname")
+    fun updateNickname(
+        @CurrentUser userDetails: CustomUserDetails,
+        @RequestBody request: NicknameUpdateRequestDTO,
+    ): ResponseEntity<ApiResponse<Unit>>
 
     @Operation(summary = "리포트 상세 조회", description = "현재 날짜 기준 지난주 리포트의 상세 내용을 조회합니다.")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
