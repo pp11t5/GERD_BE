@@ -3,6 +3,7 @@ package com.gerd.domain.mypage.service
 import com.gerd.domain.auth.entity.AuthAccount
 import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.AuthProvider
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.auth.service.NicknameService
@@ -164,6 +165,18 @@ class MyPageServiceTest {
             service.updateNickname(userId, request)
 
             verify(nicknameService).changeNickname(userId, "다정한 기린")
+        }
+
+        @Test
+        fun `NicknameService가 중복 닉네임 예외를 던지면 그대로 전파한다`() {
+            val request = NicknameUpdateRequestDTO(nickname = "다정한 기린")
+            whenever(nicknameService.changeNickname(userId, "다정한 기린"))
+                .thenThrow(GeneralException(AuthErrorCode.NICKNAME_ALREADY_IN_USE))
+
+            assertThatThrownBy { service.updateNickname(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.NICKNAME_ALREADY_IN_USE)
         }
     }
 

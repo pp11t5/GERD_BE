@@ -53,7 +53,10 @@ interface MyPageApi {
     ): ResponseEntity<ApiResponse<Unit>>
 
     @Operation(summary = "닉네임 수정", description = "마이페이지에서 닉네임을 변경합니다. 이미 사용 중인 닉네임이면 409를 반환합니다.")
-    @ApiResponses(SwaggerResponse(responseCode = "200", description = "수정 성공"))
+    @ApiResponses(
+        SwaggerResponse(responseCode = "200", description = "수정 성공"),
+        SwaggerResponse(responseCode = "409", description = "이미 사용 중인 닉네임"),
+    )
     @PatchMapping("/nickname")
     fun updateNickname(
         @CurrentUser userDetails: CustomUserDetails,

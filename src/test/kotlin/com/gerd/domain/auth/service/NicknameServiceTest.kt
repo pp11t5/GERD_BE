@@ -5,6 +5,7 @@ import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.UserFixture
 import org.assertj.core.api.Assertions.assertThat
+import org.springframework.dao.DataIntegrityViolationException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -91,6 +92,20 @@ class NicknameServiceTest {
                 .isEqualTo(AuthErrorCode.NICKNAME_ALREADY_IN_USE)
 
             verify(userRepository, never()).findById(eq(userId))
+        }
+
+        @Test
+        fun `exists 체크를 통과했지만 저장 시점에 DB unique 제약을 위반하면 NICKNAME_ALREADY_IN_USE를 던진다`() {
+            val user = UserFixture.user()
+            whenever(userRepository.existsByNicknameIncludingDeleted("다정한 기린", userId)).thenReturn(false)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user))
+            whenever(userRepository.saveAndFlush(user))
+                .thenThrow(DataIntegrityViolationException("duplicate key"))
+
+            assertThatThrownBy { nicknameService.changeNickname(userId, "다정한 기린") }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.NICKNAME_ALREADY_IN_USE)
         }
     }
 }
