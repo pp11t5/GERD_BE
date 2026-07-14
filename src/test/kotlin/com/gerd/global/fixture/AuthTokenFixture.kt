@@ -9,13 +9,11 @@ object AuthTokenFixture {
         accessToken: String = "access.token",
         refreshToken: String = "refresh.token",
         userId: String = "1",
-        email: String = "user@test.com",
         role: UserRole = UserRole.USER,
     ) = AuthTokenResponseDTO(
         accessToken = accessToken,
         refreshToken = refreshToken,
         userId = userId,
-        email = email,
         role = role,
     )
 
@@ -26,7 +24,6 @@ object AuthTokenFixture {
         accessToken = accessToken,
         refreshToken = refreshToken,
         userId = "3",
-        email = "admin@test.com",
         role = UserRole.ADMIN,
     )
 }

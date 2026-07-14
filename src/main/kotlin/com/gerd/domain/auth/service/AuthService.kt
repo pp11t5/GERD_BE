@@ -66,7 +66,6 @@ class AuthService(
             accessToken = accessToken,
             refreshToken = refreshToken.value,
             userId = userId.toString(),
-            email = user.email,
             role = user.role,
         )
     }
@@ -102,8 +101,6 @@ class AuthService(
         return UserMeResponseDTO(
             userId = user.id?.toString() ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND),
             nickname = user.nickname,
-            email = user.email,
-            profileImage = user.profileImage,
         )
     }
 
