@@ -5,6 +5,7 @@ import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.service.NicknameService
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
 import com.gerd.domain.food.entity.Allergen
@@ -14,6 +15,7 @@ import com.gerd.domain.mypage.dto.MealCount
 import com.gerd.domain.mypage.dto.MedicalInfoResponseDTO
 import com.gerd.domain.mypage.dto.MedicalInfoUpdateRequestDTO
 import com.gerd.domain.mypage.dto.MyPageSummaryResponseDTO
+import com.gerd.domain.mypage.dto.NicknameUpdateRequestDTO
 import com.gerd.domain.mypage.dto.ProfileDetailResponseDTO
 import com.gerd.domain.onboarding.entity.UserAllergen
 import com.gerd.domain.onboarding.entity.UserMedication
@@ -38,6 +40,7 @@ class MyPageService(
     private val userMedicationRepository: UserMedicationRepository,
     private val userFoodDictionaryRepository: UserFoodDictionaryRepository,
     private val reportService: ReportService,
+    private val nicknameService: NicknameService,
 ) {
 
     fun getProfileSummary(userId: Long): MyPageSummaryResponseDTO {
@@ -54,7 +57,6 @@ class MyPageService(
         return MyPageSummaryResponseDTO(
             profile = MyPageSummaryResponseDTO.ProfileSummary(
                 nickName = user.nickname,
-                profileImage = user.profileImage,
                 disease = userProfile.diseaseType,
             ),
             foodHistory = MyPageSummaryResponseDTO.FoodHistory(
@@ -86,13 +88,15 @@ class MyPageService(
         val etcCount = maxOf(0, allItems.size - 1)
         return ProfileDetailResponseDTO(
             nickName = user.nickname,
-            profileImage = user.profileImage,
-            email = user.email,
             provider = authAccount.provider,
             diseaseType = userProfile.diseaseType,
             representativeInfo = representativeInfo,
             etcCount = etcCount,
         )
+    }
+
+    fun updateNickname(userId: Long, request: NicknameUpdateRequestDTO) {
+        nicknameService.changeNickname(userId, request.nickname)
     }
 
     fun getHealthInfo(userId: Long): MedicalInfoResponseDTO {

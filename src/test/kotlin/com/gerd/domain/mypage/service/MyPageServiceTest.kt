@@ -3,8 +3,10 @@ package com.gerd.domain.mypage.service
 import com.gerd.domain.auth.entity.AuthAccount
 import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.AuthProvider
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.service.NicknameService
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
 import com.gerd.domain.food.entity.Allergen
@@ -12,6 +14,7 @@ import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.repository.AllergenRepository
 import com.gerd.domain.mypage.dto.MealCount
 import com.gerd.domain.mypage.dto.MedicalInfoUpdateRequestDTO
+import com.gerd.domain.mypage.dto.NicknameUpdateRequestDTO
 import com.gerd.domain.mypage.dto.WeeklySummaryResponseDTO
 import com.gerd.domain.onboarding.entity.UserMedication
 import com.gerd.domain.onboarding.entity.UserProfile
@@ -63,6 +66,9 @@ class MyPageServiceTest {
     @Mock
     private lateinit var reportService: ReportService
 
+    @Mock
+    private lateinit var nicknameService: NicknameService
+
     private val service by lazy {
         MyPageService(
             userRepository,
@@ -73,6 +79,7 @@ class MyPageServiceTest {
             userMedicationRepository,
             userFoodDictionaryRepository,
             reportService,
+            nicknameService,
         )
     }
 
@@ -142,10 +149,34 @@ class MyPageServiceTest {
 
             val result = service.getProfile(userId)
 
-            assertThat(result.email).isEqualTo("user@test.com")
             assertThat(result.provider).isEqualTo(AuthProvider.KAKAO)
             assertThat(result.representativeInfo).isEqualTo("우유")
             assertThat(result.etcCount).isEqualTo(1)
+        }
+    }
+
+    @Nested
+    inner class `닉네임 수정` {
+
+        @Test
+        fun `NicknameService에 위임한다`() {
+            val request = NicknameUpdateRequestDTO(nickname = "다정한 기린")
+
+            service.updateNickname(userId, request)
+
+            verify(nicknameService).changeNickname(userId, "다정한 기린")
+        }
+
+        @Test
+        fun `NicknameService가 중복 닉네임 예외를 던지면 그대로 전파한다`() {
+            val request = NicknameUpdateRequestDTO(nickname = "다정한 기린")
+            whenever(nicknameService.changeNickname(userId, "다정한 기린"))
+                .thenThrow(GeneralException(AuthErrorCode.NICKNAME_ALREADY_IN_USE))
+
+            assertThatThrownBy { service.updateNickname(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.NICKNAME_ALREADY_IN_USE)
         }
     }
 

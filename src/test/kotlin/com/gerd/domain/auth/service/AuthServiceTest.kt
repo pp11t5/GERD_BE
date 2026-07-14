@@ -77,7 +77,6 @@ class AuthServiceTest {
                 assertThat(result.accessToken).isEqualTo("access.token")
                 assertThat(result.refreshToken).isEqualTo("refresh.token")
                 assertThat(result.userId).isEqualTo("1")
-                assertThat(result.email).isEqualTo("user@test.com")
                 assertThat(user.lastLoginAt).isNotNull
             }
         }

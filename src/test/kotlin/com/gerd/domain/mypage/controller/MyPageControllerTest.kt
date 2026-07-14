@@ -7,6 +7,7 @@ import com.gerd.domain.mypage.dto.MealCount
 import com.gerd.domain.mypage.dto.MedicalInfoResponseDTO
 import com.gerd.domain.mypage.dto.MedicalInfoUpdateRequestDTO
 import com.gerd.domain.mypage.dto.MyPageSummaryResponseDTO
+import com.gerd.domain.mypage.dto.NicknameUpdateRequestDTO
 import com.gerd.domain.mypage.dto.WeeklyReportResponseDTO
 import com.gerd.domain.mypage.service.MyPageService
 import com.gerd.domain.onboarding.entity.enums.DiseaseType
@@ -114,6 +115,41 @@ class MyPageControllerTest @Autowired constructor(
     }
 
     @Nested
+    inner class `닉네임 수정` {
+
+        @Test
+        @WithCustomUser(userId = 1L)
+        fun `유효한 요청이면 닉네임을 변경하고 성공 응답을 반환한다`() {
+            val request = NicknameUpdateRequestDTO(nickname = "다정한 기린")
+
+            mockMvc.patch("/api/v1/my-page/nickname") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.isSuccess") { value(true) }
+                jsonPath("$.code") { value("COMMON200") }
+            }
+
+            verify(myPageService).updateNickname(1L, request)
+        }
+
+        @Test
+        @WithCustomUser(userId = 1L)
+        fun `닉네임이 공백이면 400 응답을 반환한다`() {
+            val request = NicknameUpdateRequestDTO(nickname = "   ")
+
+            mockMvc.patch("/api/v1/my-page/nickname") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+            }.andExpect {
+                status { isBadRequest() }
+                jsonPath("$.isSuccess") { value(false) }
+            }
+        }
+    }
+
+    @Nested
     inner class `리포트 조회` {
 
         @Test
@@ -149,7 +185,6 @@ class MyPageControllerTest @Autowired constructor(
     private fun summaryResponse() = MyPageSummaryResponseDTO(
         profile = MyPageSummaryResponseDTO.ProfileSummary(
             nickName = "위장이",
-            profileImage = null,
             disease = DiseaseType.GERD,
         ),
         foodHistory = MyPageSummaryResponseDTO.FoodHistory(

@@ -13,9 +13,6 @@ data class AuthTokenResponseDTO(
     @field:Schema(description = "토큰이 발급된 사용자 ID", example = "550e8400-e29b-41d4-a716-446655440000")
     val userId: String,
 
-    @field:Schema(description = "토큰이 발급된 사용자 이메일", example = "user@test.com")
-    val email: String,
-
     @field:Schema(description = "토큰이 발급된 사용자의 권한", example = "USER")
     val role: UserRole,
 )

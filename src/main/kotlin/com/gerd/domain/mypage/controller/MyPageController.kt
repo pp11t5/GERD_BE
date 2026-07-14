@@ -4,6 +4,7 @@ import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.mypage.dto.MedicalInfoResponseDTO
 import com.gerd.domain.mypage.dto.MedicalInfoUpdateRequestDTO
 import com.gerd.domain.mypage.dto.MyPageSummaryResponseDTO
+import com.gerd.domain.mypage.dto.NicknameUpdateRequestDTO
 import com.gerd.domain.mypage.dto.ProfileDetailResponseDTO
 import com.gerd.domain.mypage.dto.WeeklyReportResponseDTO
 import com.gerd.domain.mypage.service.MyPageService
@@ -48,6 +49,14 @@ class MyPageController(
         @RequestBody @Valid request: MedicalInfoUpdateRequestDTO,
     ): ResponseEntity<ApiResponse<Unit>> {
         myPageService.updateHealthInfo(userDetails.userId, request)
+        return ResponseEntity.ok(ApiResponse.onSuccess(Unit, CommonSuccessCode.OK))
+    }
+
+    override fun updateNickname(
+        @CurrentUser userDetails: CustomUserDetails,
+        @RequestBody @Valid request: NicknameUpdateRequestDTO,
+    ): ResponseEntity<ApiResponse<Unit>> {
+        myPageService.updateNickname(userDetails.userId, request)
         return ResponseEntity.ok(ApiResponse.onSuccess(Unit, CommonSuccessCode.OK))
     }
 

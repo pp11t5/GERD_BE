@@ -14,8 +14,6 @@ data class MyPageSummaryResponseDTO(
     data class ProfileSummary(
         @field:Schema(description = "닉네임", example = "서유진")
         val nickName: String,
-        @field:Schema(description = "프로필 이미지", nullable = true)
-        val profileImage: String? = null,
         @field:Schema(description = "질환명", example = "gerd")
         val disease: DiseaseType,
     )

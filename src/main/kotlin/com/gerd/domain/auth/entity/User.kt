@@ -30,15 +30,12 @@ class User(
     @Column(nullable = false, length = 20)
     var role: UserRole = UserRole.USER,
 
-    @Column
-    var nickname: String = "위장이",
+    @Column(unique = true)
+    var nickname: String,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: UserStatus = UserStatus.ACTIVE,
-
-    @Column(name = "profile_image")
-    var profileImage: String? = null,
 
     @Column(name = "last_login_at")
     var lastLoginAt: LocalDateTime? = null,
@@ -50,6 +47,11 @@ class User(
 
     fun updateLastLoginAt() {
         lastLoginAt = LocalDateTime.now()
+    }
+
+    // 마이페이지 닉네임 변경
+    fun changeNickname(newNickname: String) {
+        nickname = newNickname
     }
 
     // 탈퇴 요청 — deleted_at 기록으로 14일 유예 시작
