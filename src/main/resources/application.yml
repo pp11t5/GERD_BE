@@ -36,6 +36,11 @@ kakao:
   jwks-url: ${KAKAO_JWKS_URL:}
   admin-key: ${KAKAO_ADMIN_KEY:}
 
+apple:
+  bundle-id: ${APPLE_BUNDLE_ID:}
+  iss: ${APPLE_ISS:https://appleid.apple.com}
+  jwks-url: ${APPLE_JWKS_URL:https://appleid.apple.com/auth/keys}
+
 gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-2.5-flash-lite}
