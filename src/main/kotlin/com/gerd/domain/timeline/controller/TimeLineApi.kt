@@ -1,8 +1,8 @@
 package com.gerd.domain.timeline.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
+import com.gerd.domain.timeline.dto.MonthlyJudgementResponseDTO
 import com.gerd.domain.timeline.dto.TimeLineResponseDTO
-import com.gerd.domain.timeline.dto.WeeklyJudgementResponseDTO
 import com.gerd.global.annotation.CurrentUser
 import com.gerd.global.apiPayload.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import java.time.LocalDate
+import java.time.YearMonth
 
 @Tag(name = "TimeLine", description = "타임라인 API")
 @RequestMapping("/api/v1/timeline")
@@ -33,12 +34,12 @@ interface TimeLineApi {
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate,
     ): ResponseEntity<ApiResponse<TimeLineResponseDTO>>
 
-    @Operation(summary = "주간 판정 등급 조회", description = "해당 날짜가 속한 주(일~토)의 날짜별 판정 등급 목록을 조회합니다.")
+    @Operation(summary = "월간 판정 등급 조회", description = "해당 월의 날짜별 판정 등급 목록을 조회합니다.")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
-    @GetMapping("/weekly")
-    fun getWeeklyJudgements(
+    @GetMapping("/monthly")
+    fun getMonthlyJudgements(
         @CurrentUser userDetails: CustomUserDetails,
-        @Parameter(description = "조회 기준 날짜 (yyyy-MM-dd)", example = "2026-06-21")
-        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate,
-    ): ResponseEntity<ApiResponse<List<WeeklyJudgementResponseDTO>>>
+        @Parameter(description = "조회 기준 월 (yyyy-MM)", example = "2026-06")
+        @RequestParam @DateTimeFormat(pattern = "yyyy-MM") month: YearMonth,
+    ): ResponseEntity<ApiResponse<List<MonthlyJudgementResponseDTO>>>
 }
