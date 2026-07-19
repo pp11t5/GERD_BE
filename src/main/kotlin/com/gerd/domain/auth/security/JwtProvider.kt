@@ -54,6 +54,21 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
             .compact()
     }
 
+    // sub = 0(synthetic admin id), role = ADMIN — DB User 없이 어드민 전용 access token 발급
+    fun createAdminAccessToken(email: String): String {
+        val now = Date()
+        return Jwts.builder()
+            .setSubject("0")
+            .claim("tokenType", TOKEN_TYPE_ACCESS)
+            .claim("email", email)
+            .claim("role", "ADMIN")
+            .setId(UUID.randomUUID().toString())
+            .setIssuedAt(now)
+            .setExpiration(Date(now.time + jwtProperties.accessExpirationMs))
+            .signWith(key, SignatureAlgorithm.HS256)
+            .compact()
+    }
+
     // sub = userId, tokenType = REFRESH, jti = Redis 키
     fun createRefreshToken(user: User): JwtToken {
         val now = Date()

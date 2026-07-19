@@ -21,6 +21,7 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.oas.models.servers.Server
+import org.springdoc.core.models.GroupedOpenApi
 import org.springdoc.core.customizers.OperationCustomizer
 import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.core.MethodParameter
@@ -36,6 +37,20 @@ class SwaggerConfig {
     companion object {
         private const val JWT_SCHEME = "JWT TOKEN"
     }
+
+    @Bean
+    fun defaultApiGroup(): GroupedOpenApi =
+        GroupedOpenApi.builder()
+            .group("default")
+            .pathsToExclude("/api/v1/admin/**", "/api/v1/auth/admin/**")
+            .build()
+
+    @Bean
+    fun adminApiGroup(): GroupedOpenApi =
+        GroupedOpenApi.builder()
+            .group("admin")
+            .pathsToMatch("/api/v1/admin/**", "/api/v1/auth/admin/**")
+            .build()
 
     @Bean
     fun openApi(): OpenAPI =
