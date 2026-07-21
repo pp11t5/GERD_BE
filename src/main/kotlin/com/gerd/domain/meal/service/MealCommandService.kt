@@ -209,16 +209,10 @@ class MealCommandService(
     private fun resolveOrCreateUserFood(name: String, user: User): Food {
         val ownerId = user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
         foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER)?.let { return it }
-        return try {
-            foodRepository.save(
-                Food(
-                    name = name,
-                    source = FoodSource.USER,
-                    visibility = FoodVisibility.PRIVATE,
-                    ownerUserId = ownerId,
-                ),
-            )
-        } catch (e: DataIntegrityViolationException) {
+        return runCatching {
+            foodRepository.save(Food(name = name, source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = ownerId))
+        }.getOrElse { e ->
+            if (e !is DataIntegrityViolationException) throw e
             // 경합 패자 — 다른 트랜잭션이 (owner, source, name) 유니크를 먼저 차지했으므로 그 음식을 재조회해 재사용
             foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER) ?: throw e
         }

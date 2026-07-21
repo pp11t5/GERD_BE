@@ -77,11 +77,7 @@ class RecentFoodService(
     }
 
     private fun parseUuid(value: String): UUID? =
-        try {
-            UUID.fromString(value.trim())
-        } catch (e: IllegalArgumentException) {
-            null
-        }
+        runCatching { UUID.fromString(value.trim()) }.getOrNull()
 
     private fun FoodSearchHistory.toDTO(category: String?) =
         RecentFoodDTO(
