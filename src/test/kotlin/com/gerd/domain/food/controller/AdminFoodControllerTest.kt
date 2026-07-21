@@ -85,6 +85,16 @@ class AdminFoodControllerTest @Autowired constructor(
                 jsonPath("$.result.totalElements") { value(0) }
             }
         }
+
+        @Test
+        @WithCustomUser(role = "ADMIN")
+        fun `음수 페이지 번호이면 400을 반환한다`() {
+            mockMvc.get("/api/v1/admin/foods") {
+                param("page", "-1")
+            }.andExpect {
+                status { isBadRequest() }
+            }
+        }
     }
 
     @Nested
