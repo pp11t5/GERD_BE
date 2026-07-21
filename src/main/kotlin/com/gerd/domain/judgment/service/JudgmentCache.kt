@@ -19,12 +19,21 @@ class JudgmentCache {
         .recordStats()
         .build()
 
-    // Caffeine.get이 동일 키 동시 요청을 직렬화해 loader 중복 호출을 방지한다.
-    // loader가 null을 반환하면 Caffeine이 캐시에 저장하지 않는다.
-    // @Suppress: Kotlin은 Caffeine Function 파라미터를 NonNull로 추론하나, JVM 레벨에서는 null 반환이 허용된다.
-    @Suppress("UNCHECKED_CAST")
-    fun get(key: String, loader: (String) -> CachedJudgment?): CachedJudgment? =
-        cache.get(key, loader as java.util.function.Function<String, CachedJudgment>)
+    // asMap().compute()는 동일 키의 동시 요청을 직렬화하므로 loader 중복 호출을 방지한다.
+    // loader가 null을 반환하면 캐시에 저장하지 않는다.
+    fun get(key: String, loader: (String) -> CachedJudgment?): CachedJudgment? {
+        cache.getIfPresent(key)?.let { return it }
+        var result: CachedJudgment? = null
+        cache.asMap().compute(key) { k, existing ->
+            if (existing != null) {
+                result = existing
+                existing
+            } else {
+                loader(k).also { result = it }
+            }
+        }
+        return result
+    }
 
     companion object {
         // 일 사용자 수 × 평균 판정 음식 수 기준 여유 있게 잡은 상한
