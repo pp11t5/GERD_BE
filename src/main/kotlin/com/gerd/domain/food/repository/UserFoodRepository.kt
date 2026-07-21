@@ -4,7 +4,10 @@ import com.gerd.domain.food.entity.UserFood
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import org.springframework.transaction.annotation.Transactional
 
 interface UserFoodRepository : JpaRepository<UserFood, Long> {
 
@@ -20,7 +23,10 @@ interface UserFoodRepository : JpaRepository<UserFood, Long> {
     )
     fun findAllWithFoodByIsUnknown(isUnknown: Boolean, pageable: Pageable): Page<UserFood>
 
-    fun deleteAllByFoodId(foodId: Long)
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM UserFood uf WHERE uf.food.id = :foodId")
+    fun deleteAllByFoodId(@Param("foodId") foodId: Long)
 
     fun existsByUserIdAndFoodId(userId: Long, foodId: Long): Boolean
 }
