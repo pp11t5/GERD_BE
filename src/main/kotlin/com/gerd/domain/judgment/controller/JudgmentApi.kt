@@ -3,6 +3,7 @@ package com.gerd.domain.judgment.controller
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
+import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
 import com.gerd.domain.symptom.dto.FoodSymptomResponseDTO
 import com.gerd.global.annotation.ApiErrorExample
 import com.gerd.global.annotation.CurrentUser
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 
 @Tag(name = "음식 판정", description = "음식 신호등 판정 API")
 @RequestMapping("/api/v1/foods")
@@ -41,6 +43,24 @@ interface JudgmentApi {
         @Parameter(description = "음식 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
         @PathVariable foodExternalId: String,
     ): ResponseEntity<ApiResponse<JudgmentResponseDTO>>
+
+    @Operation(
+        summary = "음식 이름으로 신호등 판정",
+        description = """
+            검색 결과에 없는 음식을 직접 입력했을 때 사용합니다.
+            DB 음식 엔티티를 생성하지 않고 LLM으로 즉시 판정하며, 대체식단은 항상 빈 배열로 반환됩니다.
+            음식이 추후 식사 기록에 등록되면 그 시점에 DB에 저장됩니다.
+            - grade: RECOMMEND(🟢) | CAUTION(🟡) | RISK(🔴) | UNKNOWN(⚪, LLM 판정 실패 시)
+            - 동일한 (이름 × 사용자 상태)는 24시간 캐시됩니다.
+        """,
+    )
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "판정 성공"))
+    @GetMapping("/judgment")
+    fun getJudgmentByText(
+        @CurrentUser userDetails: CustomUserDetails,
+        @Parameter(description = "판정할 음식 이름", example = "치킨")
+        @RequestParam name: String,
+    ): ResponseEntity<ApiResponse<TextJudgmentResponseDTO>>
 
     @Operation(
         summary = "음식 ID로 연결 증상 목록 조회",

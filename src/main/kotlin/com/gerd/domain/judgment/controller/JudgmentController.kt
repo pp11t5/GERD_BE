@@ -2,6 +2,7 @@ package com.gerd.domain.judgment.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
+import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
 import com.gerd.domain.symptom.dto.FoodSymptomResponseDTO
 import com.gerd.domain.symptom.service.FoodSymptomQueryService
@@ -22,6 +23,17 @@ class JudgmentController(
         foodExternalId: String,
     ): ResponseEntity<ApiResponse<JudgmentResponseDTO>> {
         val (response, isCached) = foodJudgmentQueryService.getJudgment(foodExternalId, userDetails.userId)
+        return ResponseEntity
+            .status(CommonSuccessCode.OK.httpStatus)
+            .header("X-Cache", if (isCached) "HIT" else "MISS")
+            .body(ApiResponse.onSuccess(response, CommonSuccessCode.OK))
+    }
+
+    override fun getJudgmentByText(
+        @CurrentUser userDetails: CustomUserDetails,
+        name: String,
+    ): ResponseEntity<ApiResponse<TextJudgmentResponseDTO>> {
+        val (response, isCached) = foodJudgmentQueryService.getJudgmentByText(name, userDetails.userId)
         return ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
             .header("X-Cache", if (isCached) "HIT" else "MISS")
