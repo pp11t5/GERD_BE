@@ -10,13 +10,16 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.constraints.Min
 import org.springframework.http.ResponseEntity
+import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 
+@Validated
 @Tag(name = "관리자 음식 관리", description = "관리자 음식 관리 API")
 @RequestMapping("/api/v1/admin/foods")
 interface AdminFoodApi {
@@ -32,7 +35,7 @@ interface AdminFoodApi {
     @GetMapping
     fun getAllUserFoods(
         @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
-        @RequestParam(defaultValue = "0") page: Int,
+        @Min(0) @RequestParam(defaultValue = "0") page: Int,
         @Parameter(description = "true=unknown만, false=known만, 생략=전체")
         @RequestParam(required = false) isUnknown: Boolean?,
     ): ResponseEntity<ApiResponse<PageResponse<AdminUserFoodDTO>>>
