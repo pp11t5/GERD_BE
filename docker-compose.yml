@@ -19,9 +19,9 @@ services:
     image: grafana/otel-lgtm:latest
     profiles: ["apm", "loadtest"]
     ports:
-      - "3001:3000"   # Grafana (host 3000은 프론트 dev 서버가 사용 → 3001)
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+      - "3001:3000"
+      - "4317:4317"
+      - "4318:4318"
     environment:
       TZ: Asia/Seoul
     restart: unless-stopped

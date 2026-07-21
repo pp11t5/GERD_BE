@@ -31,9 +31,9 @@ class JudgmentController(
 
     override fun getJudgmentByText(
         @CurrentUser userDetails: CustomUserDetails,
-        foodTextInput: String,
+        name: String,
     ): ResponseEntity<ApiResponse<TextJudgmentResponseDTO>> {
-        val (response, isCached) = foodJudgmentQueryService.getJudgmentByText(foodTextInput, userDetails.userId)
+        val (response, isCached) = foodJudgmentQueryService.getJudgmentByText(name, userDetails.userId)
         return ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
             .header("X-Cache", if (isCached) "HIT" else "MISS")

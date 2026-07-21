@@ -15,6 +15,11 @@ spring:
     database:
       replace: none
 
+app:
+  withdraw:
+    grace-period: PT10M
+    schedule-in-memory: true
+
 jwt:
   secret: dGVzdC1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtMzItYnl0ZXMhIQ==
   access-expiration-ms: 3600000

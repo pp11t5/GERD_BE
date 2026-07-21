@@ -1,6 +1,7 @@
 package com.gerd.domain.food.controller
 
 import com.gerd.domain.food.dto.AddRecentRequestDTO
+import com.gerd.domain.food.dto.FoodSearchResultDTO
 import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.exception.FoodErrorCode
@@ -59,17 +60,36 @@ class FoodControllerTest @Autowired constructor(
 
         @Test
         @WithCustomUser
-        fun `검색에 성공하면 음식 목록을 반환한다`() {
+        fun `검색에 성공하면 음식 목록과 hasExactMatch를 반환한다`() {
             whenever(foodSearchService.search(any(), anyOrNull(), any()))
-                .thenReturn(listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew")))
+                .thenReturn(FoodSearchResultDTO(
+                    foods = listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew")),
+                    hasExactMatch = true,
+                ))
 
             mockMvc.get("/api/v1/foods/search") {
-                param("q", "된장")
+                param("q", "된장찌개")
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.isSuccess") { value(true) }
-                jsonPath("$.result[0].name") { value("된장찌개") }
-                jsonPath("$.result[0].category") { value("soup_stew") }
+                jsonPath("$.result.foods[0].name") { value("된장찌개") }
+                jsonPath("$.result.foods[0].category") { value("soup_stew") }
+                jsonPath("$.result.hasExactMatch") { value(true) }
+            }
+        }
+
+        @Test
+        @WithCustomUser
+        fun `완전 일치가 없으면 hasExactMatch가 false다`() {
+            whenever(foodSearchService.search(any(), anyOrNull(), any()))
+                .thenReturn(FoodSearchResultDTO(foods = emptyList(), hasExactMatch = false))
+
+            mockMvc.get("/api/v1/foods/search") {
+                param("q", "신메뉴")
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.result.hasExactMatch") { value(false) }
+                jsonPath("$.result.foods.length()") { value(0) }
             }
         }
 

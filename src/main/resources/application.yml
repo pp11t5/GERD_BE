@@ -55,6 +55,10 @@ sentry:
   send-default-pii: false
   traces-sample-rate: 0.0
 
+admin:
+  email: ${ADMIN_EMAIL:}
+  secret: ${ADMIN_SECRET:}
+
 management:
   endpoints:
     web:

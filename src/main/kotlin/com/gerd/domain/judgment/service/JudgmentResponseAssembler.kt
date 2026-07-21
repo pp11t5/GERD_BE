@@ -13,7 +13,10 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.SafetyOverrideRule.OverrideResult
 import org.springframework.stereotype.Component
 
-// 판정 응답 조립 — LLM 제목 채택/폴백 판단(spec §3)과 고정 폴백 카피를 담당한다
+// 판정 응답 조립 — LLM 제목 채택/폴백 판단과 고정 폴백 카피를 담당
+/**
+ *
+ */
 @Component
 class JudgmentResponseAssembler {
 
@@ -53,9 +56,10 @@ class JudgmentResponseAssembler {
     private fun resolveTitle(llmJudgment: LlmJudgmentDTO, override: OverrideResult): String =
         llmJudgment.personalTitle
             ?.takeIf { it.isNotBlank() && override.grade == llmJudgment.grade }
-            ?: FALLBACK_TITLES.getValue(override.grade)
+            ?: FALLBACK_TITLES[override.grade]
+            ?: FALLBACK_TITLE
 
-    fun toResponse(cached: CachedJudgment): JudgmentResponseDTO =
+    fun toResponse(cached: CachedJudgment, stateRecords: StateRecordsDTO): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = requireNotNull(cached.foodExternalId) { "ID 판정 캐시는 foodExternalId를 가진다" },
             foodName = cached.foodName,
@@ -63,7 +67,7 @@ class JudgmentResponseAssembler {
             grade = cached.grade,
             personalTitle = cached.personalTitle,
             items = cached.items,
-            stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
+            stateRecords = stateRecords,
             substitutes = cached.substitutes,
         )
 
@@ -76,7 +80,7 @@ class JudgmentResponseAssembler {
             grade = JudgmentGrade.UNKNOWN,
             personalTitle = FALLBACK_TITLE,
             items = FALLBACK_ITEMS,
-            stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
+            stateRecords = context.stateRecords,
             substitutes = emptyList(),
         )
 
@@ -119,8 +123,9 @@ class JudgmentResponseAssembler {
             substitutes = emptyList(),
         )
 
+    // 고정 응답 모음
     companion object {
-        // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약 (기획 PItem-1 / PItem-2)
+        // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약
         private const val ALLERGY_SLOT = 1
 
         // LLM 제목을 쓸 수 없는 경우(누락·공백·등급 강등)의 등급별 고정 제목

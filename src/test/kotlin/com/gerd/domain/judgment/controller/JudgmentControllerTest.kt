@@ -6,6 +6,7 @@ import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.StateRecordsDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
+import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
 import com.gerd.domain.symptom.dto.FoodSymptomResponseDTO
@@ -95,6 +96,53 @@ class JudgmentControllerTest @Autowired constructor(
                     jsonPath("$.isSuccess") { value(false) }
                     jsonPath("$.code") { value("FOOD404_1") }
                 }
+            }
+        }
+    }
+
+    @Nested
+    inner class `GET judgment by text` {
+
+        private val textResponse = TextJudgmentResponseDTO(
+            foodName = "치킨",
+            grade = JudgmentGrade.CAUTION,
+            personalTitle = "가끔씩 드세요",
+            items = listOf(
+                JudgmentItemDTO("기름기가 많아요", "트리거 성분이 포함될 수 있어요."),
+                JudgmentItemDTO("알레르기 해당 없어요", "알레르기 성분이 포함되지 않았어요."),
+            ),
+            stateRecords = StateRecordsDTO(total = 0, records = emptyList()),
+            substitutes = emptyList(),
+        )
+
+        @Test
+        @WithCustomUser
+        fun `음식 이름으로 신호등 판정을 반환한다`() {
+            whenever(foodJudgmentQueryService.getJudgmentByText(any(), any())).thenReturn(textResponse to false)
+
+            mockMvc.get("/api/v1/foods/judgment") {
+                param("name", "치킨")
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.isSuccess") { value(true) }
+                jsonPath("$.result.foodName") { value("치킨") }
+                jsonPath("$.result.grade") { value("CAUTION") }
+                jsonPath("$.result.items.length()") { value(2) }
+                jsonPath("$.result.substitutes.length()") { value(0) }
+                header { string("X-Cache", "MISS") }
+            }
+        }
+
+        @Test
+        @WithCustomUser
+        fun `캐시 히트 시 X-Cache HIT를 반환한다`() {
+            whenever(foodJudgmentQueryService.getJudgmentByText(any(), any())).thenReturn(textResponse to true)
+
+            mockMvc.get("/api/v1/foods/judgment") {
+                param("name", "치킨")
+            }.andExpect {
+                status { isOk() }
+                header { string("X-Cache", "HIT") }
             }
         }
     }

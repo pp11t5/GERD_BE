@@ -21,4 +21,5 @@ enum class AuthErrorCode(
     FORBIDDEN(HttpStatus.FORBIDDEN, "AUTH403_1", "접근 권한이 없습니다."),
     KAKAO_UNLINK_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AUTH500_1", "카카오 연결해제에 실패했습니다."),
     NICKNAME_ALREADY_IN_USE(HttpStatus.CONFLICT, "AUTH409_1", "이미 사용 중인 닉네임입니다."),
+    INVALID_ADMIN_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH401_6", "어드민 이메일 또는 시크릿이 올바르지 않습니다."),
 }

@@ -2,6 +2,7 @@ package com.gerd.domain.judgment.dto
 
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 
 // 판정에 필요한 음식·사용자 컨텍스트 — Reader가 짧은 트랜잭션에서 일괄 로딩한 뒤 지연로딩 없이 사용한다
 data class JudgmentContext(
@@ -14,6 +15,7 @@ data class JudgmentContext(
     val medications: List<String>,
     val symptomCodes: List<String>,
     val history: LlmInputSnapshotDTO.HistorySnapshotDTO = LlmInputSnapshotDTO.HistorySnapshotDTO(),
+    val stateRecords: JudgmentResponseDTO.StateRecordsDTO = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),
 ) {
 
     val foodExternalId: String

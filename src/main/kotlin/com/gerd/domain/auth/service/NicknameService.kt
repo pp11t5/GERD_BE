@@ -28,9 +28,8 @@ class NicknameService(
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         user.changeNickname(newNickname)
-        try {
-            userRepository.saveAndFlush(user)
-        } catch (e: DataIntegrityViolationException) {
+        runCatching { userRepository.saveAndFlush(user) }.getOrElse { e ->
+            if (e !is DataIntegrityViolationException) throw e
             throw GeneralException(AuthErrorCode.NICKNAME_ALREADY_IN_USE)
         }
     }

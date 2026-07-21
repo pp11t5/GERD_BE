@@ -3,7 +3,7 @@ package com.gerd.domain.food.controller
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.food.dto.AddRecentRequestDTO
 import com.gerd.domain.food.dto.FoodCategoryDTO
-import com.gerd.domain.food.dto.FoodSummaryDTO
+import com.gerd.domain.food.dto.FoodSearchResultDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.food.service.FoodSearchService
@@ -34,7 +34,7 @@ class FoodController(
         @CurrentUser userDetails: CustomUserDetails,
         q: String?,
         size: Int?,
-    ): ResponseEntity<ApiResponse<List<FoodSummaryDTO>>> =
+    ): ResponseEntity<ApiResponse<FoodSearchResultDTO>> =
         ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
             .body(ApiResponse.onSuccess(foodSearchService.search(q, size, userDetails.userId), CommonSuccessCode.OK))

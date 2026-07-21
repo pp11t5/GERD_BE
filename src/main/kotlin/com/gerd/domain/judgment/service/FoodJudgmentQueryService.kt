@@ -12,12 +12,13 @@ import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.TextJudgmentResponseDTO
 import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 
+private val log = KotlinLogging.logger {}
+
 /**
- * 신호등 판정 파이프라인 오케스트레이션 (spec §4)
- *
- * ⓪ 출처 게이트 → 캐시 조회 → ① LLM 판정 → ② 안전 오버라이드 → ③ 조립·캐시
+ * 신호등 판정 파이프라인 오케스트레이션
  *
  * 클래스에 @Transactional을 두지 않는다 — 캐시 미스 시 LLM 호출(수 초) 동안
  * DB 커넥션을 점유하면 안 되며, DB 읽기는 Reader의 짧은 트랜잭션으로 분리돼 있다
@@ -39,6 +40,7 @@ class FoodJudgmentQueryService(
 
         // ⓪ 출처 게이트: 유저 입력 음식은 검수 라벨·grounding이 없어 LLM에 줄 근거가 없다 → 환각 방지 위해 즉시 폴백(CAUTION) (ADR-0003)
         if (context.food.source == FoodSource.USER) {
+            log.info { "판정 폴백(UNKNOWN) - USER 음식: foodId=${context.food.id} userId=$userId" }
             return judgmentResponseAssembler.assembleFallback(context) to false
         }
 
@@ -49,10 +51,15 @@ class FoodJudgmentQueryService(
         var loaderRan = false
         val cached = judgmentCache.get(key) {
             loaderRan = true
+            log.info { "판정 캐시 MISS - LLM 호출: foodId=${context.food.id} userId=$userId" }
             judge(context, snapshot)
-        } ?: return judgmentResponseAssembler.assembleFallback(context) to false
+        } ?: run {
+            log.warn { "판정 폴백(UNKNOWN) - LLM 실패: foodId=${context.food.id} userId=$userId" }
+            return judgmentResponseAssembler.assembleFallback(context) to false
+        }
 
-        return judgmentResponseAssembler.toResponse(cached) to !loaderRan
+        if (!loaderRan) log.debug { "판정 캐시 HIT: foodId=${context.food.id} userId=$userId" }
+        return judgmentResponseAssembler.toResponse(cached, context.stateRecords) to !loaderRan
     }
 
     fun getJudgmentByText(foodText: String, userId: Long): Pair<TextJudgmentResponseDTO, Boolean> {
@@ -90,7 +97,7 @@ class FoodJudgmentQueryService(
         return judgmentResponseAssembler.assembleTextCacheable(foodText, llmJudgment, override)
     }
 
-    // ① LLM → ② 안전 오버라이드 → ③ 조립. 실패는 null로 반환해 캐시에 남기지 않는다
+    // LLM, 안전 오버라이드, 조립하며 실패 시 캐시에 남기지 않음
     private fun judge(context: JudgmentContext, snapshot: LlmInputSnapshotDTO): CachedJudgment? {
         val llmJudgment = judgmentGeminiAdapter.generateJudgment(
             systemInstruction = judgmentPromptBuilder.buildSystemInstruction(),
@@ -122,7 +129,7 @@ class FoodJudgmentQueryService(
         return judgmentResponseAssembler.assembleCacheable(context, llmJudgment, override, substitutes)
     }
 
-    // LLM이 추출한 code를 안전 룰 입력 TagDTO로 변환 — 허용 code만 통과시키고 중복 제거.
+    // LLM이 추출한 code를 안전 룰 입력 TagDTO로 변환 — 허용 code만 통과시키고 중복 제거
     // label은 매칭(코드 기준)·텍스트 응답 카피에 쓰이지 않아 code로 채운다
     private fun List<String>.toValidTags(validCodes: Set<String>): List<TagDTO> =
         filter { it in validCodes }.distinct().map { TagDTO(it, it) }

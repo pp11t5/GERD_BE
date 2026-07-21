@@ -35,6 +35,7 @@ class WebSecurityConfig(
             "/api/v1/auth/*/login",
             "/api/v1/auth/*/recover",
             "/api/v1/consent/terms",
+            "/api/v1/auth/admin/login",
         )
     }
 

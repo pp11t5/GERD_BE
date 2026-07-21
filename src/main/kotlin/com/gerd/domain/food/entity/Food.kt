@@ -47,11 +47,11 @@ class Food(
 
     @Convert(converter = FoodSourceConverter::class)
     @Column(nullable = false)
-    val source: FoodSource,
+    var source: FoodSource,
 
     @Convert(converter = FoodVisibilityConverter::class)
     @Column(nullable = false)
-    val visibility: FoodVisibility,
+    var visibility: FoodVisibility,
 
     // user food일 때만 채워지는 소유자 참조 — 도메인 경계가 달라 FK 없이 식별자만 보관한다
     @Column(name = "owner_user_id")
@@ -71,5 +71,11 @@ class Food(
         this.name = name
         this.description = description
         this.imageUrl = imageUrl
+    }
+
+    // 관리자 승격 — 유저 음식을 큐레이션 공개 카탈로그로 전환. 이후 모든 유저 검색에 노출됨
+    fun promote() {
+        this.source = FoodSource.CURATED
+        this.visibility = FoodVisibility.PUBLIC
     }
 }

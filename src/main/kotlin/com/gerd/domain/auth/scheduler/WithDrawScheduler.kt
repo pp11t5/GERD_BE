@@ -1,31 +1,29 @@
 package com.gerd.domain.auth.scheduler
 
 import com.gerd.domain.auth.service.WithdrawService
-import org.slf4j.LoggerFactory
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.context.annotation.Profile
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 @Component
-@ConditionalOnProperty(name = ["withdraw.scheduler.enabled"], havingValue = "true", matchIfMissing = false)
+@Profile("prod")
 class WithDrawScheduler(
     private val withdrawService: WithdrawService,
 ) {
-    private val log = LoggerFactory.getLogger(javaClass)
+    private val log = KotlinLogging.logger {}
 
-    // 매일 자정 — 14일 유예가 지난 탈퇴 유저를 100명씩 물리 삭제
+    // 매일 자정 — 유예기간이 지난 탈퇴 유저를 배치로 물리 삭제
     @Scheduled(cron = "0 0 0 * * *")
     fun withDraw() {
         var lastId = 0L
         while (true) {
             val userIds = withdrawService.findUsersForHardDelete(lastId, BATCH_SIZE)
             if (userIds.isEmpty()) break
-
             userIds.forEach { userId ->
                 runCatching { withdrawService.withdrawHardDelete(userId) }
-                    .onFailure { log.error("하드 삭제 실패 userId=$userId", it) }
+                    .onFailure { log.error(it) { "하드 삭제 실패 userId=$userId" } }
             }
-            // 실패해 남은 유저까지 커서를 넘겨 무한 루프 방지
             lastId = userIds.last()
         }
     }
