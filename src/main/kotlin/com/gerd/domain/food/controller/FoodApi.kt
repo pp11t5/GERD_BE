@@ -40,8 +40,8 @@ interface FoodApi {
     @Operation(
         summary = "음식 검색",
         description = """
-            음식 이름으로 검색합니다(공백 무시 부분일치). 응답은 음식 외부 식별자(externalId)와 분류 목록을 포함합니다.
-            - q: 검색어(필수, 앞뒤 공백 제거 후 1자 이상). 한글·영어 그대로 입력.
+            음식 이름으로 검색합니다(공백 무시 부분일치), 응답은 음식 외부 식별자(externalId)와 분류 목록을 포함합니다.
+            - q: 검색어(필수, 앞뒤 공백 제거 후 1자 이상), 한글·영어 그대로 입력
             - size: 결과 수(기본 10, 최대 50). 범위를 벗어나면 보정합니다.
             - 노출 범위: 공개 카탈로그 + 본인이 추가한 비공개 음식.
         """,
@@ -57,7 +57,7 @@ interface FoodApi {
 
     @Operation(
         summary = "최근 본 음식 조회",
-        description = "본인이 최근 본 음식을 최신순으로 반환합니다(기본 10, 최대 50). 삭제된 음식은 제외됩니다.",
+        description = "본인이 최근 본 음식을 최신순으로 반환합니다(기본 10, 최대 50), 삭제된 음식은 제외됩니다.",
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공(없으면 빈 배열)"))
     @GetMapping("/recent")
@@ -69,7 +69,7 @@ interface FoodApi {
     @Operation(
         summary = "최근 본 음식 추가",
         description = """
-            음식 상세 진입 시 호출합니다. (user, food) 단위로 upsert되어 같은 음식 재진입 시 시각만 갱신됩니다.
+            음식 상세 진입 시 호출합니다, (user, food) 단위로 upsert되어 같은 음식 재진입 시 시각만 갱신됩니다.
             보관 상한(10) 초과 시 오래된 항목부터 삭제됩니다.
         """,
     )
