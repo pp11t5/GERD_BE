@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
@@ -38,11 +40,16 @@ class WithdrawService(
         refreshTokenRepository.deleteAllByUserId(userId)
 
         // prod는 WithDrawScheduler(DB 폴링)가 담당하므로 in-memory 예약 생략
+        // afterCommit: 트랜잭션 롤백 시 예약이 남아 정상 유저를 삭제하는 것을 방지
         if (scheduleInMemory) {
-            taskScheduler.schedule(
-                { runCatching { withdrawHardDelete(userId) }.onFailure { log.error("예약 하드 삭제 실패 userId=$userId", it) } },
-                Instant.now().plus(gracePeriod),
-            )
+            TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                override fun afterCommit() {
+                    taskScheduler.schedule(
+                        { runCatching { withdrawHardDelete(userId) }.onFailure { log.error("예약 하드 삭제 실패 userId=$userId", it) } },
+                        Instant.now().plus(gracePeriod),
+                    )
+                }
+            })
         }
     }
 
