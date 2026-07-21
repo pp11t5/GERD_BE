@@ -7,6 +7,7 @@ import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.text.Normalizer
 
 @Service
 @Transactional(readOnly = true)
@@ -16,7 +17,7 @@ class FoodSearchService(
 ) {
 
     fun search(rawQuery: String?, rawSize: Int?, userId: Long): FoodSearchResultDTO {
-        val trimmed = rawQuery?.trim().orEmpty()
+        val trimmed = Normalizer.normalize(rawQuery?.trim().orEmpty(), Normalizer.Form.NFC)
         if (trimmed.isEmpty() || trimmed.length > MAX_QUERY_LENGTH) {
             throw GeneralException(FoodErrorCode.INVALID_SEARCH_QUERY)
         }
