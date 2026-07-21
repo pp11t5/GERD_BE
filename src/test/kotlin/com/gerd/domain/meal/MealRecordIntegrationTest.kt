@@ -88,9 +88,9 @@ class MealRecordIntegrationTest @Autowired constructor(
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.isSuccess") { value(true) }
-                jsonPath("$.result[0].externalId") { value(food.externalId.toString()) }
-                jsonPath("$.result[0].name") { value("통합 된장찌개") }
-                jsonPath("$.result[0].category") { value("soup_stew") }
+                jsonPath("$.result.foods[0].externalId") { value(food.externalId.toString()) }
+                jsonPath("$.result.foods[0].name") { value("통합 된장찌개") }
+                jsonPath("$.result.foods[0].category") { value("soup_stew") }
             }
 
             mockMvc.get("/api/v1/foods/{foodExternalId}/judgment", food.externalId)
