@@ -9,10 +9,12 @@ import com.gerd.domain.food.repository.FoodTriggerRepository
 import com.gerd.domain.food.service.FoodAccessPolicy
 import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.JudgmentContext
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
+import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
@@ -24,6 +26,7 @@ import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -45,6 +48,7 @@ class JudgmentContextReader(
     private val userMedicationRepository: UserMedicationRepository,
     private val userSymptomRepository: UserSymptomRepository,
     private val symptomRepository: SymptomRepository,
+    private val mealRecordRepository: MealRecordRepository,
 ) {
 
     fun load(foodExternalId: String, userId: Long): JudgmentContext {
@@ -54,7 +58,10 @@ class JudgmentContextReader(
             ?.takeIf { FoodAccessPolicy.isVisibleTo(it, userId) }
             ?: throw GeneralException(FoodErrorCode.FOOD_NOT_FOUND)
 
+        val foodId = requireNotNull(food.id) { "영속 음식은 id를 가진다" }
+
         // ⓪ 출처 게이트 대상(유저 입력 음식)은 LLM을 타지 않으므로 부가 컨텍스트 조회를 생략한다
+        // 단, 증상 기록은 USER 음식도 무조건 조회한다
         if (food.source == FoodSource.USER) {
             return JudgmentContext(
                 food = food,
@@ -65,10 +72,10 @@ class JudgmentContextReader(
                 userAllergens = emptyList(),
                 medications = emptyList(),
                 symptomCodes = emptyList(),
+                stateRecords = loadStateRecords(userId, foodId),
             )
         }
 
-        val foodId = requireNotNull(food.id) { "영속 음식은 id를 가진다" }
         val category = foodCategoryReader.loadPrimaryByFoodIds(listOf(foodId))[foodId]
         return JudgmentContext(
             food = food,
@@ -84,6 +91,7 @@ class JudgmentContextReader(
             medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },
             symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
             history = loadHistory(userId, food.name, category),
+            stateRecords = loadStateRecords(userId, foodId),
         )
     }
 
@@ -117,11 +125,7 @@ class JudgmentContextReader(
     }
 
     private fun parseUuid(value: String): UUID? =
-        try {
-            UUID.fromString(value.trim())
-        } catch (e: IllegalArgumentException) {
-            null
-        }
+        runCatching { UUID.fromString(value.trim()) }.getOrNull()
 
     private fun loadHistory(userId: Long, foodName: String, category: String?): LlmInputSnapshotDTO.HistorySnapshotDTO {
         val rows = symptomRepository.findLinkedRows(userId, LocalDateTime.now().minusDays(HISTORY_WINDOW_DAYS.toLong()))
@@ -151,6 +155,38 @@ class JudgmentContextReader(
             )
             .take(MAX_HISTORY_RECORDS)
 
+    private fun loadStateRecords(userId: Long, foodId: Long): JudgmentResponseDTO.StateRecordsDTO {
+        val symptoms = symptomRepository.findLinkedSymptomsByUserIdAndFoodId(userId, foodId)
+        if (symptoms.isEmpty()) return JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList())
+
+        val eatenAtByMealRecordId = mealRecordRepository
+            .findAllById(symptoms.mapNotNull { it.mealRecordId }.distinct())
+            .associateBy({ requireNotNull(it.id) }) { it.eatenAt }
+
+        val records = symptoms
+            .filter { it.mealRecordId != null && eatenAtByMealRecordId.containsKey(it.mealRecordId) }
+            .take(STATE_RECORDS_LIMIT)
+            .map { symptom ->
+                val eatenAt = eatenAtByMealRecordId[symptom.mealRecordId]!!
+                val afterMinutes = ChronoUnit.MINUTES.between(eatenAt, symptom.occurredAt).toInt()
+                JudgmentResponseDTO.StateRecordDTO(
+                    label = symptom.symptomState.toLabel(),
+                    date = symptom.occurredAt.toLocalDate().toString(),
+                    timing = "식후 ${afterMinutes}분",
+                )
+            }
+
+        return JudgmentResponseDTO.StateRecordsDTO(total = symptoms.size, records = records)
+    }
+
+    private fun SymptomState.toLabel(): String = when (this) {
+        SymptomState.COMFORTABLE -> "편안해요"
+        SymptomState.GOOD -> "양호해요"
+        SymptomState.NORMAL -> "보통이에요"
+        SymptomState.UNCOMFORTABLE -> "불편해요"
+        SymptomState.SEVERE -> "심각해요"
+    }
+
     private fun SymptomState.isComfort(): Boolean =
         this == SymptomState.COMFORTABLE || this == SymptomState.GOOD
 
@@ -167,5 +203,6 @@ class JudgmentContextReader(
     companion object {
         private const val HISTORY_WINDOW_DAYS = 14
         private const val MAX_HISTORY_RECORDS = 5
+        private const val STATE_RECORDS_LIMIT = 3
     }
 }

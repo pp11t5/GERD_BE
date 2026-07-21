@@ -1,6 +1,7 @@
 package com.gerd.domain.judgment.service
 
 import com.gerd.domain.judgment.dto.JudgmentContext
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO.StateRecordsDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO.LlmJudgmentItemDTO
@@ -123,7 +124,7 @@ class JudgmentResponseAssemblerTest {
                 substitutes = emptyList(),
             )
 
-            val response = assembler.toResponse(cached)
+            val response = assembler.toResponse(cached, StateRecordsDTO(total = 0, records = emptyList()))
 
             assertThat(response.personalTitle).isEqualTo("속이 편안할 수 있도록 천천히 드세요!")
             assertThat(response.category).isEqualTo("beverage")
@@ -141,7 +142,7 @@ class JudgmentResponseAssemblerTest {
                 substitutes = emptyList(),
             )
 
-            val response = assembler.toResponse(cached)
+            val response = assembler.toResponse(cached, StateRecordsDTO(total = 0, records = emptyList()))
 
             assertThat(response.personalTitle).isEqualTo("좋은 선택이에요!")
         }
