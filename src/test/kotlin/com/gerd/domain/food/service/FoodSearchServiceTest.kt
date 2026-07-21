@@ -1,7 +1,10 @@
 package com.gerd.domain.food.service
 
+import com.gerd.domain.food.entity.enums.FoodSource
+import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.food.repository.UserFoodRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
 import org.assertj.core.api.Assertions.assertThat
@@ -33,6 +36,9 @@ class FoodSearchServiceTest {
 
     @Mock
     private lateinit var foodCategoryReader: FoodCategoryReader
+
+    @Mock
+    private lateinit var userFoodRepository: UserFoodRepository
 
     @InjectMocks
     private lateinit var service: FoodSearchService
@@ -70,7 +76,9 @@ class FoodSearchServiceTest {
 
         @Test
         fun `공백을 제거한 검색어로 리포지토리를 조회한다`() {
-            whenever(foodRepository.search("감자된장", 10, userId)).thenReturn(emptyList())
+            val food = FoodFixture.food(id = 1, name = "감자된장")
+            whenever(foodRepository.search("감자된장", 10, userId)).thenReturn(listOf(food))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
 
             service.search("  감자 된장  ", null, userId)
 
@@ -79,7 +87,9 @@ class FoodSearchServiceTest {
 
         @Test
         fun `size를 1과 50 사이로 보정한다`() {
-            whenever(foodRepository.search("된장", 50, userId)).thenReturn(emptyList())
+            val food = FoodFixture.food(id = 1, name = "된장")
+            whenever(foodRepository.search("된장", 50, userId)).thenReturn(listOf(food))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
 
             service.search("된장", 999, userId)
 
@@ -99,6 +109,63 @@ class FoodSearchServiceTest {
             assertThat(result[0].externalId).isEqualTo(food.externalId.toString())
             assertThat(result[0].name).isEqualTo("된장찌개")
             assertThat(result[0].category).isEqualTo("soup_stew")
+        }
+
+        @Test
+        fun `완전 일치 결과가 있으면 UserFood를 새로 만들지 않는다`() {
+            val food = FoodFixture.food(id = 3, name = "된장찌개")
+            whenever(foodRepository.search("된장찌개", 10, userId)).thenReturn(listOf(food))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            service.search("된장찌개", null, userId)
+
+            verify(userFoodRepository, never()).save(any())
+            verify(userFoodRepository, never()).existsByUserIdAndFoodId(any(), any())
+        }
+
+        @Test
+        fun `완전 일치 없고 기존 USER 음식도 없으면 Food와 UserFood를 신규 생성한다`() {
+            val newFood = FoodFixture.food(id = 99, name = "신메뉴", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
+            whenever(foodRepository.search("신메뉴", 10, userId)).thenReturn(emptyList())
+            whenever(foodRepository.findByNameAndOwnerUserIdAndSource("신메뉴", userId, FoodSource.USER)).thenReturn(null)
+            whenever(foodRepository.save(any())).thenReturn(newFood)
+            whenever(userFoodRepository.existsByUserIdAndFoodId(userId, 99L)).thenReturn(false)
+            whenever(userFoodRepository.save(any())).thenAnswer { it.arguments[0] }
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            val result = service.search("신메뉴", null, userId)
+
+            assertThat(result).hasSize(1)
+            assertThat(result[0].name).isEqualTo("신메뉴")
+            verify(foodRepository).save(any())
+            verify(userFoodRepository).save(any())
+        }
+
+        @Test
+        fun `완전 일치 없고 기존 USER 음식이 있으면 재사용하고 UserFood만 확인한다`() {
+            val existing = FoodFixture.food(id = 55, name = "집밥", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = userId)
+            whenever(foodRepository.search("집밥", 10, userId)).thenReturn(emptyList())
+            whenever(foodRepository.findByNameAndOwnerUserIdAndSource("집밥", userId, FoodSource.USER)).thenReturn(existing)
+            whenever(userFoodRepository.existsByUserIdAndFoodId(userId, 55L)).thenReturn(true)
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            val result = service.search("집밥", null, userId)
+
+            assertThat(result).hasSize(1)
+            assertThat(result[0].name).isEqualTo("집밥")
+            verify(foodRepository, never()).save(any())
+            verify(userFoodRepository, never()).save(any())
+        }
+
+        @Test
+        fun `공백 포함 검색어도 공백 무시 후 완전 일치 판단한다`() {
+            val food = FoodFixture.food(id = 4, name = "된 장 찌 개")
+            whenever(foodRepository.search("된장찌개", 10, userId)).thenReturn(listOf(food))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            service.search("된 장 찌 개", null, userId)
+
+            verify(userFoodRepository, never()).save(any())
         }
     }
 }
