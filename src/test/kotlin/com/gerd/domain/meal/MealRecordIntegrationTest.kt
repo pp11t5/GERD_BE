@@ -52,6 +52,7 @@ class MealRecordIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun setUp() {
+        jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
         jdbcTemplate.update(
             """
             INSERT INTO users (user_id, external_id, email, role, status)
