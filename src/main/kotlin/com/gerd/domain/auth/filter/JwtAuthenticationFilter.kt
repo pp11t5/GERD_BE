@@ -28,15 +28,11 @@ class JwtAuthenticationFilter(
             ?.let { token ->
                 val claims = jwtProvider.validateAccessToken(token)
 
-                val email = claims["email"] as? String
-                    ?: throw GeneralException(AuthErrorCode.INVALID_TOKEN)
                 val role = (claims["role"] as? String)?.let { UserRole.valueOf(it) }
                     ?: throw GeneralException(AuthErrorCode.INVALID_TOKEN)
 
                 val userDetails = CustomUserDetails(
                     userId = jwtProvider.extractUserId(claims),
-                    email = email,
-                    nickname = claims["nickname"] as? String,
                     role = role,
                 )
 

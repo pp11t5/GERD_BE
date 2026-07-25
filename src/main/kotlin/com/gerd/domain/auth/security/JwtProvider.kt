@@ -38,14 +38,12 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
         key = Keys.hmacShaKeyFor(bytes)
     }
 
-    // sub = userId, tokenType = ACCESS, email, nickname, role 포함
+    // sub = userId, tokenType = ACCESS, role — PII(email·nickname) 제외
     fun createAccessToken(user: User): String {
         val now = Date()
         return Jwts.builder()
             .setSubject(user.id.toString())
             .claim("tokenType", TOKEN_TYPE_ACCESS)
-            .claim("email", user.email)
-            .claim("nickname", user.nickname)
             .claim("role", user.role.name)
             .setId(UUID.randomUUID().toString())
             .setIssuedAt(now)
