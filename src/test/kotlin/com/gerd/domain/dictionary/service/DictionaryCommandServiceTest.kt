@@ -48,9 +48,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `끼니의 음식이 SAFE에 없으면 저장한다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
                 .thenReturn(null)
             whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
@@ -63,9 +61,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `이미 SAFE에 있는 음식은 저장하지 않는다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
                 .thenReturn(DictionaryFixture.entry(type = DictionaryType.SAFE))
             whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
@@ -77,8 +73,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `끼니에 음식이 없으면 아무것도 저장하지 않는다`() {
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(emptyList())
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(emptyList())
             whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
 
             service.upsertSafeEntries(userId, mealRecordId)
@@ -92,9 +87,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `다른 편안 증상에서 유효하지 않은 음식만 삭제한다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
             whenever(symptomRepository.findFoodIdsStillSafeByOtherSymptoms(userId, listOf(1L), mealRecordId))
                 .thenReturn(emptyList())
 
@@ -105,9 +98,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `다른 편안 증상에서 유효한 음식은 삭제하지 않는다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
             whenever(symptomRepository.findFoodIdsStillSafeByOtherSymptoms(userId, listOf(1L), mealRecordId))
                 .thenReturn(listOf(1L))
 
@@ -118,8 +109,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `끼니에 음식이 없으면 삭제 쿼리를 호출하지 않는다`() {
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(emptyList())
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(emptyList())
 
             service.removeSafeEntries(userId, mealRecordId)
 
@@ -128,10 +118,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `일부 음식만 다른 증상에서 유효하면 나머지만 삭제한다`() {
-            val food1 = MealRecordFixture.mealFood(foodId = 1L)
-            val food2 = MealRecordFixture.mealFood(foodId = 2L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(food1, food2))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L, 2L))
             whenever(symptomRepository.findFoodIdsStillSafeByOtherSymptoms(userId, listOf(1L, 2L), mealRecordId))
                 .thenReturn(listOf(1L))
 

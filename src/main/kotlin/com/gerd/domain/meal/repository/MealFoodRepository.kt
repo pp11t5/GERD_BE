@@ -16,6 +16,9 @@ interface MealFoodRepository : JpaRepository<MealFood, Long> {
     @Query("select mf from MealFood mf where mf.mealRecord.id = :mealRecordId order by mf.eatenAt asc")
     fun findByMealRecordIdOrderByEatenAtAsc(@Param("mealRecordId") mealRecordId: Long): List<MealFood>
 
+    @Query("select mf.foodId from MealFood mf where mf.mealRecord.id = :mealRecordId")
+    fun findFoodIdsByMealRecordId(@Param("mealRecordId") mealRecordId: Long): List<Long>
+
     @Query(
         "select mf from MealFood mf where mf.mealRecord.id in :mealRecordIds " +
             "order by mf.mealRecord.id asc, mf.eatenAt asc",

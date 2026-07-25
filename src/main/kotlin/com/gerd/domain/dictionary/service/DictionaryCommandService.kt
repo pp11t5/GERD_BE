@@ -10,7 +10,6 @@ import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.repository.SymptomRepository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 
 @Service
@@ -22,33 +21,40 @@ class DictionaryCommandService(
     private val symptomRepository: SymptomRepository,
 ) {
 
-    // afterCommit(SymptomService.create/update)에서만 호출 — 원 트랜잭션이 이미 커밋된 시점이라
-    // REQUIRED로는 커밋된 트랜잭션에 참여해 INSERT가 유실된다. 독립 트랜잭션으로 분리해 커밋을 보장한다.
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // 안전한 상태에 있는지 확인
+    private val SAFE_STATES = setOf(SymptomState.COMFORTABLE, SymptomState.GOOD)
+    // 
+    fun SymptomState.isSafe() = this in SAFE_STATES
+
+    // SymptomService.create/update와 같은 트랜잭션에서 직접 호출 — 별도 이벤트/트랜잭션 분리 없음
+    @Transactional
     fun upsertSafeEntries(userId: Long, mealRecordId: Long) {
         val user = userRepository.getReferenceById(userId)
-        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId)
+        val foodIds = mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)
 
-        mealFoods.forEach { mealFood ->
+        foodIds.forEach { foodId ->
             val exists = dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(
-                userId, mealFood.foodId, DictionaryType.SAFE,
+                userId, foodId, DictionaryType.SAFE,
             ) != null
             if (exists) return@forEach
 
             dictionaryRepository.save(
                 UserFoodDictionary(
                     user = user,
-                    food = foodRepository.getReferenceById(mealFood.foodId),
+                    food = foodRepository.getReferenceById(foodId),
                     dictionaryType = DictionaryType.SAFE,
                 ),
             )
         }
     }
 
+    /**
+     * 유저-음식-판정 등급에 따라 SAFE 사전 항목 제거
+     * 다른 증상 기록에서 여전히 SAFE 상태로 판정되는 음식은 제거하지 않음
+     */
     @Transactional
     fun removeSafeEntries(userId: Long, mealRecordId: Long) {
-        val foodIds = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId)
-            .map { it.foodId }
+        val foodIds = mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)
         if (foodIds.isEmpty()) return
 
         val stillValidatedIds = symptomRepository
@@ -61,6 +67,10 @@ class DictionaryCommandService(
         dictionaryRepository.deleteByUserIdAndFoodIdsAndType(userId, toRemove, DictionaryType.SAFE)
     }
 
+    /**
+     * 유저-음식-판정 등급에 따라 CAUTION/RISK 사전 항목 추가
+     * 이미 존재하는 경우에는 아무 작업도 하지 않음
+     */
     @Transactional
     fun upsertCautionRiskEntry(userId: Long, foodId: Long, grade: JudgmentGrade) {
         val type = when (grade) {
@@ -81,6 +91,3 @@ class DictionaryCommandService(
     }
 }
 
-private val SAFE_STATES = setOf(SymptomState.COMFORTABLE, SymptomState.GOOD)
-
-fun SymptomState.isSafe() = this in SAFE_STATES
