@@ -10,6 +10,10 @@ spring:
       hibernate:
         format_sql: true
     open-in-view: false
+  # 매번 새로 뜨는 Testcontainers DB엔 ddl-auto가 스키마를 만들기 전이라
+  # Flyway가 foods 등 테이블을 참조하는 마이그레이션에서 실패한다 — 테스트에서는 비활성화
+  flyway:
+    enabled: false
   # @DataJpaTest가 임베디드 H2로 대체하지 않고 위 datasource를 그대로 쓰게 한다
   test:
     database:
