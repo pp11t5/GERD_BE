@@ -71,4 +71,4 @@ management:
         step: 30s
 logging:
   level:
-    io.micrometer.registry.otlp: TRACE
+    io.micrometer.registry.otlp: WARN

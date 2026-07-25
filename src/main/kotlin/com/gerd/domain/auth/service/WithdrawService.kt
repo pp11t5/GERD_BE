@@ -8,6 +8,7 @@ import com.gerd.domain.auth.repository.RefreshTokenRepository
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.global.apiPayload.GeneralException
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Service
@@ -24,7 +25,7 @@ class WithdrawService(
     private val authAccountRepository: AuthAccountRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val kakaoApiClient: KakaoApiClient,
-    private val taskScheduler: TaskScheduler,
+    @Qualifier("withdrawTaskScheduler") private val taskScheduler: TaskScheduler,
     @Value("\${app.withdraw.grace-period}") private val gracePeriod: Duration,
     @Value("\${app.withdraw.schedule-in-memory}") private val scheduleInMemory: Boolean,
 ) {
