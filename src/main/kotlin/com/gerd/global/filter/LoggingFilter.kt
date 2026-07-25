@@ -43,7 +43,11 @@ class LoggingFilter : OncePerRequestFilter() {
             val status = response.status
             val msg = "← {} {} {} {}ms (traceId={})"
             val args = arrayOf(request.method, request.requestURI, status, duration, MDC.get("traceId"))
-            if (status >= 400) log.warn(msg, *args) else log.info(msg, *args)
+            when {
+                status >= 500 -> log.error(msg, *args)
+                status >= 400 -> log.warn(msg, *args)
+                else -> log.info(msg, *args)
+            }
         }
     }
 }
