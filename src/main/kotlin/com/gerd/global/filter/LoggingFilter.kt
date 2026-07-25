@@ -40,10 +40,10 @@ class LoggingFilter : OncePerRequestFilter() {
             filterChain.doFilter(request, response)
         } finally {
             val duration = System.currentTimeMillis() - start
-            log.info(
-                "← {} {} {} {}ms (traceId={})",
-                request.method, request.requestURI, response.status, duration, MDC.get("traceId"),
-            )
+            val status = response.status
+            val msg = "← {} {} {} {}ms (traceId={})"
+            val args = arrayOf(request.method, request.requestURI, status, duration, MDC.get("traceId"))
+            if (status >= 400) log.warn(msg, *args) else log.info(msg, *args)
         }
     }
 }
