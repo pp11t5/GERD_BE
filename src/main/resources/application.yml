@@ -11,6 +11,10 @@ spring:
       hibernate:
         jdbc:
           time_zone: Asia/Seoul
+  flyway:
+    # 기존 스키마는 ddl-auto가 관리 — Flyway는 그 위에 얹는 확장/인덱스/데이터 마이그레이션만 담당
+    baseline-on-migrate: true
+    baseline-version: "0"
 
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long}
