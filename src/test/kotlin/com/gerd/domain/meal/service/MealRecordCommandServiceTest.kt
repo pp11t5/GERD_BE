@@ -12,6 +12,7 @@ import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
+import com.gerd.domain.meal.event.MealFoodJudgedEvent
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -35,6 +36,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
@@ -73,6 +75,9 @@ class MealRecordCommandServiceTest {
     @Mock
     private lateinit var dictionaryCommandService: DictionaryCommandService
 
+    @Mock
+    private lateinit var eventPublisher: ApplicationEventPublisher
+
     private lateinit var service: MealCommandService
 
     private val objectMapper = ObjectMapper()
@@ -91,6 +96,7 @@ class MealRecordCommandServiceTest {
             objectMapper = objectMapper,
             symptomRepository = symptomRepository,
             dictionaryCommandService = dictionaryCommandService,
+            eventPublisher = eventPublisher,
             transactionManager = transactionManager,
         )
     }
@@ -139,11 +145,44 @@ class MealRecordCommandServiceTest {
             assertThat(analysis.allergyAnalysis.ment).isEqualTo("자극 가능성이 있어요")
             assertThat(analysis.allergyAnalysis.content).isEqualTo("식후 바로 눕지 마세요")
             assertThat(result.mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
+            verify(eventPublisher).publishEvent(MealFoodJudgedEvent(userId, 10L, JudgmentGrade.CAUTION))
 
             // 판정(LLM 호출 가능)은 트랜잭션 밖에서 수행 — 커넥션을 점유하지 않는다. 트랜잭션은 저장용 쓰기 tx 하나뿐
             val definitions = argumentCaptor<TransactionDefinition>()
             verify(transactionManager, times(1)).getTransaction(definitions.capture())
             assertThat(definitions.firstValue.isReadOnly).isFalse()
+        }
+
+        @Test
+        fun `RECOMMEND 판정이면 도감 갱신 이벤트를 발행하지 않는다`() {
+            val food = FoodFixture.food(id = 10L)
+            whenever(transactionManager.getTransaction(any())).thenAnswer { SimpleTransactionStatus() }
+            whenever(mealRecordConverter.parseUuid(foodExternalId.toString())).thenReturn(foodExternalId)
+            whenever(foodRepository.findByExternalId(foodExternalId)).thenReturn(food)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
+            whenever(foodJudgmentQueryService.getJudgment(foodExternalId.toString(), userId))
+                .thenReturn(judgment(grade = JudgmentGrade.RECOMMEND) to true)
+            whenever(mealRecordConverter.parseEatenAt("2026-06-11T12:30:00+09:00")).thenReturn(MealRecordFixture.EATEN_AT)
+            whenever(mealRecordRepository.save(any())).thenAnswer { invocation ->
+                (invocation.arguments[0] as MealRecord).apply {
+                    ReflectionTestUtils.setField(this, "id", MealRecordFixture.MEAL_RECORD_ID)
+                }
+            }
+            whenever(mealFoodRepository.save(any())).thenAnswer { invocation ->
+                (invocation.arguments[0] as MealFood).apply {
+                    ReflectionTestUtils.setField(this, "id", 1L)
+                    externalId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID
+                }
+            }
+            whenever(mealRecordConverter.toSummary(any(), any())).thenReturn(mealFoodDetail())
+
+            service.createNew(
+                foodExternalId = foodExternalId.toString(),
+                rawEatenAt = "2026-06-11T12:30:00+09:00",
+                userId = userId,
+            )
+
+            verify(eventPublisher, never()).publishEvent(any())
         }
 
         @Test
@@ -251,11 +290,11 @@ class MealRecordCommandServiceTest {
         }
     }
 
-    private fun judgment() = JudgmentResponseDTO(
+    private fun judgment(grade: JudgmentGrade = JudgmentGrade.CAUTION) = JudgmentResponseDTO(
         foodExternalId = foodExternalId.toString(),
         foodName = "된장찌개",
         category = "soup_stew",
-        grade = JudgmentGrade.CAUTION,
+        grade = grade,
         personalTitle = "속이 불편할 수 있어요",
         items = listOf(
             JudgmentResponseDTO.JudgmentItemDTO("맵고 짤 수 있어요", "천천히 드세요"),

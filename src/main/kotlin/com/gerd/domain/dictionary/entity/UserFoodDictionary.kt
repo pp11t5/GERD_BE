@@ -24,7 +24,6 @@ import org.hibernate.annotations.OnDeleteAction
 @Table(
     name = "user_food_dictionaries",
     indexes = [
-        // 커서 페이징(user_id + type 필터, id desc 정렬) 및 user_id 단독 카운트를 함께 커버.
         Index(name = "user_food_dict_user_type_id_idx", columnList = "user_id, dictionary_type, id"),
     ],
     uniqueConstraints = [

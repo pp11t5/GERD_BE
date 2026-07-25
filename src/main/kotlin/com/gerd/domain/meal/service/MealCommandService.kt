@@ -17,11 +17,13 @@ import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
+import com.gerd.domain.meal.event.MealFoodJudgedEvent
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
@@ -41,6 +43,7 @@ class MealCommandService(
     private val objectMapper: ObjectMapper,
     private val symptomRepository: SymptomRepository,
     private val dictionaryCommandService: DictionaryCommandService,
+    private val eventPublisher: ApplicationEventPublisher,
     transactionManager: PlatformTransactionManager,
 ) {
     private val writeTransactionTemplate = TransactionTemplate(transactionManager)
@@ -156,6 +159,7 @@ class MealCommandService(
                 analysisJson = analysisJson,
             ),
         )
+        publishJudgedEventIfCautionRisk(user.id!!, food.id!!, grade)
         return mealRecordConverter.toSummary(saved, food)
     }
 
@@ -180,7 +184,13 @@ class MealCommandService(
         )
         mealRecord.updateGrade(grade)
         mealRecordRepository.save(mealRecord)
+        publishJudgedEventIfCautionRisk(user.id!!, food.id!!, grade)
         return mealRecordConverter.toSummary(saved, food)
+    }
+
+    private fun publishJudgedEventIfCautionRisk(userId: Long, foodId: Long, grade: JudgmentGrade) {
+        if (grade != JudgmentGrade.CAUTION && grade != JudgmentGrade.RISK) return
+        eventPublisher.publishEvent(MealFoodJudgedEvent(userId, foodId, grade))
     }
 
     private fun resolveFood(foodExternalId: String, userId: Long): Food {

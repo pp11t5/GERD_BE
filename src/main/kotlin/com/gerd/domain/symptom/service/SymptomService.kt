@@ -2,7 +2,6 @@ package com.gerd.domain.symptom.service
 
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.service.DictionaryCommandService
-import com.gerd.domain.dictionary.service.isSafe
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
 import com.gerd.domain.food.repository.FoodRepository
@@ -21,11 +20,8 @@ import com.gerd.domain.symptom.exception.SymptomErrorCode
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.apiPayload.code.CommonErrorCode
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.transaction.support.TransactionSynchronization
-import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.UUID
 
 @Service
@@ -38,18 +34,13 @@ class SymptomService(
     private val foodCategoryMapRepository: FoodCategoryMapRepository,
     private val symptomConverter: SymptomConverter,
     private val userRepository: UserRepository,
-    private val symptomPatternRefreshService: SymptomPatternRefreshService,
     private val dictionaryCommandService: DictionaryCommandService,
     private val userStreakService: UserStreakService,
 ) {
 
-    private val log = LoggerFactory.getLogger(SymptomService::class.java)
-
     // 상세 조회
     fun getDetail(symptomId: String, userId: Long): SymptomResponseDTO {
         val symptom = resolveSymptom(symptomId, userId)
-        // 증상 상세 조회 시점에 분석이 최신 상태가 아닐 수 있으므로, 필요 시 비동기 갱신 예약
-        if (symptom.isAnalysisDirty) symptom.externalId?.let { symptomPatternRefreshService.refreshAsync(it.toString(), userId) }
         return symptomConverter.toResponse(symptom, buildLinkedMeal(symptom, userId))
     }
 
@@ -67,13 +58,15 @@ class SymptomService(
             memo = request.memo,
         )
         val saved = symptomRepository.save(symptom)
+
+        // 스트릭 대상인지 확인
         if (saved.symptomState.isStreakTarget()) {
             userStreakService.updateOnComfortableRecorded(userId, saved.occurredAt.toLocalDate())
         }
-        if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(saved, userId)
 
-        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
-            registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
+        // 안전 상태(COMFORTABLE/GOOD)면 도감 SAFE 등록
+        if (with(dictionaryCommandService) { request.symptomState?.isSafe() } == true && mealRecordId != null) {
+            dictionaryCommandService.upsertSafeEntries(userId, mealRecordId)
         }
 
         return symptomConverter.toResponse(saved, buildLinkedMeal(saved, userId))
@@ -102,10 +95,9 @@ class SymptomService(
         ) {
             userStreakService.rebuildCurrentStreak(userId)
         }
-        if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(symptom, userId)
 
-        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
-            registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
+        if (with(dictionaryCommandService) { request.symptomState?.isSafe() } == true && mealRecordId != null) {
+            dictionaryCommandService.upsertSafeEntries(userId, mealRecordId)
         }
     }
 
@@ -114,7 +106,6 @@ class SymptomService(
     fun updateMemo(symptomId: String, request: SymptomMemoUpdateRequestDTO, userId: Long) {
         val symptom = resolveSymptom(symptomId, userId)
         symptom.updateMemo(request.memo)
-        scheduleAnalysisRefreshAfterCommit(symptom, userId)
     }
 
     // 기록 삭제
@@ -189,28 +180,8 @@ class SymptomService(
             .groupBy { it.foodId }
             .mapValues { (_, categories) -> categories.firstOrNull()?.code }
     }
-
-    // 트랜잭션 커밋 이후에 증상 패턴 분석 갱신을 예약
-    private fun scheduleAnalysisRefreshAfterCommit(symptom: Symptom, userId: Long) {
-        val symptomId = symptom.externalId?.toString() ?: return
-        registerAfterCommit { symptomPatternRefreshService.refreshAsync(symptomId, userId) }
-    }
-
-    private fun registerAfterCommit(action: () -> Unit) {
-        val wrapped = {
-            try { action() }
-            catch (e: Exception) {
-                log.error("[afterCommit] 커밋 후 작업 실패", e)
-            }
-        }
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            wrapped(); return
-        }
-        TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
-            override fun afterCommit() = wrapped()
-        })
-    }
 }
 
+// 증상 상태가 연속 기록(streak) 대상인지 확인
 private fun SymptomState.isStreakTarget(): Boolean =
     this == SymptomState.COMFORTABLE
