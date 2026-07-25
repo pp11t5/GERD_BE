@@ -1,5 +1,6 @@
 package com.gerd.domain.symptom.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
@@ -36,6 +37,7 @@ import org.mockito.kotlin.isNull
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class SymptomServiceTest {
@@ -94,7 +96,7 @@ class SymptomServiceTest {
         fun `증상 기록을 저장하고 연결 음식 정보를 포함해 응답한다`() {
             val request = createRequest()
             val saved = SymptomFixture.symptom()
-            whenever(userRepository.getReferenceById(userId)).thenReturn(SymptomFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
                 .thenReturn(MealRecordFixture.mealRecord())
             whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
@@ -129,7 +131,7 @@ class SymptomServiceTest {
                 symptomState = SymptomState.GOOD,
                 mealRecordId = null,
             )
-            whenever(userRepository.getReferenceById(userId)).thenReturn(SymptomFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
             whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
             whenever(symptomRepository.save(any())).thenReturn(saved)
             whenever(symptomConverter.toResponse(any(), isNull()))
@@ -143,11 +145,22 @@ class SymptomServiceTest {
         @Test
         fun `끼니 식별자가 잘못된 형식이면 MEAL_RECORD_NOT_FOUND`() {
             val request = createRequest(mealRecordId = "bad")
-            whenever(userRepository.getReferenceById(userId)).thenReturn(SymptomFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
 
             assertThatThrownBy { service.create(userId, request) }
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(MealErrorCode.MEAL_RECORD_NOT_FOUND)
+            verify(symptomRepository, never()).save(any())
+        }
+
+        @Test
+        fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            val request = createRequest()
+            whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+
+            assertThatThrownBy { service.create(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode").isEqualTo(AuthErrorCode.USER_NOT_FOUND)
             verify(symptomRepository, never()).save(any())
         }
     }

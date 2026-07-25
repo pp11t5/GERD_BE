@@ -1,5 +1,6 @@
 package com.gerd.domain.symptom.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.dictionary.service.isSafe
@@ -56,7 +57,8 @@ class SymptomService(
     // 증상 기록 생성
     @Transactional
     fun create(userId: Long, request: SymptomCreateRequestDTO): SymptomResponseDTO {
-        val user = userRepository.getReferenceById(userId)
+        val user = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
         val symptom = Symptom(
             user = user,
