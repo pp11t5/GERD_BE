@@ -20,9 +20,9 @@ import org.mockito.kotlin.whenever
 /**
  * 음식 검색 서비스 단위 테스트
  *
- * 검색어 검증·정규화(공백 제거)·size 보정·DTO 매핑·hasExactMatch 판정 등 서비스 로직만 mock으로 검증한다.
- * 실제 이름 매칭(ILIKE·공백 무시·정렬)은 DB 엔진에 의존하므로 H2로는 충실히 재현할 수 없어 제외한다.
- * 검색 시점에 음식 생성은 수행하지 않는다 — 생성은 식사 기록 등록 시점에 위임한다.
+ * 검색어 검증·정규화(공백 제거)·size 보정·DTO 매핑·hasExactMatch 판정 등 서비스 로직을 mock으로 검증
+ * 실제 이름 매칭(LIKE·공백 무시·정렬)은 DB 엔진 의존이라 H2로 충실히 재현 불가 — 제외
+ * 완전 일치 없을 때 findSimilarByJamo 분기 및 중복 제거 동작 포함
  */
 @ExtendWith(MockitoExtension::class)
 class FoodSearchServiceTest {
@@ -118,11 +118,48 @@ class FoodSearchServiceTest {
         fun `완전 일치 결과가 없으면 hasExactMatch가 false다`() {
             val food = FoodFixture.food(id = 4, name = "된장찌개볶음")
             whenever(foodRepository.search("된장", 10, userId)).thenReturn(listOf(food))
+            whenever(foodRepository.findSimilarByJamo(any(), any(), any())).thenReturn(emptyList())
             whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
 
             val result = service.search("된장", null, userId)
 
             assertThat(result.hasExactMatch).isFalse()
+        }
+
+        @Test
+        fun `완전 일치 없을 때 자모 유사도 후보를 뒤에 붙인다`() {
+            val jamoFood = FoodFixture.food(id = 2, name = "감자탕")
+            whenever(foodRepository.search("감자탁", 10, userId)).thenReturn(emptyList())
+            whenever(foodRepository.findSimilarByJamo("감자탁", userId, 10)).thenReturn(listOf(jamoFood))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            val result = service.search("감자탁", null, userId)
+
+            assertThat(result.foods).hasSize(1)
+            assertThat(result.hasExactMatch).isFalse()
+        }
+
+        @Test
+        fun `자모 결과 중 exact에 이미 있는 항목은 중복 제거된다`() {
+            val food = FoodFixture.food(id = 1, name = "된장국")
+            whenever(foodRepository.search("된장꾹", 10, userId)).thenReturn(listOf(food))
+            whenever(foodRepository.findSimilarByJamo("된장꾹", userId, 9)).thenReturn(listOf(food))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            val result = service.search("된장꾹", null, userId)
+
+            assertThat(result.foods).hasSize(1)
+        }
+
+        @Test
+        fun `exact 결과가 size를 채우면 findSimilarByJamo를 호출하지 않는다`() {
+            val foods = (1..10).map { FoodFixture.food(id = it.toLong(), name = "된장찌개$it") }
+            whenever(foodRepository.search("된장", 10, userId)).thenReturn(foods)
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            service.search("된장", null, userId)
+
+            verify(foodRepository, never()).findSimilarByJamo(any(), any(), any())
         }
 
         @Test
@@ -139,6 +176,7 @@ class FoodSearchServiceTest {
         @Test
         fun `검색 결과가 없어도 음식을 생성하지 않는다`() {
             whenever(foodRepository.search("신메뉴", 10, userId)).thenReturn(emptyList())
+            whenever(foodRepository.findSimilarByJamo(any(), any(), any())).thenReturn(emptyList())
             whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
 
             val result = service.search("신메뉴", null, userId)

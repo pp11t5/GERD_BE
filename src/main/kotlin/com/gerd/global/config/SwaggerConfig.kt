@@ -35,7 +35,7 @@ import java.lang.reflect.ParameterizedType
 class SwaggerConfig {
 
     companion object {
-        private const val JWT_SCHEME = "JWT TOKEN"
+        private const val JWT_SCHEME = "BearerAuth"
     }
 
     @Bean
