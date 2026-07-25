@@ -1,9 +1,9 @@
 package com.gerd.domain.food.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
-import com.gerd.domain.food.dto.AddRecentRequestDTO
 import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.dto.FoodSearchResultDTO
+import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.food.service.FoodSearchService
@@ -11,9 +11,7 @@ import com.gerd.domain.food.service.RecentFoodService
 import com.gerd.global.annotation.CurrentUser
 import com.gerd.global.apiPayload.ApiResponse
 import com.gerd.global.apiPayload.code.CommonSuccessCode
-import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -47,24 +45,11 @@ class FoodController(
             .status(CommonSuccessCode.OK.httpStatus)
             .body(ApiResponse.onSuccess(recentFoodService.getRecent(size, userDetails.userId), CommonSuccessCode.OK))
 
-    override fun addRecent(
-        @CurrentUser userDetails: CustomUserDetails,
-        @Valid @RequestBody request: AddRecentRequestDTO,
-    ): ResponseEntity<ApiResponse<RecentFoodDTO>> =
-        ResponseEntity
-            .status(CommonSuccessCode.OK.httpStatus)
-            .body(
-                ApiResponse.onSuccess(
-                    recentFoodService.addRecent(request.foodExternalId, userDetails.userId),
-                    CommonSuccessCode.OK,
-                ),
-            )
-
     override fun deleteRecent(
         @CurrentUser userDetails: CustomUserDetails,
-        foodExternalId: String,
+        id: Long,
     ): ResponseEntity<ApiResponse<Unit>> {
-        recentFoodService.deleteRecent(foodExternalId, userDetails.userId)
+        recentFoodService.deleteRecent(id, userDetails.userId)
         return ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
             .body(ApiResponse.onSuccess(Unit, CommonSuccessCode.OK))
@@ -78,4 +63,11 @@ class FoodController(
             .status(CommonSuccessCode.OK.httpStatus)
             .body(ApiResponse.onSuccess(Unit, CommonSuccessCode.OK))
     }
+
+    override fun getTopSearched(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<List<FoodSummaryDTO>>> =
+        ResponseEntity
+            .status(CommonSuccessCode.OK.httpStatus)
+            .body(ApiResponse.onSuccess(recentFoodService.getTopSearched(), CommonSuccessCode.OK))
 }

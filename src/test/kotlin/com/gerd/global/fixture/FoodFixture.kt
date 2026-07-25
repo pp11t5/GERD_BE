@@ -26,13 +26,13 @@ object FoodFixture {
         this.externalId = externalId // BaseEntity의 public var로 직접 할당
     }
 
-    // 최근 본 음식 1건 — 상한/upsert/삭제 분기용
+    // 최근 검색어 1건 — 상한/upsert/삭제 분기용
     fun history(
         id: Long,
-        food: Food = food(),
+        query: String = "된장찌개",
         searchedAt: LocalDateTime,
         userId: Long = 1L,
-    ): FoodSearchHistory = FoodSearchHistory(userId = userId, food = food, searchedAt = searchedAt).apply {
+    ): FoodSearchHistory = FoodSearchHistory(userId = userId, query = query, searchedAt = searchedAt).apply {
         ReflectionTestUtils.setField(this, "id", id)
     }
 }

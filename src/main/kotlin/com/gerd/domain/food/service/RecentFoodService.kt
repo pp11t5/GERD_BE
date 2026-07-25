@@ -1,64 +1,52 @@
 package com.gerd.domain.food.service
 
+import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.entity.FoodSearchHistory
 import com.gerd.domain.food.exception.FoodErrorCode
-import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.food.repository.FoodSearchHistoryRepository
 import com.gerd.global.apiPayload.GeneralException
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
-import java.util.UUID
 
 /**
- * 최근 본 음식 CRUD 서비스
+ * 최근 검색어 CRUD 서비스
  *
- * - 추가: (user_id, food_id) upsert(재진입 시 searchedAt만 갱신) + 보관 상한(10) 정리
- * - 조회/삭제: 본인 항목만, soft-deleted 음식은 조회에서 제외
+ * - 기록: 음식 검색 API 호출 시 FoodSearchService가 호출 — (user_id, query) upsert(재검색 시 searchedAt만 갱신) + 보관 상한(10) 정리
+ * - 조회/삭제: 본인 항목만
  */
 @Service
 @Transactional(readOnly = true)
 class RecentFoodService(
     private val foodSearchHistoryRepository: FoodSearchHistoryRepository,
-    private val foodRepository: FoodRepository,
-    private val foodCategoryReader: FoodCategoryReader,
 ) {
+
+    fun getTopSearched(): List<FoodSummaryDTO> =
+        foodSearchHistoryRepository.findTop3MostSearched().map {
+            FoodSummaryDTO(externalId = it.getExternalId(), name = it.getName(), category = it.getCategory())
+        }
 
     fun getRecent(rawSize: Int?, userId: Long): List<RecentFoodDTO> {
         val size = (rawSize ?: DEFAULT_SIZE).coerceIn(1, MAX_SIZE)
-        val histories = foodSearchHistoryRepository.findRecentWithFood(userId, PageRequest.of(0, size))
-
-        val categories = foodCategoryReader.loadPrimaryByFoodIds(histories.mapNotNull { it.food.id })
-        return histories.map { it.toDTO(categories[it.food.id]) }
+        return foodSearchHistoryRepository.findRecentByUserId(userId, PageRequest.of(0, size)).map { it.toDTO() }
     }
 
+    // FoodSearchService.search() 내부에서 호출 — 검색어 자체를 최근 검색 기록으로 남긴다
     @Transactional
-    fun addRecent(foodExternalId: String, userId: Long): RecentFoodDTO {
-        // 형식이 잘못된 UUID는 존재할 수 없는 음식과 동일하게 취급(열거 단서 차단)
-        val externalId = parseUuid(foodExternalId) ?: throw GeneralException(FoodErrorCode.FOOD_NOT_FOUND)
-        val food = foodRepository.findByExternalId(externalId)
-            ?.takeIf { FoodAccessPolicy.isVisibleTo(it, userId) }
-            ?: throw GeneralException(FoodErrorCode.FOOD_NOT_FOUND)
-
+    fun record(query: String, userId: Long) {
         val now = LocalDateTime.now()
-        val foodId = food.id!!
-        val history = foodSearchHistoryRepository.findByUserIdAndFoodId(userId, foodId)
+        foodSearchHistoryRepository.findByUserIdAndQuery(userId, query)
             ?.apply { touch(now) }
-            ?: foodSearchHistoryRepository.save(FoodSearchHistory(userId = userId, food = food, searchedAt = now))
+            ?: foodSearchHistoryRepository.save(FoodSearchHistory(userId = userId, query = query, searchedAt = now))
 
         enforceLimit(userId)
-
-        val category = foodCategoryReader.loadPrimaryByFoodIds(listOf(foodId))[foodId]
-        return history.toDTO(category)
     }
 
     @Transactional
-    fun deleteRecent(foodExternalId: String, userId: Long) {
-        // 형식이 잘못된 UUID는 존재할 수 없는 항목과 동일하게 취급(열거 단서 차단)
-        val externalId = parseUuid(foodExternalId) ?: throw GeneralException(FoodErrorCode.RECENT_NOT_FOUND)
-        val history = foodSearchHistoryRepository.findByUserIdAndFoodExternalId(userId, externalId)
+    fun deleteRecent(id: Long, userId: Long) {
+        val history = foodSearchHistoryRepository.findByIdAndUserId(id, userId)
             ?: throw GeneralException(FoodErrorCode.RECENT_NOT_FOUND)
         foodSearchHistoryRepository.delete(history)
     }
@@ -76,14 +64,10 @@ class RecentFoodService(
         }
     }
 
-    private fun parseUuid(value: String): UUID? =
-        runCatching { UUID.fromString(value.trim()) }.getOrNull()
-
-    private fun FoodSearchHistory.toDTO(category: String?) =
+    private fun FoodSearchHistory.toDTO() =
         RecentFoodDTO(
-            foodExternalId = food.externalId.toString(),
-            name = food.name,
-            category = category,
+            id = id!!,
+            query = query,
             searchedAt = searchedAt,
         )
 

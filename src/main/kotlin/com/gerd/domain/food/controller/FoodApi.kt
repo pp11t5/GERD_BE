@@ -1,9 +1,9 @@
 package com.gerd.domain.food.controller
 
 import com.gerd.domain.auth.security.CustomUserDetails
-import com.gerd.domain.food.dto.AddRecentRequestDTO
 import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.dto.FoodSearchResultDTO
+import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.global.annotation.ApiErrorExample
@@ -18,8 +18,6 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 
@@ -57,8 +55,8 @@ interface FoodApi {
     ): ResponseEntity<ApiResponse<FoodSearchResultDTO>>
 
     @Operation(
-        summary = "최근 본 음식 조회",
-        description = "본인이 최근 본 음식을 최신순으로 반환합니다(기본 10, 최대 50), 삭제된 음식은 제외됩니다.",
+        summary = "최근 검색어 조회",
+        description = "본인이 최근 검색한 검색어를 최신순으로 반환합니다(기본 10, 최대 50).",
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공(없으면 빈 배열)"))
     @GetMapping("/recent")
@@ -68,37 +66,32 @@ interface FoodApi {
     ): ResponseEntity<ApiResponse<List<RecentFoodDTO>>>
 
     @Operation(
-        summary = "최근 본 음식 추가",
-        description = """
-            음식 상세 진입 시 호출합니다, (user, food) 단위로 upsert되어 같은 음식 재진입 시 시각만 갱신됩니다.
-            보관 상한(10) 초과 시 오래된 항목부터 삭제됩니다.
-        """,
-    )
-    @ApiErrorExample(FoodErrorCode::class, "FOOD_NOT_FOUND")
-    @ApiResponses(SwaggerResponse(responseCode = "200", description = "추가/갱신 성공"))
-    @PostMapping("/recent")
-    fun addRecent(
-        @CurrentUser userDetails: CustomUserDetails,
-        @RequestBody request: AddRecentRequestDTO,
-    ): ResponseEntity<ApiResponse<RecentFoodDTO>>
-
-    @Operation(
-        summary = "최근 본 음식 단건 삭제",
-        description = "본인의 최근 본 음식 1건을 음식 외부 식별자(externalId)로 삭제합니다. (user, food)가 유니크라 externalId가 항목을 유일하게 가리킵니다.",
+        summary = "최근 검색어 단건 삭제",
+        description = "본인의 최근 검색어 1건을 id로 삭제합니다.",
     )
     @ApiErrorExample(FoodErrorCode::class, "RECENT_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "삭제 성공"))
-    @DeleteMapping("/recent/{foodExternalId}")
+    @DeleteMapping("/recent/{id}")
     fun deleteRecent(
         @CurrentUser userDetails: CustomUserDetails,
-        @Parameter(description = "음식 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
-        @PathVariable foodExternalId: String,
+        @Parameter(description = "최근 검색어 id", example = "1")
+        @PathVariable id: Long,
     ): ResponseEntity<ApiResponse<Unit>>
 
-    @Operation(summary = "최근 본 음식 전체 삭제", description = "본인의 최근 검색 기록을 모두 삭제합니다.")
+    @Operation(summary = "최근 검색어 전체 삭제", description = "본인의 최근 검색 기록을 모두 삭제합니다.")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "전체 삭제 성공"))
     @DeleteMapping("/recent")
     fun deleteAllRecent(
         @CurrentUser userDetails: CustomUserDetails,
     ): ResponseEntity<ApiResponse<Unit>>
+
+    @Operation(
+        summary = "가장 많이 검색된 음식 TOP 3",
+        description = "전체 유저의 검색 기록 기준 상위 3개 음식을 반환합니다. 검색 기록이 없으면 빈 배열.",
+    )
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
+    @GetMapping("/top-searched")
+    fun getTopSearched(
+        @CurrentUser userDetails: CustomUserDetails,
+    ): ResponseEntity<ApiResponse<List<FoodSummaryDTO>>>
 }

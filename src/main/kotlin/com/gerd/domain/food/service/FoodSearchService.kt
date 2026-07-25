@@ -10,10 +10,11 @@ import org.springframework.transaction.annotation.Transactional
 import java.text.Normalizer
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 class FoodSearchService(
     private val foodRepository: FoodRepository,
     private val foodCategoryReader: FoodCategoryReader,
+    private val recentFoodService: RecentFoodService,
 ) {
 
     fun search(rawQuery: String?, rawSize: Int?, userId: Long): FoodSearchResultDTO {
@@ -27,6 +28,8 @@ class FoodSearchService(
         if (normalized.isEmpty()) {
             throw GeneralException(FoodErrorCode.INVALID_SEARCH_QUERY)
         }
+        recentFoodService.record(trimmed, userId)
+
         val size = (rawSize ?: DEFAULT_SIZE).coerceIn(1, MAX_SIZE)
         val exactResults = foodRepository.search(normalized, size, userId)
         val hasExactMatch = exactResults.any { it.name.replace(" ", "").equals(normalized, ignoreCase = true) }
