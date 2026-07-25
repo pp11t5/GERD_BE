@@ -79,6 +79,7 @@ class PostMealNotificationUseCase(
     // 크론에서 호출 — due PENDING을 유저별로 묶어 비동기 발송에 위임
     fun processPending() {
         val pendings = notificationPendingRepository.findDueForActiveUsers(PENDING, LocalDateTime.now())
+        if (pendings.isEmpty()) return
         log.info { "식후 알림 처리 시작: 대상 ${pendings.size}건" }
         pendings.groupBy { it.user.id!! }.forEach { (userId, userPendings) ->
             postMealPendingSender.sendForUser(userId, userPendings.mapNotNull { it.id })
