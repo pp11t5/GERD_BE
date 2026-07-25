@@ -110,7 +110,7 @@ class SymptomServiceTest {
             verify(symptomConverter).toResponse(any(), linkedMealCaptor.capture())
             verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
             verify(userStreakService).updateOnComfortableRecorded(userId, SymptomFixture.OCCURRED_AT.toLocalDate())
-            assertThat(symptomCaptor.firstValue.user.id).isEqualTo(userId)
+            assertThat(symptomCaptor.firstValue.user?.id).isEqualTo(userId)
             assertThat(symptomCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(symptomCaptor.firstValue.symptomState).isEqualTo(SymptomState.COMFORTABLE)
             assertThat(linkedMealCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString())

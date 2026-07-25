@@ -18,8 +18,6 @@ import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
-import org.hibernate.annotations.OnDelete
-import org.hibernate.annotations.OnDeleteAction
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
 import java.time.LocalDateTime
@@ -35,10 +33,9 @@ import java.time.LocalDateTime
 @SQLDelete(sql = "UPDATE symptom_records SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP WHERE symptom_id = ?")
 @SQLRestriction("deleted_at IS NULL")
 class Symptom(
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    val user: User,
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id", nullable = true)
+    val user: User?,
 
     symptomState: SymptomState,
 
@@ -71,7 +68,6 @@ class Symptom(
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "symptom_types", joinColumns = [JoinColumn(name = "symptom_id")])
-    @OnDelete(action = OnDeleteAction.CASCADE)
     @Enumerated(EnumType.STRING)
     @Column(name = "symptom_type", nullable = false)
     var symptomTypes: Set<SymptomType> = symptomTypes

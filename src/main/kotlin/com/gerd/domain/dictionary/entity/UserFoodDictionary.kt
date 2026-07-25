@@ -17,9 +17,6 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
-import org.hibernate.annotations.OnDelete
-import org.hibernate.annotations.OnDeleteAction
-
 @Entity
 @Table(
     name = "user_food_dictionaries",
@@ -32,10 +29,9 @@ import org.hibernate.annotations.OnDeleteAction
     ],
 )
 class UserFoodDictionary(
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    val user: User,
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id", nullable = true)
+    val user: User?,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "food_id", nullable = false)
