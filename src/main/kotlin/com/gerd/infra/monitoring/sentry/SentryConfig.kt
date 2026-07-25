@@ -42,6 +42,13 @@ class SentryConfig(
             options.tracesSampleRate = tracesSampleRate
             options.isSendDefaultPii = sendDefaultPii
             options.maxRequestBodySize = parseRequestSize(maxRequestBodySize)
+            options.beforeSend = io.sentry.SentryOptions.BeforeSendCallback { event, _ ->
+                event.request?.headers?.apply {
+                    remove("Authorization")
+                    remove("Cookie")
+                }
+                event
+            }
         }
         log.info("Sentry initialized")
     }
