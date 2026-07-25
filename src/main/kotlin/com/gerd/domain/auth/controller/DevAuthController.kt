@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController
 @Tag(name = "Auth", description = "인증 API")
 @RestController
 @RequestMapping("/api/v1/auth")
-@Profile("local", "test", "staging")
+@Profile("local", "test")
 class DevAuthController(
     private val authService: AuthService,
 ) {
