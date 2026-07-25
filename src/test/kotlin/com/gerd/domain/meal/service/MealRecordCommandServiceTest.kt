@@ -129,7 +129,7 @@ class MealRecordCommandServiceTest {
 
             val captor = argumentCaptor<MealFood>()
             verify(mealFoodRepository).save(captor.capture())
-            assertThat(captor.firstValue.user.id).isEqualTo(userId)
+            assertThat(captor.firstValue.user?.id).isEqualTo(userId)
             assertThat(captor.firstValue.mealRecord.id).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(captor.firstValue.judgedGrade).isEqualTo(JudgmentGrade.CAUTION)
             val analysis = objectMapper.readValue(captor.firstValue.analysisJson, MealAnalysisSnapshotDTO::class.java)

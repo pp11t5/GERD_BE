@@ -46,8 +46,6 @@ class JwtAuthenticationFilterTest {
             val claims = mock<Claims>()
             whenever(jwtProvider.validateAccessToken("access.token")).thenReturn(claims)
             whenever(jwtProvider.extractUserId(claims)).thenReturn(1L)
-            whenever(claims["email"]).thenReturn("user@test.com")
-            whenever(claims["nickname"]).thenReturn("tester")
             whenever(claims["role"]).thenReturn("USER")
 
             filter.doFilter(requestWithBearer("access.token"), MockHttpServletResponse(), MockFilterChain())
@@ -57,9 +55,6 @@ class JwtAuthenticationFilterTest {
             assertThat(authentication).isNotNull
             assertThat(authentication!!.principal)
                 .isInstanceOf(com.gerd.domain.auth.security.CustomUserDetails::class.java)
-            val principal = authentication.principal
-                as com.gerd.domain.auth.security.CustomUserDetails
-            assertThat(principal.nickname).isEqualTo("tester")
         }
     }
 

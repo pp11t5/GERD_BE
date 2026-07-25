@@ -33,6 +33,9 @@ class FoodSearchServiceTest {
     @Mock
     private lateinit var foodCategoryReader: FoodCategoryReader
 
+    @Mock
+    private lateinit var recentFoodService: RecentFoodService
+
     @InjectMocks
     private lateinit var service: FoodSearchService
 
@@ -47,6 +50,7 @@ class FoodSearchServiceTest {
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(FoodErrorCode.INVALID_SEARCH_QUERY)
             verify(foodRepository, never()).search(any(), any(), any())
+            verify(recentFoodService, never()).record(any(), any())
         }
 
         @Test
@@ -183,6 +187,18 @@ class FoodSearchServiceTest {
 
             assertThat(result.foods).isEmpty()
             assertThat(result.hasExactMatch).isFalse()
+        }
+
+        @Test
+        fun `검색에 성공하면 검색어를 최근 검색 기록으로 남긴다`() {
+            whenever(foodRepository.search("된장찌개", 10, userId)).thenReturn(emptyList())
+            whenever(foodRepository.findSimilarByJamo(any(), any(), any())).thenReturn(emptyList())
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(emptyMap())
+
+            service.search("  된장찌개  ", null, userId)
+
+            // 공백 트림·NFC 정규화까지만 적용한 값을 남긴다 (검색 자체에 쓰이는 공백 제거본과는 다름)
+            verify(recentFoodService).record("된장찌개", userId)
         }
     }
 }
