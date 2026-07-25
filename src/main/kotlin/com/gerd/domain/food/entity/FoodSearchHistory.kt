@@ -19,10 +19,10 @@ import java.time.LocalDateTime
  */
 @Entity
 @Table(
-    name = "food_search_history",
-    uniqueConstraints = [UniqueConstraint(name = "uk_food_search_history_user_query", columnNames = ["user_id", "query"])],
+    name = "food_search_histories",
+    uniqueConstraints = [UniqueConstraint(name = "uk_food_search_histories_user_query", columnNames = ["user_id", "query"])],
     // 본인 최근순 조회용 — (user_id, searched_at DESC) 복합 인덱스
-    indexes = [Index(name = "food_search_history_user_recent_idx", columnList = "user_id, searched_at desc")],
+    indexes = [Index(name = "food_search_histories_user_recent_idx", columnList = "user_id, searched_at desc")],
 )
 class FoodSearchHistory(
     // user는 인증 도메인 소유 — Food.ownerUserId와 동일하게 FK 없이 식별자만 보관

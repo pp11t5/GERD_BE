@@ -39,7 +39,7 @@ interface FoodSearchHistoryRepository : JpaRepository<FoodSearchHistory, Long> {
                     WHERE fcm.food_id = f.food_id
                     ORDER BY fc.sort_order
                     LIMIT 1) AS category
-            FROM food_search_history fsh
+            FROM food_search_histories fsh
             JOIN foods f
               ON LOWER(REPLACE(f.name, ' ', '')) = LOWER(REPLACE(fsh.query, ' ', ''))
              AND f.deleted_at IS NULL
