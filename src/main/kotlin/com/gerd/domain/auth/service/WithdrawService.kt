@@ -66,7 +66,10 @@ class WithdrawService(
     internal fun withdrawHardDelete(userId: Long) {
         authAccountRepository.findById(userId)
             .filter { it.provider == AuthProvider.KAKAO }
-            .ifPresent { kakaoApiClient.unlink(it.providerAccountId) }
+            .ifPresent {
+                runCatching { kakaoApiClient.unlink(it.providerAccountId) }
+                    .onFailure { e -> log.warn("카카오 unlink 실패 userId=$userId — 물리 삭제 계속 진행", e) }
+            }
 
         userRepository.hardDelete(userId)
     }
