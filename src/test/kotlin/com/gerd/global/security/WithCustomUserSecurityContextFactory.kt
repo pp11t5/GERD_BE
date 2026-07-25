@@ -12,8 +12,6 @@ class WithCustomUserSecurityContextFactory : WithSecurityContextFactory<WithCust
     override fun createSecurityContext(annotation: WithCustomUser): SecurityContext {
         val principal = CustomUserDetails(
             userId = annotation.userId,
-            email = annotation.email,
-            nickname = annotation.nickname,
             role = UserRole.valueOf(annotation.role),
         )
         val auth = UsernamePasswordAuthenticationToken(principal, null, principal.authorities)
