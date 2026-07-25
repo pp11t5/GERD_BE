@@ -160,6 +160,7 @@ class MealCommandService(
                 analysisJson = analysisJson,
             ),
         )
+        dictionaryCommandService.upsertCautionRiskEntry(requireUserId(user), food.id!!, grade)
         return mealRecordConverter.toSummary(saved, food)
     }
 
@@ -184,6 +185,7 @@ class MealCommandService(
         )
         mealRecord.updateGrade(grade)
         mealRecordRepository.save(mealRecord)
+        dictionaryCommandService.upsertCautionRiskEntry(requireUserId(user), food.id!!, grade)
         return mealRecordConverter.toSummary(saved, food)
     }
 
@@ -197,6 +199,9 @@ class MealCommandService(
 
     private fun resolveUser(userId: Long): User =
         userRepository.findById(userId).orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
+
+    private fun requireUserId(user: User): Long =
+        user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
 
     private fun findMealRecord(rawMealRecordId: String, user: User): MealRecord {
         val externalId = mealRecordConverter.parseUuid(rawMealRecordId)
