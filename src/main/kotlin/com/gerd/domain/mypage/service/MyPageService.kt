@@ -50,7 +50,9 @@ class MyPageService(
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
 
         val safeCount = userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.SAFE)
-        val cautionCount = userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.CAUTION)
+        val cautionCount = userFoodDictionaryRepository.countByUser_IdAndDictionaryTypeIn(
+            userId, listOf(DictionaryType.CAUTION, DictionaryType.RISK),
+        )
 
         val weeklySummary = reportService.getWeeklySummary(userId)
 

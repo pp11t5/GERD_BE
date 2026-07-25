@@ -94,8 +94,11 @@ class MyPageServiceTest {
             whenever(userProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile()))
             whenever(userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.SAFE))
                 .thenReturn(5L)
-            whenever(userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.CAUTION))
-                .thenReturn(2L)
+            whenever(
+                userFoodDictionaryRepository.countByUser_IdAndDictionaryTypeIn(
+                    userId, listOf(DictionaryType.CAUTION, DictionaryType.RISK),
+                ),
+            ).thenReturn(2L)
             whenever(reportService.getWeeklySummary(userId)).thenReturn(
                 WeeklySummaryResponseDTO(
                     mealRecordCount = 7,
