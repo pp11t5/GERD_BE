@@ -101,6 +101,7 @@ class AuthService(
         return UserMeResponseDTO(
             userId = user.id?.toString() ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND),
             nickname = user.nickname,
+            createdDate = user.createdAt?.toLocalDate(),
         )
     }
 

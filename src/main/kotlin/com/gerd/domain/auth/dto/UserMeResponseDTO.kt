@@ -1,6 +1,7 @@
 package com.gerd.domain.auth.dto
 
 import io.swagger.v3.oas.annotations.media.Schema
+import java.time.LocalDate
 
 data class UserMeResponseDTO(
     @field:Schema(description = "사용자 ID", example = "550e8400-e29b-41d4-a716-446655440000")
@@ -8,4 +9,7 @@ data class UserMeResponseDTO(
 
     @field:Schema(description = "닉네임", example = "홍길동")
     val nickname: String?,
+
+    @field:Schema(description = "가입일")
+    val createdDate: LocalDate?,
 )
