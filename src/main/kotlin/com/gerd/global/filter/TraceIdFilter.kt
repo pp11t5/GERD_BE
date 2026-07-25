@@ -4,12 +4,14 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.MDC
+import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import java.util.UUID
 
 /** 요청마다 UUID traceId를 생성해 MDC와 응답 헤더에 심고, 요청 종료 후 MDC를 정리 */
 @Component
+@Order(0)
 class TraceIdFilter : OncePerRequestFilter() {
 
     companion object {
