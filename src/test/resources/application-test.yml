@@ -44,3 +44,12 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      gemini-judgment:          # 슬라이딩 윈도우 3회 모두 실패 시 OPEN — 빠른 테스트용
+        sliding-window-size: 3
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 1s
+        permitted-number-of-calls-in-half-open-state: 1

@@ -1,6 +1,6 @@
-package com.gerd.global.ai.gemini
+package com.gerd.global.ai
 
-data class GeminiRequest(
+data class LlmRequest(
     val systemInstruction: String,
     val userContent: String,
     val responseSchema: Map<String, Any>,

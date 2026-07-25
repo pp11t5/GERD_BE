@@ -32,6 +32,9 @@ enum class CommonErrorCode(
     // 404
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON404_1", "요청한 리소스를 찾을 수 없습니다."),
 
+    // 408
+    REQUEST_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "COMMON408_1", "처리 시간이 초과되었습니다."),
+
     // 409
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "COMMON409_1", "이미 존재하는 리소스입니다."),
     CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "COMMON409_2", "동시 수정 충돌이 발생했습니다."),

@@ -1,5 +1,7 @@
 package com.gerd.global.ai.gemini
 
+import com.gerd.global.ai.LlmRequest
+import com.gerd.global.ai.LlmTimeoutException
 import com.gerd.global.config.properties.GeminiProperties
 import com.sun.net.httpserver.HttpServer
 import org.assertj.core.api.Assertions.assertThat
@@ -21,6 +23,7 @@ class GeminiClientTest {
     private var responseStatus = 200
     private var responseBody = ""
     private var requestCount = 0
+    private var responseDelayMs = 0L
 
     // 운영의 Boot 자동 구성 mapper처럼 Kotlin 모듈을 ServiceLoader로 등록한다
     private val objectMapper = JsonMapper.builder().findAndAddModules().build()
@@ -30,6 +33,7 @@ class GeminiClientTest {
         server = HttpServer.create(InetSocketAddress(0), 0).apply {
             createContext("/") { exchange ->
                 requestCount++
+                if (responseDelayMs > 0) Thread.sleep(responseDelayMs)
                 val bytes = responseBody.toByteArray(Charsets.UTF_8)
                 exchange.responseHeaders.add("Content-Type", "application/json")
                 exchange.sendResponseHeaders(responseStatus, bytes.size.toLong())
@@ -66,7 +70,7 @@ class GeminiClientTest {
             ),
         )
 
-    private fun call() = client.generateJson(GeminiRequest("system", "user", mapOf("type" to "OBJECT")))
+    private fun call() = client.generateJson(LlmRequest("system", "user", mapOf("type" to "OBJECT")))
 
     @Nested
     inner class 성공 {
@@ -132,6 +136,19 @@ class GeminiClientTest {
         }
 
         @Test
+        fun `읽기 타임아웃이 발생하면 GeminiTimeoutException을 던진다`() {
+            responseDelayMs = 2000 // readTimeoutMs(1000) 초과
+            assertThrows<LlmTimeoutException> { call() }
+        }
+
+        @Test
+        fun `타임아웃 시 재시도 없이 즉시 전파된다`() {
+            responseDelayMs = 2000
+            assertThrows<LlmTimeoutException> { call() }
+            assertThat(requestCount).isEqualTo(1)
+        }
+
+        @Test
         fun `API 키가 비어 있으면 HTTP 호출 없이 null을 반환한다`() {
             val blankKeyClient = GeminiClient(
                 geminiProperties = GeminiProperties(
@@ -144,7 +161,7 @@ class GeminiClientTest {
                 geminiResponseParser = GeminiResponseParser(),
             )
 
-            assertThat(blankKeyClient.generateJson(GeminiRequest("system", "user", mapOf("type" to "OBJECT")))).isNull()
+            assertThat(blankKeyClient.generateJson(LlmRequest("system", "user", mapOf("type" to "OBJECT")))).isNull()
             assertThat(requestCount).isZero()
         }
     }
