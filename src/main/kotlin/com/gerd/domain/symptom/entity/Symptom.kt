@@ -71,6 +71,7 @@ class Symptom(
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "symptom_types", joinColumns = [JoinColumn(name = "symptom_id")])
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @Enumerated(EnumType.STRING)
     @Column(name = "symptom_type", nullable = false)
     var symptomTypes: Set<SymptomType> = symptomTypes
