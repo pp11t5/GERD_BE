@@ -83,18 +83,10 @@ class DictionaryCommandService(
             JudgmentGrade.RISK -> DictionaryType.RISK
             else -> return
         }
-        val exists = dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, foodId, type) != null
-        if (exists) return
-
-        val user = userRepository.findById(userId)
-            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-        dictionaryRepository.save(
-            UserFoodDictionary(
-                user = user,
-                food = foodRepository.getReferenceById(foodId),
-                dictionaryType = type,
-            ),
-        )
+        if (!userRepository.existsById(userId)) throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
+        // 끼니 저장과 같은 트랜잭션에서 실행되므로, 동시 요청이 겹쳐도 uq_user_food_dict 충돌로
+        // 전체 트랜잭션이 롤백되지 않도록 존재 확인 후 저장 대신 원자적 upsert로 처리
+        dictionaryRepository.insertIfAbsent(userId, foodId, type.name)
     }
 }
 
