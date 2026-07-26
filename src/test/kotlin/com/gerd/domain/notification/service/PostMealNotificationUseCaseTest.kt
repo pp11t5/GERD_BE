@@ -22,6 +22,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDateTime
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class PostMealNotificationUseCaseTest {
@@ -51,7 +52,7 @@ class PostMealNotificationUseCaseTest {
             // 12:00 + 2h = 14:00 → 야간 아님
             val now = LocalDateTime.of(2026, 7, 6, 12, 0)
             val user = mock<User>()
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user))
             whenever(
                 notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
                     eq(userId), eq(NotificationType.POST_MEAL), any(),
@@ -74,7 +75,7 @@ class PostMealNotificationUseCaseTest {
         @Test
         fun `낮 시간대에 90분 내 이력이 있으면 저장하지 않는다`() {
             val now = LocalDateTime.of(2026, 7, 6, 12, 0)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(mock<User>())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(mock<User>()))
             whenever(
                 notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
                     eq(userId), eq(NotificationType.POST_MEAL), any(),
@@ -91,7 +92,7 @@ class PostMealNotificationUseCaseTest {
             // 21:00 + 2h = 23:00 → 야간 → 다음날 09:00 이연
             val now = LocalDateTime.of(2026, 7, 6, 21, 0)
             val user = mock<User>()
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user))
 
             withFixedNow(now) { useCase.enqueue(userId, mealRecordId) }
 

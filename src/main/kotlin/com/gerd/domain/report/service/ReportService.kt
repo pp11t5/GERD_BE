@@ -1,6 +1,7 @@
 package com.gerd.domain.report.service
 
 import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -12,6 +13,7 @@ import com.gerd.domain.report.repository.WeeklyReportRepository
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.entity.enums.SymptomType
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.global.apiPayload.GeneralException
 import tools.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -53,7 +55,8 @@ class ReportService(
     @Transactional
     fun getOrCreate(userId: Long): WeeklyReport {
         val (start, end) = lastWeekRange()
-        val user: User = userRepository.getReferenceById(userId)
+        val user: User = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
 
         weeklyReportRepository.findByUserIdAndStartDate(userId, start)?.let { return it }
 

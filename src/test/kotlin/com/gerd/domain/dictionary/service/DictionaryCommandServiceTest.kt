@@ -20,6 +20,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class DictionaryCommandServiceTest {
@@ -53,7 +54,7 @@ class DictionaryCommandServiceTest {
                 .thenReturn(listOf(mealFood))
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
                 .thenReturn(null)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
             whenever(foodRepository.getReferenceById(1L)).thenReturn(FoodFixture.food(id = 1L))
 
             service.upsertSafeEntries(userId, mealRecordId)
@@ -68,7 +69,7 @@ class DictionaryCommandServiceTest {
                 .thenReturn(listOf(mealFood))
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
                 .thenReturn(DictionaryFixture.entry(type = DictionaryType.SAFE))
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
 
             service.upsertSafeEntries(userId, mealRecordId)
 
@@ -79,7 +80,7 @@ class DictionaryCommandServiceTest {
         fun `끼니에 음식이 없으면 아무것도 저장하지 않는다`() {
             whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
                 .thenReturn(emptyList())
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
 
             service.upsertSafeEntries(userId, mealRecordId)
 
@@ -148,7 +149,7 @@ class DictionaryCommandServiceTest {
         fun `CAUTION 판정이면 CAUTION 타입으로 저장한다`() {
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.CAUTION))
                 .thenReturn(null)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
             whenever(foodRepository.getReferenceById(1L)).thenReturn(FoodFixture.food(id = 1L))
 
             service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.CAUTION)
@@ -160,7 +161,7 @@ class DictionaryCommandServiceTest {
         fun `RISK 판정이면 RISK 타입으로 저장한다`() {
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.RISK))
                 .thenReturn(null)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
             whenever(foodRepository.getReferenceById(1L)).thenReturn(FoodFixture.food(id = 1L))
 
             service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.RISK)

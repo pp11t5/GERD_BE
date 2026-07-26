@@ -1,5 +1,6 @@
 package com.gerd.domain.dictionary.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.entity.UserFoodDictionary
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
@@ -9,6 +10,7 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -30,7 +32,8 @@ class DictionaryCommandService(
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun upsertSafeEntries(userId: Long, mealRecordId: Long) {
-        val user = userRepository.getReferenceById(userId)
+        val user = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId)
 
         mealFoods.forEach { mealFood ->
@@ -83,9 +86,11 @@ class DictionaryCommandService(
         val exists = dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, foodId, type) != null
         if (exists) return
 
+        val user = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         dictionaryRepository.save(
             UserFoodDictionary(
-                user = userRepository.getReferenceById(userId),
+                user = user,
                 food = foodRepository.getReferenceById(foodId),
                 dictionaryType = type,
             ),

@@ -22,6 +22,7 @@ import tools.jackson.databind.ObjectMapper
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class ReportServiceTest {
@@ -60,7 +61,7 @@ class ReportServiceTest {
         fun `기존 리포트가 있으면 집계하지 않고 그대로 반환한다`() {
             val (start, end) = lastWeekRange()
             val existing = weeklyReport(start, end)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user()))
             whenever(weeklyReportRepository.findByUserIdAndStartDate(userId, start)).thenReturn(existing)
 
             val result = service.getOrCreate(userId)
