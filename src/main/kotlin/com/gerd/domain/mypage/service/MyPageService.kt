@@ -112,6 +112,10 @@ class MyPageService(
 
     @Transactional
     fun updateHealthInfo(userId: Long, request: MedicalInfoUpdateRequestDTO): MedicalInfoResponseDTO {
+        if (!userProfileRepository.existsById(userId)) {
+            throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
+        }
+
         val newAllergens = resolveAllergens(request.allergens)
         val userProfile = userProfileRepository.getReferenceById(userId)
 
