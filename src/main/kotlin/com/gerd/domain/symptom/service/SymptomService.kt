@@ -1,5 +1,6 @@
 package com.gerd.domain.symptom.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.dictionary.service.isSafe
@@ -56,7 +57,8 @@ class SymptomService(
     // 증상 기록 생성
     @Transactional
     fun create(userId: Long, request: SymptomCreateRequestDTO): SymptomResponseDTO {
-        val user = userRepository.getReferenceById(userId)
+        val user = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
         val symptom = Symptom(
             user = user,
@@ -71,10 +73,7 @@ class SymptomService(
             userStreakService.updateOnComfortableRecorded(userId, saved.occurredAt.toLocalDate())
         }
         if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(saved, userId)
-
-        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
-            registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
-        }
+        scheduleSafeEntriesUpsertAfterCommit(request.symptomState, mealRecordId, userId)
 
         return symptomConverter.toResponse(saved, buildLinkedMeal(saved, userId))
     }
@@ -103,10 +102,7 @@ class SymptomService(
             userStreakService.rebuildCurrentStreak(userId)
         }
         if (mealRecordId != null) scheduleAnalysisRefreshAfterCommit(symptom, userId)
-
-        if (request.symptomState?.isSafe() == true && mealRecordId != null) {
-            registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
-        }
+        scheduleSafeEntriesUpsertAfterCommit(request.symptomState, mealRecordId, userId)
     }
 
     // 메모 업데이트
@@ -194,6 +190,12 @@ class SymptomService(
     private fun scheduleAnalysisRefreshAfterCommit(symptom: Symptom, userId: Long) {
         val symptomId = symptom.externalId?.toString() ?: return
         registerAfterCommit { symptomPatternRefreshService.refreshAsync(symptomId, userId) }
+    }
+
+    // 편안 증상으로 기록되면 트랜잭션 커밋 이후에 도감 SAFE 등재를 예약
+    private fun scheduleSafeEntriesUpsertAfterCommit(symptomState: SymptomState?, mealRecordId: Long?, userId: Long) {
+        if (symptomState?.isSafe() != true || mealRecordId == null) return
+        registerAfterCommit { dictionaryCommandService.upsertSafeEntries(userId, mealRecordId) }
     }
 
     private fun registerAfterCommit(action: () -> Unit) {

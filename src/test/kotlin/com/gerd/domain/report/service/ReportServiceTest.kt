@@ -1,6 +1,7 @@
 package com.gerd.domain.report.service
 
 import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.mypage.dto.MealCount
@@ -8,7 +9,9 @@ import com.gerd.domain.mypage.dto.WeeklySummaryResponseDTO
 import com.gerd.domain.report.entity.WeeklyReport
 import com.gerd.domain.report.repository.WeeklyReportRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.global.apiPayload.GeneralException
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -22,6 +25,7 @@ import tools.jackson.databind.ObjectMapper
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class ReportServiceTest {
@@ -60,7 +64,7 @@ class ReportServiceTest {
         fun `기존 리포트가 있으면 집계하지 않고 그대로 반환한다`() {
             val (start, end) = lastWeekRange()
             val existing = weeklyReport(start, end)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(user()))
             whenever(weeklyReportRepository.findByUserIdAndStartDate(userId, start)).thenReturn(existing)
 
             val result = service.getOrCreate(userId)
@@ -70,6 +74,18 @@ class ReportServiceTest {
             verify(weeklyReportRepository, never()).save(any())
         }
 
+        @Test
+        fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+
+            assertThatThrownBy { service.getOrCreate(userId) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
+
+            verify(mealRecordRepository, never()).findGradesByUserAndPeriod(any(), any(), any())
+            verify(weeklyReportRepository, never()).save(any())
+        }
     }
 
     @Nested

@@ -94,8 +94,11 @@ class MyPageServiceTest {
             whenever(userProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile()))
             whenever(userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.SAFE))
                 .thenReturn(5L)
-            whenever(userFoodDictionaryRepository.countByUser_IdAndDictionaryType(userId, DictionaryType.CAUTION))
-                .thenReturn(2L)
+            whenever(
+                userFoodDictionaryRepository.countByUser_IdAndDictionaryTypeIn(
+                    userId, listOf(DictionaryType.CAUTION, DictionaryType.RISK),
+                ),
+            ).thenReturn(2L)
             whenever(reportService.getWeeklySummary(userId)).thenReturn(
                 WeeklySummaryResponseDTO(
                     mealRecordCount = 7,
@@ -187,6 +190,7 @@ class MyPageServiceTest {
         fun `알레르기와 복용약을 전체 교체한다`() {
             val profile = userProfile()
             val milk = Allergen(code = "milk", displayName = "우유")
+            whenever(userProfileRepository.existsById(userId)).thenReturn(true)
             whenever(userProfileRepository.getReferenceById(userId)).thenReturn(profile)
             whenever(allergenRepository.findByCodeIn(listOf("milk"))).thenReturn(listOf(milk))
             val request = MedicalInfoUpdateRequestDTO(
@@ -206,6 +210,7 @@ class MyPageServiceTest {
 
         @Test
         fun `존재하지 않는 알레르기가 있으면 기존 건강 정보를 삭제하지 않는다`() {
+            whenever(userProfileRepository.existsById(userId)).thenReturn(true)
             whenever(allergenRepository.findByCodeIn(listOf("milk", "peanut"))).thenReturn(
                 listOf(Allergen(code = "milk", displayName = "우유")),
             )
@@ -223,6 +228,20 @@ class MyPageServiceTest {
             verify(userMedicationRepository, never()).deleteAllByUserProfileUserId(any())
             verify(userAllergenRepository, never()).saveAll(any<Iterable<com.gerd.domain.onboarding.entity.UserAllergen>>())
             verify(userMedicationRepository, never()).saveAll(any<Iterable<UserMedication>>())
+        }
+
+        @Test
+        fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            whenever(userProfileRepository.existsById(userId)).thenReturn(false)
+            val request = MedicalInfoUpdateRequestDTO(allergens = emptyList(), medications = emptyList())
+
+            assertThatThrownBy { service.updateHealthInfo(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
+
+            verify(userAllergenRepository, never()).deleteAllByUserProfileUserId(any())
+            verify(userMedicationRepository, never()).deleteAllByUserProfileUserId(any())
         }
 
     }

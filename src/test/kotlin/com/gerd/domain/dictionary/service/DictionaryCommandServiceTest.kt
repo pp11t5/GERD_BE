@@ -1,5 +1,6 @@
 package com.gerd.domain.dictionary.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
@@ -7,10 +8,12 @@ import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.DictionaryFixture
 import com.gerd.global.fixture.FoodFixture
 import com.gerd.global.fixture.MealRecordFixture
 import com.gerd.global.fixture.UserFixture
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -20,6 +23,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class DictionaryCommandServiceTest {
@@ -53,7 +57,7 @@ class DictionaryCommandServiceTest {
                 .thenReturn(listOf(mealFood))
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
                 .thenReturn(null)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
             whenever(foodRepository.getReferenceById(1L)).thenReturn(FoodFixture.food(id = 1L))
 
             service.upsertSafeEntries(userId, mealRecordId)
@@ -68,7 +72,7 @@ class DictionaryCommandServiceTest {
                 .thenReturn(listOf(mealFood))
             whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
                 .thenReturn(DictionaryFixture.entry(type = DictionaryType.SAFE))
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
 
             service.upsertSafeEntries(userId, mealRecordId)
 
@@ -79,9 +83,21 @@ class DictionaryCommandServiceTest {
         fun `끼니에 음식이 없으면 아무것도 저장하지 않는다`() {
             whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
                 .thenReturn(emptyList())
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
 
             service.upsertSafeEntries(userId, mealRecordId)
+
+            verify(dictionaryRepository, never()).save(any())
+        }
+
+        @Test
+        fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+
+            assertThatThrownBy { service.upsertSafeEntries(userId, mealRecordId) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
 
             verify(dictionaryRepository, never()).save(any())
         }
@@ -145,44 +161,50 @@ class DictionaryCommandServiceTest {
     inner class `주의·위험 음식 적재` {
 
         @Test
-        fun `CAUTION 판정이면 CAUTION 타입으로 저장한다`() {
-            whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.CAUTION))
-                .thenReturn(null)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
-            whenever(foodRepository.getReferenceById(1L)).thenReturn(FoodFixture.food(id = 1L))
+        fun `CAUTION 판정이면 CAUTION 타입으로 upsert한다`() {
+            whenever(userRepository.existsById(userId)).thenReturn(true)
 
             service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.CAUTION)
 
-            verify(dictionaryRepository).save(any())
+            verify(dictionaryRepository).insertIfAbsent(userId, 1L, "CAUTION")
         }
 
         @Test
-        fun `RISK 판정이면 RISK 타입으로 저장한다`() {
-            whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.RISK))
-                .thenReturn(null)
-            whenever(userRepository.getReferenceById(userId)).thenReturn(UserFixture.user())
-            whenever(foodRepository.getReferenceById(1L)).thenReturn(FoodFixture.food(id = 1L))
+        fun `RISK 판정이면 RISK 타입으로 upsert한다`() {
+            whenever(userRepository.existsById(userId)).thenReturn(true)
 
             service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.RISK)
 
-            verify(dictionaryRepository).save(any())
+            verify(dictionaryRepository).insertIfAbsent(userId, 1L, "RISK")
         }
 
         @Test
         fun `RECOMMEND 판정이면 저장하지 않는다`() {
             service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.RECOMMEND)
 
-            verify(dictionaryRepository, never()).save(any())
+            verify(dictionaryRepository, never()).insertIfAbsent(any(), any(), any())
         }
 
         @Test
-        fun `이미 같은 타입으로 존재하면 저장하지 않는다`() {
-            whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.CAUTION))
-                .thenReturn(DictionaryFixture.entry(type = DictionaryType.CAUTION))
+        fun `이미 같은 타입으로 존재해도 예외 없이 완료된다`() {
+            whenever(userRepository.existsById(userId)).thenReturn(true)
+            whenever(dictionaryRepository.insertIfAbsent(userId, 1L, "CAUTION")).thenReturn(0)
 
             service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.CAUTION)
 
-            verify(dictionaryRepository, never()).save(any())
+            verify(dictionaryRepository).insertIfAbsent(userId, 1L, "CAUTION")
+        }
+
+        @Test
+        fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            whenever(userRepository.existsById(userId)).thenReturn(false)
+
+            assertThatThrownBy { service.upsertCautionRiskEntry(userId, 1L, JudgmentGrade.CAUTION) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
+
+            verify(dictionaryRepository, never()).insertIfAbsent(any(), any(), any())
         }
     }
 }
