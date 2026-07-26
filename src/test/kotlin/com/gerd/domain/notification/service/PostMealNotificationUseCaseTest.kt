@@ -106,6 +106,17 @@ class PostMealNotificationUseCaseTest {
             verify(notificationPendingRepository, never())
                 .existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(any(), any(), any())
         }
+
+        @Test
+        fun `유저가 존재하지 않으면 예약을 스킵한다`() {
+            whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+
+            useCase.enqueue(userId, mealRecordId)
+
+            verify(notificationPendingRepository, never())
+                .existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(any(), any(), any())
+            verify(notificationPendingRepository, never()).save(any())
+        }
     }
 
     @Nested

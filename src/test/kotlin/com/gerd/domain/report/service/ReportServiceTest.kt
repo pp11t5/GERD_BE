@@ -1,6 +1,7 @@
 package com.gerd.domain.report.service
 
 import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.mypage.dto.MealCount
@@ -8,7 +9,9 @@ import com.gerd.domain.mypage.dto.WeeklySummaryResponseDTO
 import com.gerd.domain.report.entity.WeeklyReport
 import com.gerd.domain.report.repository.WeeklyReportRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.global.apiPayload.GeneralException
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -71,6 +74,18 @@ class ReportServiceTest {
             verify(weeklyReportRepository, never()).save(any())
         }
 
+        @Test
+        fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+
+            assertThatThrownBy { service.getOrCreate(userId) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
+
+            verify(mealRecordRepository, never()).findGradesByUserAndPeriod(any(), any(), any())
+            verify(weeklyReportRepository, never()).save(any())
+        }
     }
 
     @Nested

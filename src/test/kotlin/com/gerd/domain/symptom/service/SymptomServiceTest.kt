@@ -112,6 +112,7 @@ class SymptomServiceTest {
             verify(symptomConverter).toResponse(any(), linkedMealCaptor.capture())
             verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
             verify(userStreakService).updateOnComfortableRecorded(userId, SymptomFixture.OCCURRED_AT.toLocalDate())
+            verify(dictionaryCommandService).upsertSafeEntries(userId, MealRecordFixture.MEAL_RECORD_ID)
             assertThat(symptomCaptor.firstValue.user?.id).isEqualTo(userId)
             assertThat(symptomCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(symptomCaptor.firstValue.symptomState).isEqualTo(SymptomState.COMFORTABLE)
@@ -140,6 +141,26 @@ class SymptomServiceTest {
             service.create(userId, request)
 
             verify(userStreakService, never()).updateOnComfortableRecorded(any(), any())
+            // SAFE 상태(GOOD)라도 연결된 끼니가 없으면 도감 등재를 예약하지 않는다
+            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
+        }
+
+        @Test
+        fun `SAFE 상태가 아니면 도감 등재를 예약하지 않는다`() {
+            val request = createRequest(symptomState = SymptomState.UNCOMFORTABLE)
+            val saved = SymptomFixture.symptom(symptomState = SymptomState.UNCOMFORTABLE)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+                .thenReturn(MealRecordFixture.mealRecord())
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
+            whenever(symptomRepository.save(any())).thenReturn(saved)
+            stubLinkedMeal()
+            whenever(symptomConverter.toResponse(any(), any()))
+                .thenReturn(symptomResponse(symptomState = SymptomState.UNCOMFORTABLE))
+
+            service.create(userId, request)
+
+            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
         }
 
         @Test
