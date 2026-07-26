@@ -52,7 +52,13 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
     @ExceptionHandler(DataIntegrityViolationException::class)
     fun handleDataIntegrityViolation(e: DataIntegrityViolationException, request: WebRequest): ResponseEntity<Any> {
         val cause = e.mostSpecificCause.message ?: ""
-        log.warn("DataIntegrityViolationException: {}", cause)
+        // unique/duplicate는 동시 요청 등으로 흔히 발생하는 경고, foreign key는 사전 검증 누락을 가리키는
+        // 실제 이상 신호라 별도 로그로 알아챌 수 있게 error로 기록
+        if (cause.contains("foreign key", ignoreCase = true)) {
+            log.error("DataIntegrityViolationException(FK): {}", cause)
+        } else {
+            log.warn("DataIntegrityViolationException: {}", cause)
+        }
         // vendor별 예외 타입 차이 대응용 메시지 기반 분기
         val errorCode = if (cause.contains("unique", ignoreCase = true) ||
             cause.contains("duplicate", ignoreCase = true)
