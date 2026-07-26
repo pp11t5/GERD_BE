@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 /**
  * 증상 패턴 분석용 쿼리 구현체
  * - 증상 기록과 연관된 음식·카테고리 정보를 한 번에 조회
- * - 증상 패턴 분석은 최근 30일 기록만 참고하므로, 30일 이전 기록은 조회하지 않도록 쿼리에서 필터
+ * - 증상 패턴 분석은 최근 14일 기록만 참고하므로, 14일 이전 기록은 조회하지 않도록 쿼리에서 필터
  */
 class SymptomPatternQueryRepositoryImpl(
     private val queryFactory: JPAQueryFactory,

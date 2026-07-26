@@ -52,6 +52,7 @@ class MealRecordIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun setUp() {
+        jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
         jdbcTemplate.update(
             """
             INSERT INTO users (user_id, external_id, email, role, status)
@@ -66,8 +67,9 @@ class MealRecordIntegrationTest @Autowired constructor(
 
     @AfterEach
     fun tearDown() {
-        mealFoodRepository.deleteAll()
-        mealRecordRepository.deleteAll()
+        // @SQLDelete(soft delete) 우회 — 실제 행을 삭제해야 user FK 제약 해소됨
+        jdbcTemplate.update("DELETE FROM meal_foods WHERE user_id = ?", USER_ID)
+        jdbcTemplate.update("DELETE FROM meal_records WHERE user_id = ?", USER_ID)
         foodCategoryMapRepository.deleteAll()
         foodCategoryRepository.deleteAll()
         foodRepository.deleteAll()

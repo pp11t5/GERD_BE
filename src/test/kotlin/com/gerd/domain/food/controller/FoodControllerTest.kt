@@ -1,6 +1,5 @@
 package com.gerd.domain.food.controller
 
-import com.gerd.domain.food.dto.AddRecentRequestDTO
 import com.gerd.domain.food.dto.FoodSearchResultDTO
 import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
@@ -20,20 +19,16 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
-import org.springframework.http.MediaType
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
-import org.springframework.test.web.servlet.post
-import tools.jackson.databind.ObjectMapper
 import java.time.LocalDateTime
 
 @WebMvcTest(controllers = [FoodController::class])
 @AutoConfigureMockMvc(addFilters = false)
 class FoodControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
-    private val objectMapper: ObjectMapper,
 ) {
 
     @MockitoBean
@@ -50,9 +45,8 @@ class FoodControllerTest @Autowired constructor(
     private lateinit var jwtProvider: JwtProvider
 
     private fun recentFood() = RecentFoodDTO(
-        foodExternalId = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f",
-        name = "된장찌개",
-        category = "soup_stew",
+        id = 1L,
+        query = "된장찌개",
         searchedAt = LocalDateTime.of(2026, 6, 3, 8, 12, 0),
     )
 
@@ -128,48 +122,47 @@ class FoodControllerTest @Autowired constructor(
 
         @Test
         @WithCustomUser
-        fun `최근 본 음식 목록을 반환한다`() {
+        fun `최근 검색어 목록을 반환한다`() {
             whenever(recentFoodService.getRecent(anyOrNull(), any())).thenReturn(listOf(recentFood()))
 
             mockMvc.get("/api/v1/foods/recent").andExpect {
                 status { isOk() }
-                jsonPath("$.result[0].foodExternalId") { value("9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f") }
+                jsonPath("$.result[0].query") { value("된장찌개") }
                 jsonPath("$.result[0].searchedAt") { value("2026-06-03 08:12:00") }
             }
         }
     }
 
     @Nested
-    inner class `POST recent` {
+    inner class `GET top-searched` {
 
         @Test
         @WithCustomUser
-        fun `추가에 성공하면 RecentFood를 반환한다`() {
-            whenever(recentFoodService.addRecent(any(), any())).thenReturn(recentFood())
-            val body = AddRecentRequestDTO(foodExternalId = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        fun `가장 많이 검색된 상위 음식 목록을 반환한다`() {
+            whenever(recentFoodService.getTopSearched()).thenReturn(
+                listOf(
+                    FoodSummaryDTO("ext-1", "된장찌개", "soup_stew"),
+                    FoodSummaryDTO("ext-2", "비빔밥", "rice"),
+                ),
+            )
 
-            mockMvc.post("/api/v1/foods/recent") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(body)
-            }.andExpect {
+            mockMvc.get("/api/v1/foods/top-searched").andExpect {
                 status { isOk() }
-                jsonPath("$.result.foodExternalId") { value("9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f") }
+                jsonPath("$.isSuccess") { value(true) }
+                jsonPath("$.result[0].name") { value("된장찌개") }
+                jsonPath("$.result[0].category") { value("soup_stew") }
+                jsonPath("$.result[1].name") { value("비빔밥") }
             }
         }
 
         @Test
         @WithCustomUser
-        fun `음식을 찾을 수 없으면 FOOD404_1`() {
-            whenever(recentFoodService.addRecent(any(), any()))
-                .thenThrow(GeneralException(FoodErrorCode.FOOD_NOT_FOUND))
-            val body = AddRecentRequestDTO(foodExternalId = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+        fun `검색 기록이 없으면 빈 배열을 반환한다`() {
+            whenever(recentFoodService.getTopSearched()).thenReturn(emptyList())
 
-            mockMvc.post("/api/v1/foods/recent") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(body)
-            }.andExpect {
-                status { isNotFound() }
-                jsonPath("$.code") { value("FOOD404_1") }
+            mockMvc.get("/api/v1/foods/top-searched").andExpect {
+                status { isOk() }
+                jsonPath("$.result.length()") { value(0) }
             }
         }
     }
@@ -180,7 +173,7 @@ class FoodControllerTest @Autowired constructor(
         @Test
         @WithCustomUser
         fun `단건 삭제에 성공한다`() {
-            mockMvc.delete("/api/v1/foods/recent/9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f").andExpect {
+            mockMvc.delete("/api/v1/foods/recent/1").andExpect {
                 status { isOk() }
                 jsonPath("$.isSuccess") { value(true) }
             }
@@ -192,7 +185,7 @@ class FoodControllerTest @Autowired constructor(
             whenever(recentFoodService.deleteRecent(any(), any()))
                 .thenThrow(GeneralException(FoodErrorCode.RECENT_NOT_FOUND))
 
-            mockMvc.delete("/api/v1/foods/recent/9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f").andExpect {
+            mockMvc.delete("/api/v1/foods/recent/1").andExpect {
                 status { isNotFound() }
                 jsonPath("$.code") { value("FOOD404_2") }
             }

@@ -1,6 +1,8 @@
 package com.gerd.domain.symptom.service
 
+import com.gerd.domain.symptom.dto.SymptomPatternFeatureDTO
 import com.gerd.domain.symptom.dto.SymptomPatternStatsDTO
+import com.gerd.domain.symptom.dto.enums.SymptomPatternLabel
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.repository.SymptomMealPatternRow
 import org.springframework.stereotype.Component
@@ -38,6 +40,28 @@ class SymptomPatternStatsCalculator {
     }
 
 
+    // 집계 결과에서 가장 뚜렷한(comfort/discomfort 중 값이 큰) 그룹을 골라 라벨을 판정
+    // 그룹 간 값이 동률이면 groupBy 순서(= rows 순서, occurredAt desc)상 먼저 나온 그룹을 우선한다
+    fun resolveFeature(stats: SymptomPatternStatsDTO): SymptomPatternFeatureDTO {
+        val strongest = stats.groupStats.maxByOrNull { maxOf(it.comfortCount, it.discomfortCount) }
+        val strongestCount = strongest?.let { maxOf(it.comfortCount, it.discomfortCount) } ?: 0
+        val reliable = stats.totalRecordCount >= MIN_RELIABLE_RECORD_COUNT && strongestCount >= MIN_RELIABLE_PATTERN_COUNT
+
+        val label = when {
+            !reliable -> SymptomPatternLabel.OBSERVING
+            strongest != null && strongest.discomfortCount >= strongest.comfortCount -> SymptomPatternLabel.CAUTION
+            else -> SymptomPatternLabel.MAINTAIN
+        }
+
+        return SymptomPatternFeatureDTO(
+            label = label,
+            windowDays = stats.windowDays,
+            comfortCount = strongest?.comfortCount ?: 0,
+            foodGroup = strongest?.groupKey,
+            repeatCount = strongest?.discomfortCount,
+        )
+    }
+
     private fun groupKeyOf(row: SymptomMealPatternRow): String =
         row.category ?: UNCATEGORIZED_CATEGORY
 
@@ -46,6 +70,12 @@ class SymptomPatternStatsCalculator {
 
     private fun SymptomState.isDiscomfort(): Boolean =
         this == SymptomState.UNCOMFORTABLE || this == SymptomState.SEVERE
+
+    companion object {
+        const val WINDOW_DAYS = 14
+        private const val MIN_RELIABLE_RECORD_COUNT = 3
+        private const val MIN_RELIABLE_PATTERN_COUNT = 2
+    }
 
     private val UNCATEGORIZED_CATEGORY = "uncategorized"
 }

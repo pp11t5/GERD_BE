@@ -1,5 +1,6 @@
 package com.gerd.domain.symptom.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.food.repository.FoodCategoryMapRepository
@@ -36,6 +37,7 @@ import org.mockito.kotlin.isNull
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class SymptomServiceTest {
@@ -67,6 +69,9 @@ class SymptomServiceTest {
     @Mock
     private lateinit var userStreakService: UserStreakService
 
+    @Mock
+    private lateinit var symptomPatternAnalysisRefreshService: SymptomPatternAnalysisRefreshService
+
     private val service by lazy {
         SymptomService(
             symptomRepository = symptomRepository,
@@ -78,6 +83,7 @@ class SymptomServiceTest {
             userRepository = userRepository,
             dictionaryCommandService = dictionaryCommandService,
             userStreakService = userStreakService,
+            symptomPatternAnalysisRefreshService = symptomPatternAnalysisRefreshService,
         )
     }
 
@@ -90,7 +96,7 @@ class SymptomServiceTest {
         fun `증상 기록을 저장하고 연결 음식 정보를 포함해 응답한다`() {
             val request = createRequest()
             val saved = SymptomFixture.symptom()
-            whenever(userRepository.getReferenceById(userId)).thenReturn(SymptomFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
                 .thenReturn(MealRecordFixture.mealRecord())
             whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
@@ -107,7 +113,9 @@ class SymptomServiceTest {
             verify(symptomConverter).toResponse(any(), linkedMealCaptor.capture())
             verify(dictionaryCommandService).upsertSafeEntries(userId, MealRecordFixture.MEAL_RECORD_ID)
             verify(userStreakService).updateOnComfortableRecorded(userId, SymptomFixture.OCCURRED_AT.toLocalDate())
-            assertThat(symptomCaptor.firstValue.user.id).isEqualTo(userId)
+            verify(dictionaryCommandService).upsertSafeEntries(userId, MealRecordFixture.MEAL_RECORD_ID)
+            verify(symptomPatternAnalysisRefreshService).refresh(saved, userId)
+            assertThat(symptomCaptor.firstValue.user?.id).isEqualTo(userId)
             assertThat(symptomCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(symptomCaptor.firstValue.symptomState).isEqualTo(SymptomState.COMFORTABLE)
             assertThat(linkedMealCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString())
@@ -126,7 +134,7 @@ class SymptomServiceTest {
                 symptomState = SymptomState.GOOD,
                 mealRecordId = null,
             )
-            whenever(userRepository.getReferenceById(userId)).thenReturn(SymptomFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
             whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
             whenever(symptomRepository.save(any())).thenReturn(saved)
             whenever(symptomConverter.toResponse(any(), isNull()))
@@ -135,16 +143,49 @@ class SymptomServiceTest {
             service.create(userId, request)
 
             verify(userStreakService, never()).updateOnComfortableRecorded(any(), any())
+            // SAFE 상태(GOOD)라도 연결된 끼니가 없으면 도감 등재를 예약하지 않는다
+            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
+            // 연결된 끼니가 없으면 패턴 분석도 갱신하지 않는다
+            verify(symptomPatternAnalysisRefreshService, never()).refresh(any(), any())
+        }
+
+        @Test
+        fun `SAFE 상태가 아니면 도감 등재를 예약하지 않는다`() {
+            val request = createRequest(symptomState = SymptomState.UNCOMFORTABLE)
+            val saved = SymptomFixture.symptom(symptomState = SymptomState.UNCOMFORTABLE)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+                .thenReturn(MealRecordFixture.mealRecord())
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
+            whenever(symptomRepository.save(any())).thenReturn(saved)
+            stubLinkedMeal()
+            whenever(symptomConverter.toResponse(any(), any()))
+                .thenReturn(symptomResponse(symptomState = SymptomState.UNCOMFORTABLE))
+
+            service.create(userId, request)
+
+            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
         }
 
         @Test
         fun `끼니 식별자가 잘못된 형식이면 MEAL_RECORD_NOT_FOUND`() {
             val request = createRequest(mealRecordId = "bad")
-            whenever(userRepository.getReferenceById(userId)).thenReturn(SymptomFixture.user())
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
 
             assertThatThrownBy { service.create(userId, request) }
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(MealErrorCode.MEAL_RECORD_NOT_FOUND)
+            verify(symptomRepository, never()).save(any())
+        }
+
+        @Test
+        fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            val request = createRequest()
+            whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+
+            assertThatThrownBy { service.create(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode").isEqualTo(AuthErrorCode.USER_NOT_FOUND)
             verify(symptomRepository, never()).save(any())
         }
     }
@@ -162,6 +203,19 @@ class SymptomServiceTest {
             val result = service.getDetail(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
 
             assertThat(result.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
+            verify(symptomPatternAnalysisRefreshService).refresh(symptom, userId)
+        }
+
+        @Test
+        fun `분석이 dirty가 아니면 패턴 분석을 갱신하지 않는다`() {
+            val symptom = SymptomFixture.symptom(isAnalysisDirty = false)
+            whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
+            stubLinkedMeal()
+            whenever(symptomConverter.toResponse(any(), any())).thenReturn(symptomResponse())
+
+            service.getDetail(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
+
+            verify(symptomPatternAnalysisRefreshService, never()).refresh(any(), any())
         }
 
         @Test
@@ -193,6 +247,7 @@ class SymptomServiceTest {
             assertThat(symptom.isAnalysisDirty).isTrue()
             assertThat(symptom.analysisVersion).isEqualTo(2L)
             verify(userStreakService).rebuildCurrentStreak(userId)
+            verify(symptomPatternAnalysisRefreshService).refresh(symptom, userId)
         }
 
         @Test

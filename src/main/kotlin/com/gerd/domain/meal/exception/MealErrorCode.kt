@@ -10,6 +10,7 @@ enum class MealErrorCode(
 ) : BaseErrorCode {
 
     INVALID_DATE_TIME(HttpStatus.BAD_REQUEST, "MEAL400_2", "날짜/시간 형식이 올바르지 않습니다."),
+    UNKNOWN_GRADE_NOT_RECORDABLE(HttpStatus.BAD_REQUEST, "MEAL400_3", "판단할 수 없는 음식은 기록할 수 없습니다."),
     MEAL_FOOD_NOT_FOUND(HttpStatus.NOT_FOUND, "MEAL404_1", "식사 음식 기록을 찾을 수 없습니다."),
     MEAL_RECORD_NOT_FOUND(HttpStatus.NOT_FOUND, "MEAL404_2", "끼니를 찾을 수 없습니다."),
 }

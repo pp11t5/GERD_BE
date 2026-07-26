@@ -1,5 +1,6 @@
 package com.gerd.domain.dictionary.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.entity.UserFoodDictionary
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
@@ -9,6 +10,7 @@ import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.repository.SymptomRepository
+import com.gerd.global.apiPayload.GeneralException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -23,7 +25,7 @@ class DictionaryCommandService(
 
     // 안전한 상태에 있는지 확인
     private val SAFE_STATES = setOf(SymptomState.COMFORTABLE, SymptomState.GOOD)
-    // 
+
     fun SymptomState.isSafe() = this in SAFE_STATES
 
     // SymptomService.create/update와 같은 트랜잭션에서 직접 호출 — 별도 이벤트/트랜잭션 분리 없음
@@ -78,16 +80,10 @@ class DictionaryCommandService(
             JudgmentGrade.RISK -> DictionaryType.RISK
             else -> return
         }
-        val exists = dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, foodId, type) != null
-        if (exists) return
-
-        dictionaryRepository.save(
-            UserFoodDictionary(
-                user = userRepository.getReferenceById(userId),
-                food = foodRepository.getReferenceById(foodId),
-                dictionaryType = type,
-            ),
-        )
+        if (!userRepository.existsById(userId)) throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
+        // 끼니 저장과 같은 트랜잭션에서 실행되므로, 동시 요청이 겹쳐도 uq_user_food_dict 충돌로
+        // 전체 트랜잭션이 롤백되지 않도록 존재 확인 후 저장 대신 원자적 upsert로 처리
+        dictionaryRepository.insertIfAbsent(userId, foodId, type.name)
     }
 }
 

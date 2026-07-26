@@ -17,13 +17,11 @@ import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
-import com.gerd.domain.meal.event.MealFoodJudgedEvent
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
@@ -43,7 +41,6 @@ class MealCommandService(
     private val objectMapper: ObjectMapper,
     private val symptomRepository: SymptomRepository,
     private val dictionaryCommandService: DictionaryCommandService,
-    private val eventPublisher: ApplicationEventPublisher,
     transactionManager: PlatformTransactionManager,
 ) {
     private val writeTransactionTemplate = TransactionTemplate(transactionManager)
@@ -53,6 +50,7 @@ class MealCommandService(
         val food = resolveFood(foodExternalId, userId)
         val user = resolveUser(userId)
         val snapshot = loadJudgmentSnapshot(foodExternalId, userId)
+        requireRecordable(snapshot.grade)
         return writeTransactionTemplate.execute {
             saveFoodToNewMeal(food, rawEatenAt, snapshot.grade, snapshot.analysisJson, user)
         } ?: error("meal record save transaction returned null")
@@ -63,6 +61,7 @@ class MealCommandService(
         val normalizedName = normalizeFoodName(foodName)
         val user = resolveUser(userId)
         val snapshot = loadTextJudgmentSnapshot(normalizedName, userId)
+        requireRecordable(snapshot.grade)
         // 음식 생성은 쓰기 tx 밖에서 — 유니크 제약 위반 시 자체 트랜잭션만 롤백돼 catch-재조회가 동작한다(같은 tx면 abort돼 후속 쿼리 실패)
         val food = resolveOrCreateUserFood(normalizedName, user)
         return writeTransactionTemplate.execute {
@@ -75,6 +74,7 @@ class MealCommandService(
         val food = resolveFood(foodExternalId, userId)
         val user = resolveUser(userId)
         val snapshot = loadJudgmentSnapshot(foodExternalId, userId)
+        requireRecordable(snapshot.grade)
         return writeTransactionTemplate.execute {
             val mealRecord = findMealRecord(rawMealRecordId, user)
             saveFoodToExistingMeal(food, rawEatenAt, mealRecord, snapshot.grade, snapshot.analysisJson, user)
@@ -86,6 +86,7 @@ class MealCommandService(
         val normalizedName = normalizeFoodName(foodName)
         val user = resolveUser(userId)
         val snapshot = loadTextJudgmentSnapshot(normalizedName, userId)
+        requireRecordable(snapshot.grade)
         // 음식 생성은 쓰기 tx 밖에서 (createNewByText 주석 참고)
         val food = resolveOrCreateUserFood(normalizedName, user)
         return writeTransactionTemplate.execute {
@@ -159,7 +160,7 @@ class MealCommandService(
                 analysisJson = analysisJson,
             ),
         )
-        publishJudgedEventIfCautionRisk(user.id!!, food.id!!, grade)
+        dictionaryCommandService.upsertCautionRiskEntry(requireUserId(user), food.id!!, grade)
         return mealRecordConverter.toSummary(saved, food)
     }
 
@@ -184,13 +185,8 @@ class MealCommandService(
         )
         mealRecord.updateGrade(grade)
         mealRecordRepository.save(mealRecord)
-        publishJudgedEventIfCautionRisk(user.id!!, food.id!!, grade)
+        dictionaryCommandService.upsertCautionRiskEntry(requireUserId(user), food.id!!, grade)
         return mealRecordConverter.toSummary(saved, food)
-    }
-
-    private fun publishJudgedEventIfCautionRisk(userId: Long, foodId: Long, grade: JudgmentGrade) {
-        if (grade != JudgmentGrade.CAUTION && grade != JudgmentGrade.RISK) return
-        eventPublisher.publishEvent(MealFoodJudgedEvent(userId, foodId, grade))
     }
 
     private fun resolveFood(foodExternalId: String, userId: Long): Food {
@@ -203,6 +199,9 @@ class MealCommandService(
 
     private fun resolveUser(userId: Long): User =
         userRepository.findById(userId).orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
+
+    private fun requireUserId(user: User): Long =
+        user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
 
     private fun findMealRecord(rawMealRecordId: String, user: User): MealRecord {
         val externalId = mealRecordConverter.parseUuid(rawMealRecordId)
@@ -246,6 +245,10 @@ class MealCommandService(
     private fun loadTextJudgmentSnapshot(foodName: String, userId: Long): MealJudgmentSnapshot {
         val judgment = foodJudgmentQueryService.getJudgmentByText(foodName, userId).first
         return toSnapshot(judgment.grade, judgment.items)
+    }
+
+    private fun requireRecordable(grade: JudgmentGrade) {
+        if (grade == JudgmentGrade.UNKNOWN) throw GeneralException(MealErrorCode.UNKNOWN_GRADE_NOT_RECORDABLE)
     }
 
     private fun toSnapshot(grade: JudgmentGrade, items: List<JudgmentItemDTO>): MealJudgmentSnapshot =

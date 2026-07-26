@@ -19,7 +19,6 @@ import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.OnDelete
 import org.hibernate.annotations.OnDeleteAction
-
 @Entity
 @Table(
     name = "user_food_dictionaries",

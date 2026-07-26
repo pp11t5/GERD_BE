@@ -6,6 +6,7 @@ import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDI
 import com.gerd.domain.notification.entity.enums.NotificationType
 import com.gerd.domain.notification.repository.NotificationPendingRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -27,10 +28,14 @@ class PostMealNotificationUseCase(
 ) {
 
     // 리스너에서 호출 — 식후 알림 예약
+    // @Async 리스너라 예외가 응답에 영향 없이 스레드에서 유실되므로, 존재하지 않는 유저는 예외 대신 로그로 스킵
     @Transactional
     fun enqueue(userId: Long, mealRecordId: Long) {
         val now = LocalDateTime.now()
-        val user = userRepository.getReferenceById(userId)
+        val user = userRepository.findByIdOrNull(userId) ?: run {
+            log.warn { "식후 알림 예약 스킵 — 존재하지 않는 유저 userId=$userId" }
+            return
+        }
 
         // 1) 야간 판정 먼저 — 식후 2h가 야간(22:00~09:00)에 걸리면 다음 09:00로 이연
         val (scheduledAt, delayed) = resolveSchedule(now.plusHours(POST_MEAL_DELAY_HOURS))
@@ -79,6 +84,7 @@ class PostMealNotificationUseCase(
     // 크론에서 호출 — due PENDING을 유저별로 묶어 비동기 발송에 위임
     fun processPending() {
         val pendings = notificationPendingRepository.findDueForActiveUsers(PENDING, LocalDateTime.now())
+        if (pendings.isEmpty()) return
         log.info { "식후 알림 처리 시작: 대상 ${pendings.size}건" }
         pendings.groupBy { it.user.id!! }.forEach { (userId, userPendings) ->
             postMealPendingSender.sendForUser(userId, userPendings.mapNotNull { it.id })

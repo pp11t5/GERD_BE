@@ -100,6 +100,9 @@ dependencies {
 
     // db
     runtimeOnly("org.postgresql:postgresql")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+    implementation("org.springframework.boot:spring-boot-flyway")
 
     // test-db: Testcontainers PostgreSQL (운영과 동일 DB)
     testImplementation("org.testcontainers:postgresql:1.21.3")

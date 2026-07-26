@@ -109,7 +109,9 @@ class SymptomIntegrationTest @Autowired constructor(
                 jsonPath("$.result.linkedMeal.foods[0].name") { value("통합 된장찌개") }
                 jsonPath("$.result.linkedMeal.foods[0].category") { value("soup_stew") }
                 jsonPath("$.result.memo") { doesNotExist() }
-                jsonPath("$.result.analysis") { value(nullValue()) }
+                // 규칙 기반 패턴 분석은 같은 트랜잭션에서 동기로 계산된다 — 연결 기록이 이번 1건뿐이라 관찰중(OBSERVING) 라벨로 채워진다
+                jsonPath("$.result.analysis.items[0].emphasis") { value("아직 패턴을 말하기엔 기록이 조금 적어요.") }
+                jsonPath("$.result.analysis.items[0].body") { value("며칠만 더 기록하면 지원님만의 패턴을 찾아드릴 수 있어요.") }
             }
 
             val symptom = symptomRepository.findAll().single()
@@ -143,7 +145,8 @@ class SymptomIntegrationTest @Autowired constructor(
             val updated = symptomRepository.findByExternalIdAndUser_Id(symptom.externalId!!, USER_ID)!!
             assertThat(updated.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
             assertThat(updated.symptomTypes.map { it.code }).containsExactly("acid_reflux")
-            assertThat(updated.isAnalysisDirty).isTrue()
+            // 연결된 끼니가 있어 update() 안에서 패턴 분석이 동기로 즉시 재계산·저장된다
+            assertThat(updated.isAnalysisDirty).isFalse()
             assertThat(updated.analysisVersion).isEqualTo(1L)
 
             mockMvc.patch("/api/v1/symptoms/{symptomId}/memo", symptomExternalId) {

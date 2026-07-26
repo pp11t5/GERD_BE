@@ -1,5 +1,6 @@
 package com.gerd.domain.symptom.service
 
+import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.service.DictionaryCommandService
 import com.gerd.domain.food.entity.Food
@@ -36,18 +37,22 @@ class SymptomService(
     private val userRepository: UserRepository,
     private val dictionaryCommandService: DictionaryCommandService,
     private val userStreakService: UserStreakService,
+    private val symptomPatternAnalysisRefreshService: SymptomPatternAnalysisRefreshService,
 ) {
 
     // 상세 조회
+    @Transactional
     fun getDetail(symptomId: String, userId: Long): SymptomResponseDTO {
         val symptom = resolveSymptom(symptomId, userId)
+        if (symptom.isAnalysisDirty) symptomPatternAnalysisRefreshService.refresh(symptom, userId)
         return symptomConverter.toResponse(symptom, buildLinkedMeal(symptom, userId))
     }
 
     // 증상 기록 생성
     @Transactional
     fun create(userId: Long, request: SymptomCreateRequestDTO): SymptomResponseDTO {
-        val user = userRepository.getReferenceById(userId)
+        val user = userRepository.findById(userId)
+            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
         val symptom = Symptom(
             user = user,
@@ -68,6 +73,7 @@ class SymptomService(
         if (with(dictionaryCommandService) { request.symptomState?.isSafe() } == true && mealRecordId != null) {
             dictionaryCommandService.upsertSafeEntries(userId, mealRecordId)
         }
+        if (mealRecordId != null) symptomPatternAnalysisRefreshService.refresh(saved, userId)
 
         return symptomConverter.toResponse(saved, buildLinkedMeal(saved, userId))
     }
@@ -99,6 +105,7 @@ class SymptomService(
         if (with(dictionaryCommandService) { request.symptomState?.isSafe() } == true && mealRecordId != null) {
             dictionaryCommandService.upsertSafeEntries(userId, mealRecordId)
         }
+        if (mealRecordId != null) symptomPatternAnalysisRefreshService.refresh(symptom, userId)
     }
 
     // 메모 업데이트

@@ -11,6 +11,12 @@ spring:
       hibernate:
         jdbc:
           time_zone: Asia/Seoul
+  flyway:
+    # 기존 스키마는 ddl-auto가 관리 — Flyway는 그 위에 얹는 확장/인덱스/데이터 마이그레이션만 담당
+    baseline-on-migrate: true
+    baseline-version: "0"
+    # CREATE INDEX CONCURRENTLY(V1)처럼 트랜잭션 밖에서 실행돼야 하는 구문을 한 마이그레이션에 섞어 쓰기 위함
+    mixed: true
 
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long}
@@ -71,11 +77,6 @@ resilience4j:
     instances:
       gemini-judgment:
         slow-call-duration-threshold: 10s
-      gemini-symptom:
-        sliding-window-size: 5
-        failure-rate-threshold: 60
-        wait-duration-in-open-state: 60s
-        permitted-number-of-calls-in-half-open-state: 2
 
 sentry:
   dsn: ${SENTRY_DSN:}
