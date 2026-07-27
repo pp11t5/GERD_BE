@@ -4,15 +4,11 @@ import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
-import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
-import com.gerd.global.fixture.DictionaryFixture
-import com.gerd.global.fixture.FoodFixture
 import com.gerd.global.fixture.MealRecordFixture
-import com.gerd.global.fixture.UserFixture
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -23,14 +19,12 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class DictionaryCommandServiceTest {
 
     @Mock private lateinit var dictionaryRepository: UserFoodDictionaryRepository
     @Mock private lateinit var mealFoodRepository: MealFoodRepository
-    @Mock private lateinit var foodRepository: FoodRepository
     @Mock private lateinit var userRepository: UserRepository
     @Mock private lateinit var symptomRepository: SymptomRepository
 
@@ -38,7 +32,6 @@ class DictionaryCommandServiceTest {
         DictionaryCommandService(
             dictionaryRepository = dictionaryRepository,
             mealFoodRepository = mealFoodRepository,
-            foodRepository = foodRepository,
             userRepository = userRepository,
             symptomRepository = symptomRepository,
         )
@@ -51,55 +44,46 @@ class DictionaryCommandServiceTest {
     inner class `안전 음식 적재` {
 
         @Test
-        fun `끼니의 음식이 SAFE에 없으면 저장한다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
-            whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
-                .thenReturn(null)
-            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
-            whenever(foodRepository.getReferenceById(1L)).thenReturn(FoodFixture.food(id = 1L))
+        fun `끼니의 음식을 원자적 upsert로 SAFE 등록한다`() {
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
+            whenever(userRepository.existsById(userId)).thenReturn(true)
 
             service.upsertSafeEntries(userId, mealRecordId)
 
-            verify(dictionaryRepository).save(any())
+            verify(dictionaryRepository).insertIfAbsent(userId, 1L, "SAFE")
         }
 
         @Test
-        fun `이미 SAFE에 있는 음식은 저장하지 않는다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
-            whenever(dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(userId, 1L, DictionaryType.SAFE))
-                .thenReturn(DictionaryFixture.entry(type = DictionaryType.SAFE))
-            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
+        fun `이미 SAFE로 존재해도 예외 없이 완료된다`() {
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
+            whenever(userRepository.existsById(userId)).thenReturn(true)
+            whenever(dictionaryRepository.insertIfAbsent(userId, 1L, "SAFE")).thenReturn(0)
 
             service.upsertSafeEntries(userId, mealRecordId)
 
-            verify(dictionaryRepository, never()).save(any())
+            verify(dictionaryRepository).insertIfAbsent(userId, 1L, "SAFE")
         }
 
         @Test
         fun `끼니에 음식이 없으면 아무것도 저장하지 않는다`() {
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(emptyList())
-            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(emptyList())
 
             service.upsertSafeEntries(userId, mealRecordId)
 
-            verify(dictionaryRepository, never()).save(any())
+            verify(dictionaryRepository, never()).insertIfAbsent(any(), any(), any())
         }
 
         @Test
         fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
-            whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
+            whenever(userRepository.existsById(userId)).thenReturn(false)
 
             assertThatThrownBy { service.upsertSafeEntries(userId, mealRecordId) }
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode")
                 .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
 
-            verify(dictionaryRepository, never()).save(any())
+            verify(dictionaryRepository, never()).insertIfAbsent(any(), any(), any())
         }
     }
 
@@ -108,9 +92,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `다른 편안 증상에서 유효하지 않은 음식만 삭제한다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
             whenever(symptomRepository.findFoodIdsStillSafeByOtherSymptoms(userId, listOf(1L), mealRecordId))
                 .thenReturn(emptyList())
 
@@ -121,9 +103,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `다른 편안 증상에서 유효한 음식은 삭제하지 않는다`() {
-            val mealFood = MealRecordFixture.mealFood(foodId = 1L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(mealFood))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L))
             whenever(symptomRepository.findFoodIdsStillSafeByOtherSymptoms(userId, listOf(1L), mealRecordId))
                 .thenReturn(listOf(1L))
 
@@ -134,8 +114,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `끼니에 음식이 없으면 삭제 쿼리를 호출하지 않는다`() {
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(emptyList())
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(emptyList())
 
             service.removeSafeEntries(userId, mealRecordId)
 
@@ -144,10 +123,7 @@ class DictionaryCommandServiceTest {
 
         @Test
         fun `일부 음식만 다른 증상에서 유효하면 나머지만 삭제한다`() {
-            val food1 = MealRecordFixture.mealFood(foodId = 1L)
-            val food2 = MealRecordFixture.mealFood(foodId = 2L)
-            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecordId))
-                .thenReturn(listOf(food1, food2))
+            whenever(mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)).thenReturn(listOf(1L, 2L))
             whenever(symptomRepository.findFoodIdsStillSafeByOtherSymptoms(userId, listOf(1L, 2L), mealRecordId))
                 .thenReturn(listOf(1L))
 

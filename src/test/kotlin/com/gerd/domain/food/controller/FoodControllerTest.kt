@@ -5,6 +5,7 @@ import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.auth.security.JwtProvider
+import org.springframework.transaction.TransactionTimedOutException
 import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.food.service.FoodSearchService
 import com.gerd.domain.food.service.RecentFoodService
@@ -98,6 +99,20 @@ class FoodControllerTest @Autowired constructor(
             }.andExpect {
                 status { isBadRequest() }
                 jsonPath("$.code") { value("FOOD400_1") }
+            }
+        }
+
+        @Test
+        @WithCustomUser
+        fun `검색이 15초를 초과하면 COMMON408_1을 반환한다`() {
+            whenever(foodSearchService.search(any(), anyOrNull(), any()))
+                .thenThrow(TransactionTimedOutException("Transaction timed out"))
+
+            mockMvc.get("/api/v1/foods/search") {
+                param("q", "된장찌개")
+            }.andExpect {
+                status { isRequestTimeout() }
+                jsonPath("$.code") { value("COMMON408_1") }
             }
         }
     }

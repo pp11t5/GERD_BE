@@ -47,8 +47,8 @@ dependencies {
     // cache
     implementation("com.github.ben-manes.caffeine:caffeine")
 
-    // retry
-    implementation("org.springframework.retry:spring-retry:2.0.12")
+    // circuit breaker
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
 
     // web
     implementation("org.springframework.boot:spring-boot-starter-webmvc")

@@ -8,12 +8,15 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.dao.QueryTimeoutException
+import com.gerd.global.ai.LlmTimeoutException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatusCode
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.orm.ObjectOptimisticLockingFailureException
+import org.springframework.transaction.TransactionTimedOutException
 import org.springframework.validation.BindException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
@@ -128,6 +131,15 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
         val body = ApiResponse.onFailure(CommonErrorCode.INVALID_REQUEST, errors)
         return handleExceptionInternal(e, body, HttpHeaders(), CommonErrorCode.INVALID_REQUEST.httpStatus, request)
             ?: ResponseEntity(body, CommonErrorCode.INVALID_REQUEST.httpStatus)
+    }
+
+    // 처리 타임아웃 — LLM read timeout, DB 트랜잭션 만료, 쿼리 만료 모두 처리
+    @ExceptionHandler(LlmTimeoutException::class, TransactionTimedOutException::class, QueryTimeoutException::class)
+    fun handleTimeout(e: Exception, request: HttpServletRequest): ResponseEntity<Any> {
+        log.warn("Request timeout: {}", e.message)
+        val body = ApiResponse.onFailure<Nothing>(CommonErrorCode.REQUEST_TIMEOUT)
+        return handleExceptionInternal(e, body, HttpHeaders(), CommonErrorCode.REQUEST_TIMEOUT.httpStatus, ServletWebRequest(request))
+            ?: ResponseEntity(body, CommonErrorCode.REQUEST_TIMEOUT.httpStatus)
     }
 
     // 도메인 예외의 공통 응답 변환

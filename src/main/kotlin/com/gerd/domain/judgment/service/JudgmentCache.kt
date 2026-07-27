@@ -19,8 +19,7 @@ class JudgmentCache {
         .recordStats()
         .build()
 
-    // asMap().compute()는 동일 키의 동시 요청을 직렬화하므로 loader 중복 호출을 방지한다.
-    // loader가 null을 반환하면 캐시에 저장하지 않는다.
+    // loader가 null 반환 시 캐시에 저장하지 않음
     fun get(key: String, loader: (String) -> CachedJudgment?): CachedJudgment? {
         cache.getIfPresent(key)?.let { return it }
         var result: CachedJudgment? = null
@@ -36,8 +35,7 @@ class JudgmentCache {
     }
 
     companion object {
-        // 일 사용자 수 × 평균 판정 음식 수 기준 여유 있게 잡은 상한
-        // 이 수치에 근접하면 키 설계를 점검해야 함
+        // 캐시가 보관할 수 있는 최대 항목 수
         private const val MAX_ENTRIES = 10_000L
     }
 }

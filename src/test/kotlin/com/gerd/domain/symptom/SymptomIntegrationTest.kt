@@ -16,7 +16,6 @@ import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.entity.Symptom
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.repository.SymptomRepository
-import com.gerd.domain.symptom.service.SymptomPatternRefreshService
 import com.gerd.global.security.WithCustomUser
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.nullValue
@@ -24,16 +23,12 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
@@ -56,9 +51,6 @@ class SymptomIntegrationTest @Autowired constructor(
     private val symptomRepository: SymptomRepository,
     private val jdbcTemplate: JdbcTemplate,
 ) {
-
-    @MockitoBean
-    private lateinit var symptomPatternRefreshService: SymptomPatternRefreshService
 
     @BeforeEach
     fun setUp() {
@@ -117,12 +109,13 @@ class SymptomIntegrationTest @Autowired constructor(
                 jsonPath("$.result.linkedMeal.foods[0].name") { value("통합 된장찌개") }
                 jsonPath("$.result.linkedMeal.foods[0].category") { value("soup_stew") }
                 jsonPath("$.result.memo") { doesNotExist() }
-                jsonPath("$.result.analysis") { value(nullValue()) }
+                // 규칙 기반 패턴 분석은 같은 트랜잭션에서 동기로 계산된다 — 연결 기록이 이번 1건뿐이라 관찰중(OBSERVING) 라벨로 채워진다
+                jsonPath("$.result.analysis.items[0].emphasis") { value("아직 패턴을 말하기엔 기록이 조금 적어요.") }
+                jsonPath("$.result.analysis.items[0].body") { value("며칠만 더 기록하면 지원님만의 패턴을 찾아드릴 수 있어요.") }
             }
 
             val symptom = symptomRepository.findAll().single()
             val symptomExternalId = symptom.externalId.toString()
-            verify(symptomPatternRefreshService, times(1)).refreshAsync(symptomExternalId, USER_ID)
 
             mockMvc.get("/api/v1/symptoms/{symptomId}", symptomExternalId)
                 .andExpect {
@@ -152,7 +145,8 @@ class SymptomIntegrationTest @Autowired constructor(
             val updated = symptomRepository.findByExternalIdAndUser_Id(symptom.externalId!!, USER_ID)!!
             assertThat(updated.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
             assertThat(updated.symptomTypes.map { it.code }).containsExactly("acid_reflux")
-            assertThat(updated.isAnalysisDirty).isTrue()
+            // 연결된 끼니가 있어 update() 안에서 패턴 분석이 동기로 즉시 재계산·저장된다
+            assertThat(updated.isAnalysisDirty).isFalse()
             assertThat(updated.analysisVersion).isEqualTo(1L)
 
             mockMvc.patch("/api/v1/symptoms/{symptomId}/memo", symptomExternalId) {
@@ -166,7 +160,6 @@ class SymptomIntegrationTest @Autowired constructor(
             val memoUpdated = symptomRepository.findByExternalIdAndUser_Id(symptom.externalId!!, USER_ID)!!
             assertThat(memoUpdated.memo).isEqualTo("메모만 바꿨어요")
             assertThat(memoUpdated.analysisVersion).isEqualTo(2L)
-            verify(symptomPatternRefreshService, times(4)).refreshAsync(symptomExternalId, USER_ID)
 
             mockMvc.delete("/api/v1/symptoms/{symptomId}", symptomExternalId)
                 .andExpect {
@@ -196,7 +189,6 @@ class SymptomIntegrationTest @Autowired constructor(
             }
 
             assertThat(symptomRepository.findAll()).isEmpty()
-            verify(symptomPatternRefreshService, times(0)).refreshAsync(any(), any())
         }
 
         @Test
@@ -235,9 +227,6 @@ class SymptomIntegrationTest @Autowired constructor(
             assertThat(unchanged.isAnalysisDirty).isFalse()
             assertThat(unchanged.analysisVersion).isEqualTo(3L)
             assertThat(unchanged.analysisJson).contains("유지 권장")
-
-            val created = symptomRepository.findAll().single { it.id != existing.id }
-            verify(symptomPatternRefreshService, times(1)).refreshAsync(created.externalId.toString(), USER_ID)
         }
     }
 

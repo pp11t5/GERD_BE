@@ -14,7 +14,6 @@ import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.symptom.entity.Symptom
 import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.repository.SymptomRepository
-import com.gerd.domain.symptom.service.SymptomPatternRefreshService
 import com.gerd.global.security.WithCustomUser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -27,7 +26,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.post
@@ -46,9 +44,6 @@ class DictionaryIntegrationTest @Autowired constructor(
     private val dictionaryRepository: UserFoodDictionaryRepository,
     private val jdbcTemplate: JdbcTemplate,
 ) {
-
-    @MockitoBean
-    private lateinit var symptomPatternRefreshService: SymptomPatternRefreshService
 
     @BeforeEach
     fun setUp() {

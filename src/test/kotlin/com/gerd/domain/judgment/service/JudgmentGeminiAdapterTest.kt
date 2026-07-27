@@ -1,7 +1,7 @@
 package com.gerd.domain.judgment.service
 
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
-import com.gerd.global.ai.gemini.GeminiClient
+import com.gerd.global.ai.LlmClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -17,14 +17,14 @@ import tools.jackson.databind.json.JsonMapper
 class JudgmentGeminiAdapterTest {
 
     @Mock
-    private lateinit var geminiClient: GeminiClient
+    private lateinit var llmClient: LlmClient
 
     private lateinit var adapter: JudgmentGeminiAdapter
 
     @BeforeEach
     fun setUp() {
         adapter = JudgmentGeminiAdapter(
-            geminiClient = geminiClient,
+            llmClient = llmClient,
             objectMapper = JsonMapper.builder().findAndAddModules().build(),
         )
     }
@@ -36,7 +36,7 @@ class JudgmentGeminiAdapterTest {
 
         @Test
         fun `structured output을 LlmJudgmentDTO로 파싱한다`() {
-            whenever(geminiClient.generateJson(any())).thenReturn(
+            whenever(llmClient.generateJson(any())).thenReturn(
                 """
                 {"grade":"CAUTION","personalTitle":"오늘은 천천히 즐겨보세요","items":[
                   {"emphasis":"카페인이 들어 있어요","body":"천천히 드세요."},
@@ -59,21 +59,21 @@ class JudgmentGeminiAdapterTest {
 
         @Test
         fun `Gemini 호출 실패는 null을 반환한다`() {
-            whenever(geminiClient.generateJson(any())).thenReturn(null)
+            whenever(llmClient.generateJson(any())).thenReturn(null)
 
             assertThat(call()).isNull()
         }
 
         @Test
         fun `응답 텍스트가 JSON이 아니면 null을 반환한다`() {
-            whenever(geminiClient.generateJson(any())).thenReturn("죄송하지만 판단할 수 없습니다")
+            whenever(llmClient.generateJson(any())).thenReturn("죄송하지만 판단할 수 없습니다")
 
             assertThat(call()).isNull()
         }
 
         @Test
         fun `items가 2개가 아니면 null을 반환한다`() {
-            whenever(geminiClient.generateJson(any()))
+            whenever(llmClient.generateJson(any()))
                 .thenReturn("""{"grade":"CAUTION","items":[{"emphasis":"하나","body":"뿐"}]}""")
 
             assertThat(call()).isNull()

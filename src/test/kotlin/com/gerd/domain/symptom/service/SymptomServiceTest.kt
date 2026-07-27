@@ -64,13 +64,13 @@ class SymptomServiceTest {
     private lateinit var userRepository: UserRepository
 
     @Mock
-    private lateinit var symptomPatternRefreshService: SymptomPatternRefreshService
-
-    @Mock
     private lateinit var dictionaryCommandService: DictionaryCommandService
 
     @Mock
     private lateinit var userStreakService: UserStreakService
+
+    @Mock
+    private lateinit var symptomPatternAnalysisRefreshService: SymptomPatternAnalysisRefreshService
 
     private val service by lazy {
         SymptomService(
@@ -81,9 +81,9 @@ class SymptomServiceTest {
             foodCategoryMapRepository = foodCategoryMapRepository,
             symptomConverter = symptomConverter,
             userRepository = userRepository,
-            symptomPatternRefreshService = symptomPatternRefreshService,
             dictionaryCommandService = dictionaryCommandService,
             userStreakService = userStreakService,
+            symptomPatternAnalysisRefreshService = symptomPatternAnalysisRefreshService,
         )
     }
 
@@ -103,6 +103,7 @@ class SymptomServiceTest {
             whenever(symptomRepository.save(any())).thenReturn(saved)
             stubLinkedMeal()
             whenever(symptomConverter.toResponse(any(), any())).thenReturn(symptomResponse())
+            whenever(with(dictionaryCommandService) { SymptomState.COMFORTABLE.isSafe() }).thenReturn(true)
 
             val result = service.create(userId, request)
 
@@ -110,9 +111,10 @@ class SymptomServiceTest {
             val linkedMealCaptor = argumentCaptor<SymptomResponseDTO.LinkedMealDTO>()
             verify(symptomRepository).save(symptomCaptor.capture())
             verify(symptomConverter).toResponse(any(), linkedMealCaptor.capture())
-            verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
+            verify(dictionaryCommandService).upsertSafeEntries(userId, MealRecordFixture.MEAL_RECORD_ID)
             verify(userStreakService).updateOnComfortableRecorded(userId, SymptomFixture.OCCURRED_AT.toLocalDate())
             verify(dictionaryCommandService).upsertSafeEntries(userId, MealRecordFixture.MEAL_RECORD_ID)
+            verify(symptomPatternAnalysisRefreshService).refresh(saved, userId)
             assertThat(symptomCaptor.firstValue.user?.id).isEqualTo(userId)
             assertThat(symptomCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
             assertThat(symptomCaptor.firstValue.symptomState).isEqualTo(SymptomState.COMFORTABLE)
@@ -143,6 +145,8 @@ class SymptomServiceTest {
             verify(userStreakService, never()).updateOnComfortableRecorded(any(), any())
             // SAFE 상태(GOOD)라도 연결된 끼니가 없으면 도감 등재를 예약하지 않는다
             verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
+            // 연결된 끼니가 없으면 패턴 분석도 갱신하지 않는다
+            verify(symptomPatternAnalysisRefreshService, never()).refresh(any(), any())
         }
 
         @Test
@@ -190,7 +194,7 @@ class SymptomServiceTest {
     inner class `상세 조회` {
 
         @Test
-        fun `본인 증상 기록을 UUID로 조회하고 dirty면 비동기 갱신을 예약한다`() {
+        fun `본인 증상 기록을 UUID로 조회한다`() {
             val symptom = SymptomFixture.symptom(isAnalysisDirty = true)
             whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
             stubLinkedMeal()
@@ -198,8 +202,20 @@ class SymptomServiceTest {
 
             val result = service.getDetail(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
 
-            verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
             assertThat(result.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
+            verify(symptomPatternAnalysisRefreshService).refresh(symptom, userId)
+        }
+
+        @Test
+        fun `분석이 dirty가 아니면 패턴 분석을 갱신하지 않는다`() {
+            val symptom = SymptomFixture.symptom(isAnalysisDirty = false)
+            whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
+            stubLinkedMeal()
+            whenever(symptomConverter.toResponse(any(), any())).thenReturn(symptomResponse())
+
+            service.getDetail(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
+
+            verify(symptomPatternAnalysisRefreshService, never()).refresh(any(), any())
         }
 
         @Test
@@ -217,7 +233,7 @@ class SymptomServiceTest {
     inner class `수정` {
 
         @Test
-        fun `전체 수정하면 dirty 상태로 바꾸고 비동기 갱신을 예약한다`() {
+        fun `전체 수정하면 dirty 상태로 바꾼다`() {
             val symptom = SymptomFixture.symptom(isAnalysisDirty = false, analysisVersion = 1L)
             whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
@@ -230,12 +246,12 @@ class SymptomServiceTest {
             assertThat(symptom.symptomTypes).containsExactly(SymptomType.ACID_REFLUX)
             assertThat(symptom.isAnalysisDirty).isTrue()
             assertThat(symptom.analysisVersion).isEqualTo(2L)
-            verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
             verify(userStreakService).rebuildCurrentStreak(userId)
+            verify(symptomPatternAnalysisRefreshService).refresh(symptom, userId)
         }
 
         @Test
-        fun `메모만 수정해도 dirty 상태로 바꾸고 비동기 갱신을 예약한다`() {
+        fun `메모만 수정해도 dirty 상태로 바꾼다`() {
             val symptom = SymptomFixture.symptom(isAnalysisDirty = false, analysisVersion = 1L)
             whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
 
@@ -248,7 +264,6 @@ class SymptomServiceTest {
             assertThat(symptom.memo).isEqualTo("조금 답답했어요")
             assertThat(symptom.isAnalysisDirty).isTrue()
             assertThat(symptom.analysisVersion).isEqualTo(2L)
-            verify(symptomPatternRefreshService).refreshAsync(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), userId)
         }
 
         @Test
@@ -268,7 +283,7 @@ class SymptomServiceTest {
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(CommonErrorCode.INVALID_REQUEST)
 
-            verify(symptomPatternRefreshService, never()).refreshAsync(any(), any())
+            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
         }
     }
 

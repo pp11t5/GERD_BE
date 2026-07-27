@@ -251,11 +251,11 @@ class MealRecordCommandServiceTest {
         }
     }
 
-    private fun judgment() = JudgmentResponseDTO(
+    private fun judgment(grade: JudgmentGrade = JudgmentGrade.CAUTION) = JudgmentResponseDTO(
         foodExternalId = foodExternalId.toString(),
         foodName = "된장찌개",
         category = "soup_stew",
-        grade = JudgmentGrade.CAUTION,
+        grade = grade,
         personalTitle = "속이 불편할 수 있어요",
         items = listOf(
             JudgmentResponseDTO.JudgmentItemDTO("맵고 짤 수 있어요", "천천히 드세요"),
