@@ -35,7 +35,7 @@ class JudgmentCache {
     }
 
     companion object {
-        // 최대 수용 가능한 일일 사용자 수
+        // 캐시가 보관할 수 있는 최대 항목 수
         private const val MAX_ENTRIES = 10_000L
     }
 }

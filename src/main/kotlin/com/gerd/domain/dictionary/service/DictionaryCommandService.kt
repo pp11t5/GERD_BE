@@ -2,10 +2,8 @@ package com.gerd.domain.dictionary.service
 
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
-import com.gerd.domain.dictionary.entity.UserFoodDictionary
 import com.gerd.domain.dictionary.entity.enums.DictionaryType
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
-import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.symptom.entity.enums.SymptomState
@@ -18,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional
 class DictionaryCommandService(
     private val dictionaryRepository: UserFoodDictionaryRepository,
     private val mealFoodRepository: MealFoodRepository,
-    private val foodRepository: FoodRepository,
     private val userRepository: UserRepository,
     private val symptomRepository: SymptomRepository,
 ) {
@@ -31,22 +28,13 @@ class DictionaryCommandService(
     // SymptomService.create/update와 같은 트랜잭션에서 직접 호출 — 별도 이벤트/트랜잭션 분리 없음
     @Transactional
     fun upsertSafeEntries(userId: Long, mealRecordId: Long) {
-        val user = userRepository.getReferenceById(userId)
         val foodIds = mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)
+        if (foodIds.isEmpty()) return
+        if (!userRepository.existsById(userId)) throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
 
+        // 조회 후 저장 대신 원자적 upsert로 처리 — 동시 요청이 겹쳐도 uq_user_food_dict 충돌로 롤백되지 않는다
         foodIds.forEach { foodId ->
-            val exists = dictionaryRepository.findByUser_IdAndFood_IdAndDictionaryType(
-                userId, foodId, DictionaryType.SAFE,
-            ) != null
-            if (exists) return@forEach
-
-            dictionaryRepository.save(
-                UserFoodDictionary(
-                    user = user,
-                    food = foodRepository.getReferenceById(foodId),
-                    dictionaryType = DictionaryType.SAFE,
-                ),
-            )
+            dictionaryRepository.insertIfAbsent(userId, foodId, DictionaryType.SAFE.name)
         }
     }
 

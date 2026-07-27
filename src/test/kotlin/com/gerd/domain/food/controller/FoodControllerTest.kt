@@ -111,7 +111,7 @@ class FoodControllerTest @Autowired constructor(
             mockMvc.get("/api/v1/foods/search") {
                 param("q", "된장찌개")
             }.andExpect {
-                status { is4xxClientError() }
+                status { isRequestTimeout() }
                 jsonPath("$.code") { value("COMMON408_1") }
             }
         }
