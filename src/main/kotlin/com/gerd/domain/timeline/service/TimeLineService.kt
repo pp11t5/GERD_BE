@@ -35,11 +35,15 @@ class TimeLineService(
         val end = date.plusDays(1).atStartOfDay()
 
         val mealRecords = mealRecordRepository.findByUser_IdAndEatenAtBetween(userId, start, end)
-        val symptoms = symptomRepository.findByUser_IdAndOccurredAtBetween(userId, start, end)
+        val mealRecordIds = mealRecords.mapNotNull { it.id }
+
+        // 연관 증상은 occurredAt이 아닌 연결된 식사의 날짜 기준으로 귀속
+        val linkedSymptoms = if (mealRecordIds.isEmpty()) emptyList() else symptomRepository.findByMealRecordIdIn(mealRecordIds)
+        val unlinkedSymptoms = symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(userId, start, end)
+        val symptoms = linkedSymptoms + unlinkedSymptoms
 
         if (mealRecords.isEmpty() && symptoms.isEmpty()) return TimeLineResponseDTO(emptyList())
 
-        val mealRecordIds = mealRecords.mapNotNull { it.id }
         val mealRecordById = mealRecords.associateBy { requireNotNull(it.id) { "MealRecord.id must not be null" } }
 
         val mealFoodsByRecordId = mealFoodRepository

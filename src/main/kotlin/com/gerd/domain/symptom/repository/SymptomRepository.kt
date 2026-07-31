@@ -10,7 +10,7 @@ import java.util.UUID
 interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQueryRepository {
     fun findByMealRecordId(mealRecordId: Long): List<Symptom>
     fun findByMealRecordIdIn(mealRecordIds: List<Long>): List<Symptom>
-    fun findByUser_IdAndOccurredAtBetween(userId: Long, start: LocalDateTime, end: LocalDateTime): List<Symptom>
+    fun findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(userId: Long, start: LocalDateTime, end: LocalDateTime): List<Symptom>
 
     fun findByExternalIdAndUser_Id(externalId: UUID, userId: Long): Symptom?
 

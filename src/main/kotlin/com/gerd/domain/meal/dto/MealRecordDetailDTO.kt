@@ -16,7 +16,7 @@ data class MealRecordDetailDTO(
     val meals: List<MealFoodDetailDTO>,
 
     @field:Schema(description = "연결된 상태 기록(없으면 null)")
-    val stateRecords: StateRecordDTO?,
+    val stateRecords: MealStateRecordDTO?,
 ) {
 
     data class MealFoodDetailDTO(

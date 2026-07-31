@@ -8,7 +8,7 @@ import com.gerd.domain.meal.dto.MealCandidatesDTO
 import com.gerd.domain.meal.dto.MealFoodRecordDetailDTO
 import com.gerd.domain.meal.dto.MealFoodSummaryDTO
 import com.gerd.domain.meal.dto.MealRecordDetailDTO
-import com.gerd.domain.meal.dto.StateRecordDTO
+import com.gerd.domain.meal.dto.MealStateRecordDTO
 import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.exception.MealErrorCode
@@ -69,7 +69,7 @@ class MealRecordConverter(
         val categories = foodCategoryReader.loadPrimaryByFoodIds(foodIds)
         val stateRecord = symptoms.firstOrNull()?.let { symptom ->
             val externalId = symptom.externalId ?: return@let null
-            StateRecordDTO(
+            MealStateRecordDTO(
                 stateRecordId = externalId.toString(),
                 label = symptom.symptomState,
                 date = formatSymptomDate(symptom.occurredAt),

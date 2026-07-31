@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 /**
  * 증상 기록 DTO
  */
-data class StateRecordDTO(
+data class MealStateRecordDTO(
     @field:Schema(description = "증상 기록 외부 식별자(UUID)", example = "9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
     val stateRecordId: String,
 

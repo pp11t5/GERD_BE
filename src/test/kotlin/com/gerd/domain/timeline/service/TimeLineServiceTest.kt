@@ -47,7 +47,7 @@ class TimeLineServiceTest {
         @Test
         fun `식사 기록과 증상이 모두 없으면 빈 리스트를 반환한다`() {
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(emptyList())
 
             val result = service.getTimeLine(userId, date)
 
@@ -61,7 +61,7 @@ class TimeLineServiceTest {
             val food = FoodFixture.food(id = 1L, name = "된장찌개")
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(emptyList())
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
             whenever(foodCategoryReader.loadPrimaryByFoodIds(any())).thenReturn(mapOf(1L to "SOUP"))
@@ -85,7 +85,7 @@ class TimeLineServiceTest {
             )
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(listOf(symptom))
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(FoodFixture.food()))
 
@@ -103,7 +103,7 @@ class TimeLineServiceTest {
             val food3 = MealRecordFixture.mealFood(id = 3L, foodId = 3L)
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(emptyList())
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2, food3))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
                 FoodFixture.food(id = 1L, name = "된장찌개"),
@@ -127,7 +127,7 @@ class TimeLineServiceTest {
             val food = FoodFixture.food(id = 1L)
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(emptyList())
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
 
@@ -150,7 +150,7 @@ class TimeLineServiceTest {
             val food = FoodFixture.food(id = 1L)
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(symptomRepository.findByMealRecordIdIn(any())).thenReturn(listOf(symptom))
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
 
@@ -165,13 +165,36 @@ class TimeLineServiceTest {
         }
 
         @Test
+        fun `자정을 넘겨 발생한 연관 증상도 식사 날짜 기준으로 카드에 임베드된다`() {
+            val mealRecord = MealRecordFixture.mealRecord(eatenAt = LocalDateTime.of(2026, 6, 17, 23, 50, 0))
+            val symptom = SymptomFixture.symptom(
+                mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
+                occurredAt = LocalDateTime.of(2026, 6, 18, 0, 20, 0),
+                symptomState = SymptomState.UNCOMFORTABLE,
+            )
+            val mealFood = MealRecordFixture.mealFood()
+            val food = FoodFixture.food(id = 1L)
+
+            whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
+            whenever(symptomRepository.findByMealRecordIdIn(any())).thenReturn(listOf(symptom))
+            whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
+
+            val result = service.getTimeLine(userId, date)
+
+            assertThat(result.items.filterIsInstance<TimeLineItemDTO.Symptom>()).isEmpty()
+            val singleItem = result.items.first() as TimeLineItemDTO.Single
+            assertThat(singleItem.connectedSymptoms).isNotNull()
+        }
+
+        @Test
         fun `Single 식사에 연결된 증상이 없으면 connectedSymptoms는 null이다`() {
             val mealRecord = MealRecordFixture.mealRecord()
             val mealFood = MealRecordFixture.mealFood()
             val food = FoodFixture.food(id = 1L)
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(emptyList())
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(mealFood))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
 
@@ -194,7 +217,7 @@ class TimeLineServiceTest {
             )
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(symptomRepository.findByMealRecordIdIn(any())).thenReturn(listOf(symptom))
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
                 FoodFixture.food(id = 1L, name = "된장찌개"),
@@ -234,7 +257,7 @@ class TimeLineServiceTest {
             )
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(olderSymptom, recentSymptom))
+            whenever(symptomRepository.findByMealRecordIdIn(any())).thenReturn(listOf(olderSymptom, recentSymptom))
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
                 FoodFixture.food(id = 1L), FoodFixture.food(id = 2L),
@@ -265,7 +288,7 @@ class TimeLineServiceTest {
             )
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(symptomRepository.findByMealRecordIdIn(any())).thenReturn(listOf(symptom))
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
                 FoodFixture.food(id = 1L), FoodFixture.food(id = 2L),
@@ -286,7 +309,7 @@ class TimeLineServiceTest {
             val food2 = MealRecordFixture.mealFood(id = 2L, foodId = 2L)
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(mealRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(emptyList())
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(emptyList())
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food1, food2))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(
                 FoodFixture.food(id = 1L), FoodFixture.food(id = 2L),
@@ -307,7 +330,7 @@ class TimeLineServiceTest {
             )
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(symptom))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(listOf(symptom))
 
             val result = service.getTimeLine(userId, date)
 
@@ -330,7 +353,7 @@ class TimeLineServiceTest {
             val food2 = MealRecordFixture.mealFood(id = 2L, mealRecordId = 2L)
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(listOf(lateRecord, earlyRecord))
-            whenever(symptomRepository.findByUser_IdAndOccurredAtBetween(any(), any(), any())).thenReturn(listOf(midSymptom))
+            whenever(symptomRepository.findByUser_IdAndOccurredAtBetweenAndMealRecordIdIsNull(any(), any(), any())).thenReturn(listOf(midSymptom))
             whenever(mealFoodRepository.findByMealRecordIdInOrderByMealRecordIdAscEatenAtAsc(any())).thenReturn(listOf(food, food2))
             whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(FoodFixture.food()))
 
