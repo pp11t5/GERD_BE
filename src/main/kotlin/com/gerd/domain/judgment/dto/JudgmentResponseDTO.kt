@@ -44,10 +44,10 @@ data class JudgmentResponseDTO(
         val total: Int,
 
         @field:Schema(description = "최근 상태 기록 최대 3개")
-        val records: List<StateRecordDTO>,
+        val records: List<JudgmentStateRecordDTO>,
     )
 
-    data class StateRecordDTO(
+    data class JudgmentStateRecordDTO(
         @field:Schema(description = "상태 라벨", example = "보통이에요")
         val label: String,
 

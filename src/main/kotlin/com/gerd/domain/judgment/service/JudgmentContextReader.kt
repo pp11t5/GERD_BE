@@ -169,7 +169,7 @@ class JudgmentContextReader(
             .map { symptom ->
                 val eatenAt = eatenAtByMealRecordId[symptom.mealRecordId]!!
                 val afterMinutes = ChronoUnit.MINUTES.between(eatenAt, symptom.occurredAt).toInt()
-                JudgmentResponseDTO.StateRecordDTO(
+                JudgmentResponseDTO.JudgmentStateRecordDTO(
                     label = symptom.symptomState.toLabel(),
                     date = symptom.occurredAt.toLocalDate().toString(),
                     timing = "식후 ${afterMinutes}분",
