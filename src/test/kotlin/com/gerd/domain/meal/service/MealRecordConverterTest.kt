@@ -20,6 +20,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -103,6 +104,43 @@ class MealRecordConverterTest {
             assertThat(result.stateRecords?.stateRecordId).isEqualTo(symptomExternalId.toString())
             assertThat(result.stateRecords?.label).isEqualTo(SymptomState.UNCOMFORTABLE)
             assertThat(result.stateRecords?.date).isEqualTo("2026-06-11")
+            assertThat(result.stateRecords?.timingMinutes).isEqualTo(90)
+        }
+    }
+
+    @Nested
+    inner class `eatenAt 파싱` {
+
+        @Test
+        fun `offset을 무시하고 입력의 벽시계 시각을 그대로 유지한다`() {
+            val result = converter.parseEatenAt("2025-01-01T00:30:00+14:00")
+
+            assertThat(result).isEqualTo(LocalDateTime.of(2025, 1, 1, 0, 30))
+        }
+
+        @Test
+        fun `eatenAt과 occurredAt의 offset이 서로 달라도 timingMinutes는 벽시계 시각 차이로 계산된다`() {
+            val eatenAt = converter.parseEatenAt("2025-01-01T00:30:00+14:00")
+            val occurredAt = OffsetDateTime.parse("2025-01-01T02:00:00-05:00").toLocalDateTime()
+            val mealRecord = MealRecordFixture.mealRecord(eatenAt = eatenAt)
+            val mealFood = MealRecordFixture.mealFood(eatenAt = eatenAt, mealRecord = mealRecord)
+            val food = FoodFixture.food(id = mealFood.foodId)
+            val symptom = Symptom(
+                user = UserFixture.user(),
+                symptomState = SymptomState.UNCOMFORTABLE,
+                symptomTypes = setOf(SymptomType.ACID_REFLUX),
+                occurredAt = occurredAt,
+                mealRecordId = MealRecordFixture.MEAL_RECORD_ID,
+            ).apply {
+                ReflectionTestUtils.setField(this, "id", 99L)
+                externalId = UUID.fromString("9b1c0e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f")
+            }
+            whenever(foodRepository.findAllByIdsIncludingDeleted(listOf(mealFood.foodId))).thenReturn(listOf(food))
+            whenever(foodCategoryReader.loadPrimaryByFoodIds(listOf(mealFood.foodId)))
+                .thenReturn(mapOf(mealFood.foodId to "soup_stew"))
+
+            val result = converter.toGroupDetail(mealRecord, listOf(mealFood), listOf(symptom))
+
             assertThat(result.stateRecords?.timingMinutes).isEqualTo(90)
         }
     }
