@@ -157,7 +157,7 @@ class MealRecordConverter(
             LocalDateTime.now(SEOUL)
         } else {
             try {
-                OffsetDateTime.parse(raw).atZoneSameInstant(SEOUL).toLocalDateTime()
+                OffsetDateTime.parse(raw).toLocalDateTime()
             } catch (e: DateTimeParseException) {
                 throw GeneralException(MealErrorCode.INVALID_DATE_TIME)
             }
