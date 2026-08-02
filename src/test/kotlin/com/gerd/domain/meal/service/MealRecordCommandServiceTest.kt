@@ -229,6 +229,7 @@ class MealRecordCommandServiceTest {
             verify(mealFoodRepository).delete(mealFood)
             assertThat(mealFood.mealRecord.grade).isEqualTo(JudgmentGrade.CAUTION)
             verify(mealRecordRepository, never()).delete(any())
+            verify(notificationFacade, never()).cancelPostMeal(any(), any())
         }
     }
 

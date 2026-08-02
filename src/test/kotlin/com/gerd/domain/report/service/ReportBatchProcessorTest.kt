@@ -67,11 +67,14 @@ class ReportBatchProcessorTest {
 
             processor.createAllReports()
 
-            verify(reportService).getOrCreate(1L)
-            verify(reportService).getOrCreate(2L)
-            verify(reportService).getOrCreate(3L)
-            verify(userRepository).findIdsAfter(eq(3L), any())
-            verify(notificationFacade).sendWeeklyReport()
+            inOrder(userRepository, reportService, notificationFacade) {
+                verify(reportService).getOrCreate(1L)
+                verify(reportService).getOrCreate(2L)
+                verify(reportService).getOrCreate(3L)
+                verify(userRepository).findIdsAfter(eq(3L), any())
+                // 실패가 섞여도 마지막 페이지 조회 이후에만 발송돼야 한다
+                verify(notificationFacade).sendWeeklyReport()
+            }
         }
     }
 }
