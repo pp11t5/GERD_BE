@@ -1,6 +1,5 @@
 package com.gerd.domain.notification.service
 
-import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
@@ -69,22 +68,17 @@ class PostMealPendingSender(
     private fun sendByPendingGroup(fcmToken: UserFcmToken, pendings: List<NotificationPending>) {
         val payload = when {
             // 이연 묶음 — 일반 푸시, 미기록 식사 목록 진입
-            pendings.size > 1 -> FcmPayload(
-                title = "미기록 식사가 있어요",
-                body = "어젯밤 식사 ${pendings.size}건의 증상 기록이 남아 있어요. 잊기 전에 확인해 보세요.",
+            pendings.size > 1 -> NotificationPayloadFactory.of(
                 type = NotificationType.POST_MEAL_DELAYED_BULK,
+                bulkCount = pendings.size,
             )
             // 이연 단건 — 리치 푸시, 과거형 카피
-            pendings.first().delayed -> FcmPayload(
-                title = "어젯밤 식사, 기록하셨나요?",
-                body = "어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.",
+            pendings.first().delayed -> NotificationPayloadFactory.of(
                 type = NotificationType.POST_MEAL_DELAYED_SINGLE,
                 targetId = pendings.first().mealRecordId?.toString(),
             )
             // 낮 단건 — 리치 푸시, 바로 증상 기록
-            else -> FcmPayload(
-                title = "속은 좀 어떠세요?",
-                body = "방금 드신 식사, 속은 좀 어떠세요? 지금 증상을 기록해 보세요.",
+            else -> NotificationPayloadFactory.of(
                 type = NotificationType.POST_MEAL,
                 targetId = pendings.first().mealRecordId?.toString(),
             )
