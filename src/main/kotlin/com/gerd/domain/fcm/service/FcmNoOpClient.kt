@@ -12,7 +12,7 @@ private val log = KotlinLogging.logger {}
  * local/test 프로필용 NoOp 구현체 — Firebase 없이 컨텍스트 로드 가능
  */
 @Service
-@Profile("!prod")
+@Profile("!prod & !staging")
 class FcmNoOpClient : FcmPushSender {
 
     override fun sendToUser(userId: Long, payload: FcmPayload) {

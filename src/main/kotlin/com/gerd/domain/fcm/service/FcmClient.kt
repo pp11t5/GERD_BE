@@ -19,11 +19,11 @@ import org.springframework.stereotype.Service
 private val log = KotlinLogging.logger {}
 
 /**
- * Firebase SDK를 직접 호출하는 인프라 구현체 (prod 전용)
+ * Firebase SDK를 직접 호출하는 인프라 구현체 (prod·staging 전용)
  * - FcmPushSender: 개인·멀티캐스트 발송
  */
 @Service
-@Profile("prod")
+@Profile("prod", "staging")
 class FcmClient(
     private val fcmMessageFactory: FcmMessageFactory,
     private val fcmTokenService: FcmTokenService,
