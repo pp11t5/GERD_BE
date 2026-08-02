@@ -20,8 +20,11 @@ import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.notification.event.PostMealNotificationEvent
+import com.gerd.domain.notification.service.NotificationFacade
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
@@ -41,6 +44,8 @@ class MealCommandService(
     private val objectMapper: ObjectMapper,
     private val symptomRepository: SymptomRepository,
     private val dictionaryCommandService: DictionaryCommandService,
+    private val notificationFacade: NotificationFacade,
+    private val eventPublisher: ApplicationEventPublisher,
     transactionManager: PlatformTransactionManager,
 ) {
     private val writeTransactionTemplate = TransactionTemplate(transactionManager)
@@ -138,6 +143,8 @@ class MealCommandService(
 
         mealRecordRepository.findByIdAndUser_Id(mealRecordDbId, userId)
             ?.let(mealRecordRepository::delete)
+
+        notificationFacade.cancelPostMeal(userId, mealRecordDbId)
     }
 
     private fun saveFoodToNewMeal(
@@ -161,6 +168,7 @@ class MealCommandService(
             ),
         )
         dictionaryCommandService.upsertCautionRiskEntry(requireUserId(user), food.id!!, grade)
+        eventPublisher.publishEvent(PostMealNotificationEvent(requireUserId(user), mealRecord.id!!))
         return mealRecordConverter.toSummary(saved, food)
     }
 
