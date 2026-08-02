@@ -1,6 +1,7 @@
 package com.gerd.domain.notification.service
 
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
 import com.gerd.domain.notification.entity.enums.NotificationType
@@ -25,6 +26,7 @@ class PostMealNotificationUseCase(
     private val notificationPendingRepository: NotificationPendingRepository,
     private val postMealPendingSender: PostMealPendingSender,
     private val userRepository: UserRepository,
+    private val mealRecordRepository: MealRecordRepository,
 ) {
 
     // 리스너에서 호출 — 식후 알림 예약
@@ -34,6 +36,13 @@ class PostMealNotificationUseCase(
         val now = LocalDateTime.now()
         val user = userRepository.findByIdOrNull(userId) ?: run {
             log.warn { "식후 알림 예약 스킵 — 존재하지 않는 유저 userId=$userId" }
+            return
+        }
+
+        // AFTER_COMMIT + @Async라 커밋과 예약 사이에 끼니가 삭제될 수 있다 — cancelByMealRecordId가
+        // 이 예약보다 먼저 실행돼도 놓치지 않도록, 삭제된 끼니면 예약 자체를 만들지 않는다
+        if (!mealRecordRepository.existsById(mealRecordId)) {
+            log.warn { "식후 알림 예약 스킵 — 이미 삭제된 끼니 mealRecordId=$mealRecordId" }
             return
         }
 

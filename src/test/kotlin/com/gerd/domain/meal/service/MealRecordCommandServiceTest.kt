@@ -15,6 +15,8 @@ import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.exception.MealErrorCode
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.notification.event.PostMealNotificationEvent
+import com.gerd.domain.notification.service.NotificationFacade
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
@@ -35,6 +37,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
@@ -73,6 +76,12 @@ class MealRecordCommandServiceTest {
     @Mock
     private lateinit var dictionaryCommandService: DictionaryCommandService
 
+    @Mock
+    private lateinit var notificationFacade: NotificationFacade
+
+    @Mock
+    private lateinit var eventPublisher: ApplicationEventPublisher
+
     private lateinit var service: MealCommandService
 
     private val objectMapper = ObjectMapper()
@@ -91,6 +100,8 @@ class MealRecordCommandServiceTest {
             objectMapper = objectMapper,
             symptomRepository = symptomRepository,
             dictionaryCommandService = dictionaryCommandService,
+            notificationFacade = notificationFacade,
+            eventPublisher = eventPublisher,
             transactionManager = transactionManager,
         )
     }
@@ -139,6 +150,7 @@ class MealRecordCommandServiceTest {
             assertThat(analysis.allergyAnalysis.ment).isEqualTo("자극 가능성이 있어요")
             assertThat(analysis.allergyAnalysis.content).isEqualTo("식후 바로 눕지 마세요")
             assertThat(result.mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
+            verify(eventPublisher).publishEvent(PostMealNotificationEvent(userId, MealRecordFixture.MEAL_RECORD_ID))
 
             // 판정(LLM 호출 가능)은 트랜잭션 밖에서 수행 — 커넥션을 점유하지 않는다. 트랜잭션은 저장용 쓰기 tx 하나뿐
             val definitions = argumentCaptor<TransactionDefinition>()
@@ -197,6 +209,7 @@ class MealRecordCommandServiceTest {
                 verify(mealFoodRepository).deleteAll(foods)
                 verify(mealRecordRepository).delete(mealRecord)
             }
+            verify(notificationFacade).cancelPostMeal(userId, MealRecordFixture.MEAL_RECORD_ID)
         }
 
         @Test
@@ -216,6 +229,7 @@ class MealRecordCommandServiceTest {
             verify(mealFoodRepository).delete(mealFood)
             assertThat(mealFood.mealRecord.grade).isEqualTo(JudgmentGrade.CAUTION)
             verify(mealRecordRepository, never()).delete(any())
+            verify(notificationFacade, never()).cancelPostMeal(any(), any())
         }
     }
 
@@ -239,6 +253,7 @@ class MealRecordCommandServiceTest {
             verify(dictionaryCommandService, never()).removeSafeEntries(any(), any())
             verify(mealFoodRepository).deleteAll(foods)
             verify(mealRecordRepository).delete(mealRecord)
+            verify(notificationFacade).cancelPostMeal(userId, MealRecordFixture.MEAL_RECORD_ID)
         }
 
         @Test

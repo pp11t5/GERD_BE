@@ -1,6 +1,7 @@
 package com.gerd.domain.report.service
 
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.notification.service.NotificationFacade
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -22,10 +23,14 @@ class ReportBatchProcessorTest {
     @Mock
     private lateinit var userRepository: UserRepository
 
+    @Mock
+    private lateinit var notificationFacade: NotificationFacade
+
     private val processor by lazy {
         ReportBatchProcessor(
             reportService = reportService,
             userRepository = userRepository,
+            notificationFacade = notificationFacade,
         )
     }
 
@@ -41,13 +46,15 @@ class ReportBatchProcessorTest {
 
             processor.createAllReports()
 
-            inOrder(userRepository, reportService) {
+            inOrder(userRepository, reportService, notificationFacade) {
                 verify(userRepository).findIdsAfter(0L, pageable)
                 verify(reportService).getOrCreate(1L)
                 verify(reportService).getOrCreate(2L)
                 verify(userRepository).findIdsAfter(2L, pageable)
                 verify(reportService).getOrCreate(4L)
                 verify(userRepository).findIdsAfter(4L, pageable)
+                // 전체 리포트 생성이 끝난 뒤에만 발송 — 생성 전 알림 선발송 경합 방지
+                verify(notificationFacade).sendWeeklyReport()
             }
         }
 
@@ -60,10 +67,14 @@ class ReportBatchProcessorTest {
 
             processor.createAllReports()
 
-            verify(reportService).getOrCreate(1L)
-            verify(reportService).getOrCreate(2L)
-            verify(reportService).getOrCreate(3L)
-            verify(userRepository).findIdsAfter(eq(3L), any())
+            inOrder(userRepository, reportService, notificationFacade) {
+                verify(reportService).getOrCreate(1L)
+                verify(reportService).getOrCreate(2L)
+                verify(reportService).getOrCreate(3L)
+                verify(userRepository).findIdsAfter(eq(3L), any())
+                // 실패가 섞여도 마지막 페이지 조회 이후에만 발송돼야 한다
+                verify(notificationFacade).sendWeeklyReport()
+            }
         }
     }
 }

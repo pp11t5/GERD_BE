@@ -17,6 +17,9 @@ class NotificationFacade(
     // 식후 알림 예약 (식사 기록 커밋 후 리스너가 호출)
     fun enqueuePostMeal(userId: Long, mealRecordId: Long) = postMeal.enqueue(userId, mealRecordId)
 
+    // 식후 알림 취소 (식사 기록 삭제 시 호출)
+    fun cancelPostMeal(userId: Long, mealRecordId: Long) = postMeal.cancelByMealRecordId(userId, mealRecordId)
+
     // 식후 PENDING 발송 (매분)
     fun processPostMealPending() = postMeal.processPending()
 
