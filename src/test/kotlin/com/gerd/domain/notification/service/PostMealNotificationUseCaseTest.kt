@@ -2,6 +2,7 @@ package com.gerd.domain.notification.service
 
 import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
 import com.gerd.domain.notification.entity.enums.NotificationType
@@ -30,6 +31,7 @@ class PostMealNotificationUseCaseTest {
     @Mock private lateinit var notificationPendingRepository: NotificationPendingRepository
     @Mock private lateinit var postMealPendingSender: PostMealPendingSender
     @Mock private lateinit var userRepository: UserRepository
+    @Mock private lateinit var mealRecordRepository: MealRecordRepository
 
     @InjectMocks private lateinit var useCase: PostMealNotificationUseCase
 
@@ -53,6 +55,7 @@ class PostMealNotificationUseCaseTest {
             val now = LocalDateTime.of(2026, 7, 6, 12, 0)
             val user = mock<User>()
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(user))
+            whenever(mealRecordRepository.existsById(mealRecordId)).thenReturn(true)
             whenever(
                 notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
                     eq(userId), eq(NotificationType.POST_MEAL), any(),
@@ -76,6 +79,7 @@ class PostMealNotificationUseCaseTest {
         fun `낮 시간대에 90분 내 이력이 있으면 저장하지 않는다`() {
             val now = LocalDateTime.of(2026, 7, 6, 12, 0)
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(mock<User>()))
+            whenever(mealRecordRepository.existsById(mealRecordId)).thenReturn(true)
             whenever(
                 notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
                     eq(userId), eq(NotificationType.POST_MEAL), any(),
@@ -93,6 +97,7 @@ class PostMealNotificationUseCaseTest {
             val now = LocalDateTime.of(2026, 7, 6, 21, 0)
             val user = mock<User>()
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(user))
+            whenever(mealRecordRepository.existsById(mealRecordId)).thenReturn(true)
 
             withFixedNow(now) { useCase.enqueue(userId, mealRecordId) }
 
@@ -110,6 +115,18 @@ class PostMealNotificationUseCaseTest {
         @Test
         fun `유저가 존재하지 않으면 예약을 스킵한다`() {
             whenever(userRepository.findById(userId)).thenReturn(Optional.empty())
+
+            useCase.enqueue(userId, mealRecordId)
+
+            verify(notificationPendingRepository, never())
+                .existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(any(), any(), any())
+            verify(notificationPendingRepository, never()).save(any())
+        }
+
+        @Test
+        fun `AFTER_COMMIT 비동기 처리 사이 끼니가 삭제됐으면 예약을 스킵한다`() {
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(mock<User>()))
+            whenever(mealRecordRepository.existsById(mealRecordId)).thenReturn(false)
 
             useCase.enqueue(userId, mealRecordId)
 
