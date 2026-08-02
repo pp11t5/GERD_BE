@@ -1,6 +1,5 @@
 package com.gerd.domain.notification.service
 
-import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
 import com.gerd.domain.notification.entity.enums.DailyNotificationTime
@@ -44,10 +43,6 @@ class DailyRecordNotificationUseCase(
     }
 
     companion object {
-        private val PAYLOAD = FcmPayload(
-            title = "오늘 식사 기록을 남겨보세요",
-            body = "오늘 하루 드신 식사를 기록하면 증상 패턴을 파악할 수 있어요.",
-            type = NotificationType.DAILY_RECORD,
-        )
+        private val PAYLOAD = NotificationPayloadFactory.of(NotificationType.DAILY_RECORD)
     }
 }

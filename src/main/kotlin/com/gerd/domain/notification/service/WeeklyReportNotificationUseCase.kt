@@ -1,6 +1,5 @@
 package com.gerd.domain.notification.service
 
-import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
 import com.gerd.domain.notification.entity.enums.NotificationType
@@ -41,10 +40,6 @@ class WeeklyReportNotificationUseCase(
     }
 
     companion object {
-        private val PAYLOAD = FcmPayload(
-            title = "이번 주 리포트가 준비됐어요",
-            body = "불편했던 음식과 신호등 분포를 확인해 보세요.",
-            type = NotificationType.WEEKLY_REPORT,
-        )
+        private val PAYLOAD = NotificationPayloadFactory.of(NotificationType.WEEKLY_REPORT)
     }
 }

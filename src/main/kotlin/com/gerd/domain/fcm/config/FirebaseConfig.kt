@@ -14,10 +14,10 @@ import java.io.ByteArrayInputStream
 private val log = KotlinLogging.logger {}
 
 /**
- * FirebaseApp, FirebaseMessaging 빈 초기화 (prod 전용)
+ * FirebaseApp, FirebaseMessaging 빈 초기화 (prod·staging 전용 — 실제 발송이 필요한 환경)
  */
 @Configuration
-@Profile("prod")
+@Profile("prod", "staging")
 class FirebaseConfig(
     private val firebaseProperties: FirebaseProperties,
 ) {
