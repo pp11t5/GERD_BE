@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
  * 정기 푸시 발송 스케줄러 — 트리거만 담당, 로직은 Facade에 위임
  * - 식후 알림 PENDING 처리: 매분
  * - 매일 밤 기록 푸시: 시간대별
- * - 주간 리포트: 매주 월요일 10:00
+ * - 주간 리포트: 별도 크론 없음 — ReportBatchProcessor가 리포트 생성 완료 후 직접 발송(순서 보장)
  */
 @Component
 @ConditionalOnProperty(name = ["notification.scheduler.enabled"], havingValue = "true", matchIfMissing = false)
@@ -33,7 +33,4 @@ class NotificationCronScheduler(
 
     @Scheduled(cron = "0 0 22 * * *")
     fun sendDailyRecordNight10() = notificationFacade.sendDailyRecord(DailyNotificationTime.NIGHT_10)
-
-    @Scheduled(cron = "0 0 10 * * MON")
-    fun sendWeeklyReport() = notificationFacade.sendWeeklyReport()
 }
