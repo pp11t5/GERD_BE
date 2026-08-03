@@ -44,4 +44,12 @@ class AuthAccount(
 
     @Column(name = "provider_account_id", nullable = false, length = 100)
     val providerAccountId: String,
-) : BaseEntity()
+) : BaseEntity() {
+    @Column(name = "provider_refresh_token", length = 1000)
+    var providerRefreshToken: String? = null
+        protected set
+
+    fun updateProviderRefreshToken(encryptedRefreshToken: String) {
+        providerRefreshToken = encryptedRefreshToken
+    }
+}

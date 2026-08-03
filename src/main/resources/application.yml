@@ -36,6 +36,9 @@ withdraw:
     # 물리 삭제 스케줄러 — local/dev에서 실수로 삭제되지 않도록 기본 off, staging/prod에서만 on
     enabled: ${WITHDRAW_SCHEDULER_ENABLED:false}
 
+auth:
+  provider-token-encryption-key: ${AUTH_PROVIDER_TOKEN_ENCRYPTION_KEY:}
+
 kakao:
   native-app-key: ${KAKAO_NATIVE_APP_KEY:}
   iss: ${KAKAO_ISS:}
@@ -43,9 +46,14 @@ kakao:
   admin-key: ${KAKAO_ADMIN_KEY:}
 
 apple:
-  bundle-id: ${APPLE_BUNDLE_ID:}
   iss: ${APPLE_ISS:https://appleid.apple.com}
   jwks-url: ${APPLE_JWKS_URL:https://appleid.apple.com/auth/keys}
+  client-id: ${APPLE_CLIENT_ID:}
+  team-id: ${APPLE_TEAM_ID:}
+  key-id: ${APPLE_KEY_ID:}
+  private-key: ${APPLE_PRIVATE_KEY:}
+  token-url: ${APPLE_TOKEN_URL:https://appleid.apple.com/auth/token}
+  revoke-url: ${APPLE_REVOKE_URL:https://appleid.apple.com/auth/revoke}
 
 gemini:
   api-key: ${GEMINI_API_KEY:}

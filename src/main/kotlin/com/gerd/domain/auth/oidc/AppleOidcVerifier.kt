@@ -13,5 +13,5 @@ class AppleOidcVerifier(
     override val provider = AuthProvider.APPLE
     override val jwksUrl get() = appleProperties.jwksUrl
     override val iss get() = appleProperties.iss
-    override val aud get() = appleProperties.bundleId
+    override val aud get() = appleProperties.clientId
 }

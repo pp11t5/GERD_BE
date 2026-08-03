@@ -12,13 +12,12 @@ import com.gerd.domain.onboarding.entity.id.UserConsentId
 import com.gerd.domain.onboarding.repository.TermRepository
 import com.gerd.domain.onboarding.repository.UserConsentRepository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 /**
  * OAuth 인증 시 사용자 및 연동 계정 생성 및 조회
- * REQUIRES_NEW로 독립적인 트랜잭션 실행, 실패해도 롤백 보장
+ * 호출한 OAuth 로그인 트랜잭션에 참여해 계정 생성과 토큰 저장을 원자적으로 처리
  */
 @Service
 class UserAccountRegistrar(
@@ -30,7 +29,7 @@ class UserAccountRegistrar(
 ) {
 
     // 필요 시에만 사용자 생성
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     fun findOrRegister(
         email: String,
         provider: AuthProvider,

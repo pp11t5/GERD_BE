@@ -25,7 +25,7 @@ Thumbs.db
 
 # Secrets / env
 src/main/resources/.env
-.env.*
+src/main/resources/.env.example
 *.local
 
 # Logs / temp

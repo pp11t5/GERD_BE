@@ -1,11 +1,14 @@
 package com.gerd.domain.auth.service
 
+import com.gerd.domain.auth.client.AppleApiClient
 import com.gerd.domain.auth.client.KakaoApiClient
+import com.gerd.domain.auth.entity.AuthAccount
 import com.gerd.domain.auth.entity.enums.AuthProvider
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.RefreshTokenRepository
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.util.ProviderTokenUtil
 import com.gerd.global.apiPayload.GeneralException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -25,6 +28,8 @@ class WithdrawService(
     private val authAccountRepository: AuthAccountRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val kakaoApiClient: KakaoApiClient,
+    private val appleApiClient: AppleApiClient,
+    private val providerTokenUtil: ProviderTokenUtil,
     @Qualifier("withdrawTaskScheduler") private val taskScheduler: TaskScheduler,
     @Value("\${app.withdraw.grace-period}") private val gracePeriod: Duration,
     @Value("\${app.withdraw.schedule-in-memory}") private val scheduleInMemory: Boolean,
@@ -61,16 +66,35 @@ class WithdrawService(
             limit = limit,
         )
 
-    // 유예기간 후 스케줄러에서 호출 — 카카오 연동이 있으면 unlink 후 물리 삭제
-    // 외부 API(unlink)가 DB 트랜잭션을 점유하지 않도록 의도적으로 비트랜잭션
+    // 유예기간 후 스케줄러에서 호출 — 소셜 연결 해제 후 물리 삭제
+    // 외부 API 호출이 DB 트랜잭션을 점유하지 않도록 의도적으로 비트랜잭션
     internal fun withdrawHardDelete(userId: Long) {
         authAccountRepository.findById(userId)
-            .filter { it.provider == AuthProvider.KAKAO }
-            .ifPresent {
-                runCatching { kakaoApiClient.unlink(it.providerAccountId) }
-                    .onFailure { e -> log.warn("카카오 unlink 실패 userId=$userId — 물리 삭제 계속 진행", e) }
-            }
+            .ifPresent { revokeProvider(it, userId) }
 
         userRepository.hardDelete(userId)
+    }
+
+    private fun revokeProvider(authAccount: AuthAccount, userId: Long) {
+        when (authAccount.provider) {
+            AuthProvider.LOCAL -> Unit
+
+            AuthProvider.KAKAO -> runCatching {
+                kakaoApiClient.unlink(authAccount.providerAccountId)
+            }.onFailure { exception ->
+                log.warn("카카오 unlink 실패 userId=$userId — 물리 삭제 계속 진행", exception)
+            }
+
+            AuthProvider.APPLE -> {
+                val encryptedRefreshToken = authAccount.providerRefreshToken
+                if (encryptedRefreshToken == null) {
+                    log.warn("Apple refresh token 없음 userId=$userId — 물리 삭제 계속 진행")
+                    return
+                }
+
+                // revoke 실패 시 토큰을 보존해 다음 배치에서 재시도
+                appleApiClient.revoke(providerTokenUtil.decrypt(encryptedRefreshToken))
+            }
+        }
     }
 }

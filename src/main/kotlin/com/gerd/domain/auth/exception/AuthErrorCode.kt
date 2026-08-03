@@ -20,6 +20,8 @@ enum class AuthErrorCode(
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "AUTH404_1", "사용자를 찾을 수 없습니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "AUTH403_1", "접근 권한이 없습니다."),
     KAKAO_UNLINK_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AUTH500_1", "카카오 연결해제에 실패했습니다."),
+    APPLE_TOKEN_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "AUTH502_1", "Apple 로그인 처리 중 일시적인 오류가 발생했습니다."),
+    APPLE_REVOKE_FAILED(HttpStatus.BAD_GATEWAY, "AUTH502_2", "Apple 연결 해제 중 일시적인 오류가 발생했습니다."),
     NICKNAME_ALREADY_IN_USE(HttpStatus.CONFLICT, "AUTH409_1", "이미 사용 중인 닉네임입니다."),
     INVALID_ADMIN_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH401_6", "어드민 이메일 또는 시크릿이 올바르지 않습니다."),
 }
