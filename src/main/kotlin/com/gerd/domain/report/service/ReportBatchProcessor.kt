@@ -2,6 +2,7 @@ package com.gerd.domain.report.service
 
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.notification.service.NotificationFacade
+import com.gerd.global.config.properties.WeeklyReportScheduleProperties
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
@@ -12,13 +13,14 @@ import org.springframework.stereotype.Component
  * - 트랜잭션은 유저 1명 단위(ReportService.getOrCreate)로 분리 → 한 명 실패가 전체 롤백으로 번지지 않음
  * - 마지막 userId 기준으로 순회 → 유저 전체를 메모리에 올리지 않고, 실행 중 row 변경에 따른 offset 밀림 방지
  * - 단일 스레드
- * - 리포트 생성이 전부 끝난 뒤에만 발송 — 생성 전 알림이 먼저 나가는 경합 방지
+ * - 별도 알림 cron이 없으면 리포트 생성이 전부 끝난 뒤 발송 — 생성 전 알림이 먼저 나가는 경합 방지
  */
 @Component
 class ReportBatchProcessor(
     private val reportService: ReportService,
     private val userRepository: UserRepository,
     private val notificationFacade: NotificationFacade,
+    private val weeklyReportScheduleProperties: WeeklyReportScheduleProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -58,7 +60,9 @@ class ReportBatchProcessor(
             )
         }
 
-        notificationFacade.sendWeeklyReport()
+        if (!weeklyReportScheduleProperties.hasNotificationSchedule()) {
+            notificationFacade.sendWeeklyReport()
+        }
     }
 
     companion object {

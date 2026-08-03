@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component
 class ReportScheduler(
     private val reportBatchProcessor: ReportBatchProcessor,
 ) {
-    @Scheduled(cron = "0 0 10 * * MON")
+    @Scheduled(cron = "\${report.weekly.generation-cron}")
     fun createWeeklyReports() {
         reportBatchProcessor.createAllReports()
     }
