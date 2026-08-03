@@ -7,11 +7,12 @@ import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
 import com.gerd.domain.notification.entity.enums.NotificationType
 import com.gerd.domain.notification.repository.NotificationPendingRepository
+import com.gerd.global.config.properties.NotificationProperties
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
@@ -22,7 +23,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.Duration
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
@@ -33,10 +36,23 @@ class PostMealNotificationUseCaseTest {
     @Mock private lateinit var userRepository: UserRepository
     @Mock private lateinit var mealRecordRepository: MealRecordRepository
 
-    @InjectMocks private lateinit var useCase: PostMealNotificationUseCase
+    private lateinit var useCase: PostMealNotificationUseCase
 
     private val userId = 1L
     private val mealRecordId = 100L
+
+    @BeforeEach
+    fun setUp() {
+        useCase = createUseCase(NotificationProperties())
+    }
+
+    private fun createUseCase(properties: NotificationProperties) = PostMealNotificationUseCase(
+        notificationPendingRepository,
+        postMealPendingSender,
+        userRepository,
+        mealRecordRepository,
+        properties,
+    )
 
     // now()를 고정해 낮/야간 분기를 결정적으로 테스트 — CALLS_REAL_METHODS로 of()/atTime() 등은 실제 동작 유지
     private inline fun withFixedNow(now: LocalDateTime, block: () -> Unit) {
@@ -110,6 +126,29 @@ class PostMealNotificationUseCaseTest {
             // delayed 분기라 쿨다운 조회 자체가 일어나지 않는다
             verify(notificationPendingRepository, never())
                 .existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(any(), any(), any())
+        }
+
+        @Test
+        fun `staging 설정에서는 식후 1분 시각이 20시 40분 이후면 당일 21시로 이연한다`() {
+            useCase = createUseCase(
+                NotificationProperties(
+                    delay = Duration.ofMinutes(1),
+                    quietHoursStart = LocalTime.of(20, 40),
+                    deferredTime = LocalTime.of(21, 0),
+                ),
+            )
+            val now = LocalDateTime.of(2026, 8, 3, 20, 39)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(mock<User>()))
+            whenever(mealRecordRepository.existsById(mealRecordId)).thenReturn(true)
+
+            withFixedNow(now) { useCase.enqueue(userId, mealRecordId) }
+
+            val captor = argumentCaptor<NotificationPending>()
+            verify(notificationPendingRepository).save(captor.capture())
+            with(captor.firstValue) {
+                assertThat(delayed).isTrue()
+                assertThat(scheduledAt).isEqualTo(LocalDateTime.of(2026, 8, 3, 21, 0))
+            }
         }
 
         @Test
