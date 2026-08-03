@@ -35,6 +35,11 @@ notification:
     quiet-hours-start: ${POST_MEAL_NOTIFICATION_QUIET_HOURS_START:22:00}
     deferred-time: ${POST_MEAL_NOTIFICATION_DEFERRED_TIME:09:00}
 
+report:
+  weekly:
+    generation-cron: "${WEEKLY_REPORT_GENERATION_CRON:0 0 10 * * MON}"
+    notification-cron: "${WEEKLY_REPORT_NOTIFICATION_CRON:-}"
+
 withdraw:
   scheduler:
     # 물리 삭제 스케줄러 — local/dev에서 실수로 삭제되지 않도록 기본 off, staging/prod에서만 on
