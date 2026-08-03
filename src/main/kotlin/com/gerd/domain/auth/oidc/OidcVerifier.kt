@@ -8,5 +8,8 @@ import com.gerd.domain.auth.entity.enums.AuthProvider
  */
 interface OidcVerifier {
     val provider: AuthProvider
-    fun verify(idToken: String): OidcClaims
+    fun verify(
+        idToken: String,
+        nonce: String? = null,
+    ): OidcClaims
 }

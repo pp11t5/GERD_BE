@@ -1,6 +1,7 @@
 package com.gerd.domain.auth.controller
 
 import com.gerd.domain.auth.dto.AuthTokenResponseDTO
+import com.gerd.domain.auth.dto.AppleLoginRequestDTO
 import com.gerd.domain.auth.dto.OidcLoginRequestDTO
 import com.gerd.domain.auth.dto.RefreshTokenRequestDTO
 import com.gerd.domain.auth.dto.UserMeResponseDTO
@@ -61,6 +62,25 @@ interface AuthApi {
     fun socialLogin(
         @PathVariable provider: String,
         @Valid @RequestBody request: OidcLoginRequestDTO,
+    ): ResponseEntity<ApiResponse<AuthTokenResponseDTO>>
+
+    @Operation(
+        summary = "Apple 로그인",
+        description = "Apple에서 발급받은 Authorization Code와 인증 요청에 사용한 nonce를 검증하여 로그인하거나 신규 가입합니다.",
+    )
+    @ApiErrorExample(
+        AuthErrorCode::class,
+        "APPLE_TOKEN_REQUEST_FAILED",
+        "INVALID_TOKEN",
+        "EXPIRED_TOKEN",
+        "EMAIL_REQUIRED",
+        "ACCOUNT_INACTIVE",
+        "ACCOUNT_RECOVERABLE",
+    )
+    @ApiResponses(SwaggerResponse(responseCode = "200", description = "토큰 발급 성공"))
+    @PostMapping("/apple/login")
+    fun appleLogin(
+        @Valid @RequestBody request: AppleLoginRequestDTO,
     ): ResponseEntity<ApiResponse<AuthTokenResponseDTO>>
 
     @Operation(

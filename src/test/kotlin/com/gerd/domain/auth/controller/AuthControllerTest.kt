@@ -1,6 +1,7 @@
 package com.gerd.domain.auth.controller
 
 import tools.jackson.databind.ObjectMapper
+import com.gerd.domain.auth.dto.AppleLoginRequestDTO
 import com.gerd.domain.auth.dto.OidcLoginRequestDTO
 import com.gerd.domain.auth.dto.RefreshTokenRequestDTO
 import com.gerd.domain.auth.entity.enums.AuthProvider
@@ -90,6 +91,56 @@ class AuthControllerTest @Autowired constructor(
                     status { isBadRequest() }
                     jsonPath("$.isSuccess") { value(false) }
                     jsonPath("$.code") { value("AUTH400_2") }
+                }
+            }
+        }
+    }
+
+    @Nested
+    inner class `POST apple-login` {
+
+        @Nested
+        inner class `성공` {
+
+            @Test
+            fun `Authorization Code가 유효하면 토큰을 반환한다`() {
+                val request = AppleLoginRequestDTO(
+                    authorizationCode = "authorization-code",
+                    nonce = "apple-login-nonce",
+                )
+                val response = AuthTokenFixture.userTokenResponse(
+                    accessToken = "apple.access.token",
+                    refreshToken = "apple.refresh.token",
+                )
+                whenever(oAuthService.appleLogin("authorization-code", "apple-login-nonce"))
+                    .thenReturn(response)
+
+                mockMvc.post("/api/v1/auth/apple/login") {
+                    contentType = MediaType.APPLICATION_JSON
+                    content = objectMapper.writeValueAsString(request)
+                }.andExpect {
+                    status { isOk() }
+                    jsonPath("$.isSuccess") { value(true) }
+                    jsonPath("$.code") { value("COMMON200") }
+                    jsonPath("$.result.accessToken") { value("apple.access.token") }
+                    jsonPath("$.result.refreshToken") { value("apple.refresh.token") }
+                }
+            }
+        }
+
+        @Nested
+        inner class `실패` {
+
+            @Test
+            fun `nonce가 없으면 400을 반환한다`() {
+                val request = mapOf("authorizationCode" to "authorization-code")
+
+                mockMvc.post("/api/v1/auth/apple/login") {
+                    contentType = MediaType.APPLICATION_JSON
+                    content = objectMapper.writeValueAsString(request)
+                }.andExpect {
+                    status { isBadRequest() }
+                    jsonPath("$.isSuccess") { value(false) }
                 }
             }
         }

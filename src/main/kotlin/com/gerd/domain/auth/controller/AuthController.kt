@@ -1,6 +1,7 @@
 package com.gerd.domain.auth.controller
 
 import com.gerd.domain.auth.dto.AuthTokenResponseDTO
+import com.gerd.domain.auth.dto.AppleLoginRequestDTO
 import com.gerd.domain.auth.dto.OidcLoginRequestDTO
 import com.gerd.domain.auth.dto.RefreshTokenRequestDTO
 import com.gerd.domain.auth.dto.UserMeResponseDTO
@@ -57,6 +58,21 @@ class AuthController(
                 )
             )
     }
+
+    override fun appleLogin(
+        @Valid @RequestBody request: AppleLoginRequestDTO,
+    ): ResponseEntity<ApiResponse<AuthTokenResponseDTO>> =
+        ResponseEntity
+            .status(CommonSuccessCode.OK.httpStatus)
+            .body(
+                ApiResponse.onSuccess(
+                    oAuthService.appleLogin(
+                        authorizationCode = request.authorizationCode,
+                        nonce = request.nonce,
+                    ),
+                    CommonSuccessCode.OK,
+                ),
+            )
 
     override fun refresh(
         @Valid @RequestBody request: RefreshTokenRequestDTO,
