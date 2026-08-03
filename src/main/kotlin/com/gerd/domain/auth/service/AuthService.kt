@@ -25,7 +25,7 @@ import java.time.LocalDateTime
 class AuthService(
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
-    private val refreshTokenRevoker: RefreshTokenRevoker,
+    private val refreshTokenRevokeService: RefreshTokenRevokeService,
     private val jwtProvider: JwtProvider,
     private val jwtProperties: JwtProperties,
     private val notificationSettingRepository: UserNotificationSettingRepository,
@@ -90,7 +90,7 @@ class AuthService(
         return refreshTokenRepository.findByTokenHash(tokenHash)
             ?: run {
                 // REQUIRES_NEW 트랜잭션에서 먼저 커밋 — 이후 refresh() 롤백에 영향받지 않고 별도 삭제가 정상적으로 이루어짐
-                refreshTokenRevoker.revokeAllSessions(userId)
+                refreshTokenRevokeService.revokeAllSessions(userId)
                 throw GeneralException(AuthErrorCode.INVALID_REFRESH_TOKEN)
             }
     }

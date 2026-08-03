@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 
 @Component
-class RefreshTokenRevoker(
+class RefreshTokenRevokeService(
     private val refreshTokenRepository: RefreshTokenRepository,
 ) {
     // REQUIRES_NEW — 호출 트랜잭션이 롤백돼도 삭제는 독립 커밋으로 보장

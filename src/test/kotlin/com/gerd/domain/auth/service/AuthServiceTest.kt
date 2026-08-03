@@ -44,7 +44,7 @@ class AuthServiceTest {
     private lateinit var refreshTokenRepository: RefreshTokenRepository
 
     @Mock
-    private lateinit var refreshTokenRevoker: RefreshTokenRevoker
+    private lateinit var refreshTokenRevokeService: RefreshTokenRevokeService
 
     @Mock
     private lateinit var jwtProvider: JwtProvider
@@ -156,7 +156,7 @@ class AuthServiceTest {
                     .isEqualTo(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
                 // 탈취 의심 시 전체 세션 삭제가 실제로 호출되는지 검증
-                verify(refreshTokenRevoker).revokeAllSessions(1L)
+                verify(refreshTokenRevokeService).revokeAllSessions(1L)
             }
 
         }
