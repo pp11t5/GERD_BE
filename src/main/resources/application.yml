@@ -30,6 +30,10 @@ firebase:
 notification:
   scheduler:
     enabled: false
+  post-meal:
+    delay: ${POST_MEAL_NOTIFICATION_DELAY:PT2H}
+    quiet-hours-start: ${POST_MEAL_NOTIFICATION_QUIET_HOURS_START:22:00}
+    deferred-time: ${POST_MEAL_NOTIFICATION_DEFERRED_TIME:09:00}
 
 withdraw:
   scheduler:

@@ -6,12 +6,12 @@ import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
 import com.gerd.domain.notification.entity.enums.NotificationType
 import com.gerd.domain.notification.repository.NotificationPendingRepository
+import com.gerd.global.config.properties.NotificationProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
-import java.time.LocalTime
 
 private val log = KotlinLogging.logger {}
 
@@ -27,6 +27,7 @@ class PostMealNotificationUseCase(
     private val postMealPendingSender: PostMealPendingSender,
     private val userRepository: UserRepository,
     private val mealRecordRepository: MealRecordRepository,
+    private val notificationProperties: NotificationProperties,
 ) {
 
     // 리스너에서 호출 — 식후 알림 예약
@@ -46,10 +47,10 @@ class PostMealNotificationUseCase(
             return
         }
 
-        // 1) 야간 판정 먼저 — 식후 2h가 야간(22:00~09:00)에 걸리면 다음 09:00로 이연
-        val (scheduledAt, delayed) = resolveSchedule(now.plusHours(POST_MEAL_DELAY_HOURS))
+        // 1) 식후 지연 시각이 무발송 구간에 걸리면 설정된 이연 시각으로 예약
+        val (scheduledAt, delayed) = resolveSchedule(now.plus(notificationProperties.delay))
 
-        // 2) 쿨다운은 '낮 즉시 발송분'에만 — 야간 이연분은 09:00 묶음 규칙이라 제외
+        // 2) 쿨다운은 즉시 발송분에만 적용 — 이연분은 설정된 시각의 묶음 발송 규칙이라 제외
         // 90분 내 이력 존재 시 return, 발송하지않음
         if (!delayed &&
             notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
@@ -70,15 +71,20 @@ class PostMealNotificationUseCase(
 
     }
 
-    // 기준시각이 야간이면 다음 09:00로 이연
+    // 기준시각이 무발송 구간이면 가장 가까운 이연 시각으로 예약
     private fun resolveSchedule(base: LocalDateTime): Pair<LocalDateTime, Boolean> {
         val t = base.toLocalTime()
-        val inQuietHours = t >= QUIET_HOUR_START || t < DEFERRED_HOUR
+        val quietHoursStart = notificationProperties.quietHoursStart
+        val deferredTime = notificationProperties.deferredTime
+        val inQuietHours = if (quietHoursStart < deferredTime) {
+            t >= quietHoursStart && t < deferredTime
+        } else {
+            t >= quietHoursStart || t < deferredTime
+        }
         if (!inQuietHours) return base to false
 
-        // 22시 이후면 다음날 09:00, 새벽(00~09시)이면 당일 09:00
-        val date = if (t >= QUIET_HOUR_START) base.toLocalDate().plusDays(1) else base.toLocalDate()
-        return date.atTime(DEFERRED_HOUR) to true
+        val date = if (t < deferredTime) base.toLocalDate() else base.toLocalDate().plusDays(1)
+        return date.atTime(deferredTime) to true
     }
 
     // 기록 삭제 시 PENDING된 알림 취소 (delayed 여부 무관 — 해당 식사의 미발송분 전체)
@@ -101,9 +107,6 @@ class PostMealNotificationUseCase(
     }
 
     companion object {
-        private const val POST_MEAL_DELAY_HOURS = 2L      // 식후 발송 지연
         private const val COOLDOWN_MINUTES = 90L          // 낮 즉시 발송 최소 간격
-        private val QUIET_HOUR_START: LocalTime = LocalTime.of(22, 0)  // 야간 무발송 시작
-        private val DEFERRED_HOUR: LocalTime = LocalTime.of(9, 0)      // 이연 발송 시각
     }
 }
