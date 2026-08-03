@@ -5,6 +5,7 @@ import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
+import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.SENT
 import com.gerd.domain.notification.entity.enums.NotificationType
 import com.gerd.domain.notification.repository.NotificationPendingRepository
 import com.gerd.global.config.properties.NotificationProperties
@@ -73,8 +74,8 @@ class PostMealNotificationUseCaseTest {
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(user))
             whenever(mealRecordRepository.existsById(mealRecordId)).thenReturn(true)
             whenever(
-                notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
-                    eq(userId), eq(NotificationType.POST_MEAL), any(),
+                notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(
+                    eq(userId), eq(NotificationType.POST_MEAL), eq(setOf(PENDING, SENT)), any(),
                 )
             ).thenReturn(false)
 
@@ -92,13 +93,13 @@ class PostMealNotificationUseCaseTest {
         }
 
         @Test
-        fun `낮 시간대에 90분 내 이력이 있으면 저장하지 않는다`() {
+        fun `낮 시간대에 90분 내 PENDING 또는 SENT 이력이 있으면 저장하지 않는다`() {
             val now = LocalDateTime.of(2026, 7, 6, 12, 0)
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(mock<User>()))
             whenever(mealRecordRepository.existsById(mealRecordId)).thenReturn(true)
             whenever(
-                notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
-                    eq(userId), eq(NotificationType.POST_MEAL), any(),
+                notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(
+                    eq(userId), eq(NotificationType.POST_MEAL), eq(setOf(PENDING, SENT)), any(),
                 )
             ).thenReturn(true)
 
@@ -125,7 +126,7 @@ class PostMealNotificationUseCaseTest {
             }
             // delayed 분기라 쿨다운 조회 자체가 일어나지 않는다
             verify(notificationPendingRepository, never())
-                .existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(any(), any(), any())
+                .existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(any(), any(), any(), any())
         }
 
         @Test
@@ -158,7 +159,7 @@ class PostMealNotificationUseCaseTest {
             useCase.enqueue(userId, mealRecordId)
 
             verify(notificationPendingRepository, never())
-                .existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(any(), any(), any())
+                .existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(any(), any(), any(), any())
             verify(notificationPendingRepository, never()).save(any())
         }
 
@@ -170,7 +171,7 @@ class PostMealNotificationUseCaseTest {
             useCase.enqueue(userId, mealRecordId)
 
             verify(notificationPendingRepository, never())
-                .existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(any(), any(), any())
+                .existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(any(), any(), any(), any())
             verify(notificationPendingRepository, never()).save(any())
         }
     }
