@@ -4,6 +4,7 @@ import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
+import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.SENT
 import com.gerd.domain.notification.entity.enums.NotificationType
 import com.gerd.domain.notification.repository.NotificationPendingRepository
 import com.gerd.global.config.properties.NotificationProperties
@@ -51,10 +52,13 @@ class PostMealNotificationUseCase(
         val (scheduledAt, delayed) = resolveSchedule(now.plus(notificationProperties.delay))
 
         // 2) 쿨다운은 즉시 발송분에만 적용 — 이연분은 설정된 시각의 묶음 발송 규칙이라 제외
-        // 90분 내 이력 존재 시 return, 발송하지않음
+        // 90분 내 PENDING/SENT 이력 존재 시 return — CANCELLED는 쿨다운에서 제외
         if (!delayed &&
-            notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
-                userId, NotificationType.POST_MEAL, now.minusMinutes(COOLDOWN_MINUTES),
+            notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(
+                userId,
+                NotificationType.POST_MEAL,
+                COOLDOWN_STATUSES,
+                now.minusMinutes(COOLDOWN_MINUTES),
             )
         ) return
 
@@ -108,5 +112,6 @@ class PostMealNotificationUseCase(
 
     companion object {
         private const val COOLDOWN_MINUTES = 90L          // 낮 즉시 발송 최소 간격
+        private val COOLDOWN_STATUSES = setOf(PENDING, SENT)
     }
 }

@@ -30,11 +30,12 @@ interface NotificationPendingRepository : JpaRepository<NotificationPending, Lon
         status: NotificationPendingStatus,
     ): List<NotificationPending>
 
-    // 쿨다운 판정: 유저의 특정 타입 '낮 즉시 발송분'(delayed=false)이 기준시각 이후 등록된 이력이 있는지
-    // 야간 이연분(delayed=true)은 09:00 묶음 규칙이라 쿨다운 계산에서 제외
-    fun existsByUserIdAndTypeAndDelayedFalseAndCreatedAtAfter(
+    // 쿨다운 판정: 유저의 특정 타입 '낮 즉시 발송분'(delayed=false) 중 유효 상태가 기준시각 이후 등록됐는지
+    // 야간 이연분(delayed=true)과 취소된 알림(CANCELLED)은 쿨다운 계산에서 제외
+    fun existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(
         userId: Long,
         type: NotificationType,
+        statuses: Collection<NotificationPendingStatus>,
         createdAt: LocalDateTime,
     ): Boolean
 
