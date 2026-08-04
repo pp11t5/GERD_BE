@@ -81,7 +81,8 @@ dependencies {
     kaptTest("jakarta.annotation:jakarta.annotation-api")
     kaptTest("jakarta.persistence:jakarta.persistence-api")
 
-    
+    // client secret jwt 라이브러리
+    implementation("com.nimbusds:nimbus-jose-jwt:3.10")
 
     // jwt
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
