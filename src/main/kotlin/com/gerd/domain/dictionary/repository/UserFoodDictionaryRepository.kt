@@ -48,17 +48,18 @@ interface UserFoodDictionaryRepository : JpaRepository<UserFoodDictionary, Long>
 
     fun findByUser_IdAndFood_IdAndDictionaryType(userId: Long, foodId: Long, type: DictionaryType): UserFoodDictionary?
 
-    // 동시 요청으로 인한 uq_user_food_dict 충돌을 예외 없이 흡수 — 존재하면 조용히 무시
+    // 사용자별 음식은 한 행만 유지하고, 다시 판정되면 타입과 수정 시각을 원자적으로 갱신한다.
     @Modifying
     @Query(
         value = """
             INSERT INTO user_food_dictionaries (user_id, food_id, dictionary_type, created_at, modified_at)
             VALUES (:userId, :foodId, :type, now(), now())
-            ON CONFLICT (user_id, food_id, dictionary_type) DO NOTHING
+            ON CONFLICT (user_id, food_id)
+            DO UPDATE SET dictionary_type = EXCLUDED.dictionary_type, modified_at = now()
         """,
         nativeQuery = true,
     )
-    fun insertIfAbsent(userId: Long, foodId: Long, type: String): Int
+    fun upsertType(userId: Long, foodId: Long, type: String): Int
 
     @Modifying
     @Query("DELETE FROM UserFoodDictionary d WHERE d.user.id = :userId AND d.food.id IN :foodIds AND d.dictionaryType = :type")

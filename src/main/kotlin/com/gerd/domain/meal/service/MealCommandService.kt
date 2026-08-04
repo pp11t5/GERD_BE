@@ -167,7 +167,7 @@ class MealCommandService(
                 analysisJson = analysisJson,
             ),
         )
-        dictionaryCommandService.upsertCautionRiskEntry(requireUserId(user), food.id!!, grade)
+        dictionaryCommandService.upsertFromJudgment(requireUserId(user), food.id!!, grade)
         eventPublisher.publishEvent(PostMealNotificationEvent(requireUserId(user), mealRecord.id!!))
         return mealRecordConverter.toSummary(saved, food)
     }
@@ -193,7 +193,7 @@ class MealCommandService(
         )
         mealRecord.updateGrade(grade)
         mealRecordRepository.save(mealRecord)
-        dictionaryCommandService.upsertCautionRiskEntry(requireUserId(user), food.id!!, grade)
+        dictionaryCommandService.upsertFromJudgment(requireUserId(user), food.id!!, grade)
         return mealRecordConverter.toSummary(saved, food)
     }
 

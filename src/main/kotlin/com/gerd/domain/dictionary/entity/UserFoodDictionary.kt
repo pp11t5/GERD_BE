@@ -26,7 +26,7 @@ import org.hibernate.annotations.OnDeleteAction
         Index(name = "user_food_dict_user_type_id_idx", columnList = "user_id, dictionary_type, id"),
     ],
     uniqueConstraints = [
-        UniqueConstraint(name = "uq_user_food_dict", columnNames = ["user_id", "food_id", "dictionary_type"]),
+        UniqueConstraint(name = "uq_user_food_dict", columnNames = ["user_id", "food_id"]),
     ],
 )
 class UserFoodDictionary(
@@ -39,11 +39,19 @@ class UserFoodDictionary(
     @JoinColumn(name = "food_id", nullable = false)
     val food: Food,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "dictionary_type", nullable = false, length = 10)
-    val dictionaryType: DictionaryType,
+    dictionaryType: DictionaryType,
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
-) : BaseTimeEntity()
+) : BaseTimeEntity() {
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dictionary_type", nullable = false, length = 10)
+    final var dictionaryType: DictionaryType = dictionaryType
+        private set
+
+    fun changeType(type: DictionaryType) {
+        dictionaryType = type
+    }
+}

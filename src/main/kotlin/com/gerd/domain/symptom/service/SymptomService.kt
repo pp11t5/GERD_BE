@@ -69,9 +69,8 @@ class SymptomService(
             userStreakService.updateOnComfortableRecorded(userId, saved.occurredAt.toLocalDate())
         }
 
-        // 안전 상태(COMFORTABLE/GOOD)면 도감 SAFE 등록
-        if (with(dictionaryCommandService) { request.symptomState?.isSafe() } == true && mealRecordId != null) {
-            dictionaryCommandService.upsertSafeEntries(userId, mealRecordId)
+        if (mealRecordId != null) {
+            dictionaryCommandService.upsertFromSymptom(userId, mealRecordId, saved.symptomState)
         }
         if (mealRecordId != null) symptomPatternAnalysisRefreshService.refresh(saved, userId)
 
@@ -102,8 +101,8 @@ class SymptomService(
             userStreakService.rebuildCurrentStreak(userId)
         }
 
-        if (with(dictionaryCommandService) { request.symptomState?.isSafe() } == true && mealRecordId != null) {
-            dictionaryCommandService.upsertSafeEntries(userId, mealRecordId)
+        if (mealRecordId != null) {
+            dictionaryCommandService.upsertFromSymptom(userId, mealRecordId, symptom.symptomState)
         }
         if (mealRecordId != null) symptomPatternAnalysisRefreshService.refresh(symptom, userId)
     }

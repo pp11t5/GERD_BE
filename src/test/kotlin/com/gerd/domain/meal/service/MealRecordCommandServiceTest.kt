@@ -150,6 +150,7 @@ class MealRecordCommandServiceTest {
             assertThat(analysis.allergyAnalysis.ment).isEqualTo("자극 가능성이 있어요")
             assertThat(analysis.allergyAnalysis.content).isEqualTo("식후 바로 눕지 마세요")
             assertThat(result.mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
+            verify(dictionaryCommandService).upsertFromJudgment(userId, 10L, JudgmentGrade.CAUTION)
             verify(eventPublisher).publishEvent(PostMealNotificationEvent(userId, MealRecordFixture.MEAL_RECORD_ID))
 
             // 판정(LLM 호출 가능)은 트랜잭션 밖에서 수행 — 커넥션을 점유하지 않는다. 트랜잭션은 저장용 쓰기 tx 하나뿐

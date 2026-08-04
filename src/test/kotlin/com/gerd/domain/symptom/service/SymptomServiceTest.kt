@@ -103,17 +103,18 @@ class SymptomServiceTest {
             whenever(symptomRepository.save(any())).thenReturn(saved)
             stubLinkedMeal()
             whenever(symptomConverter.toResponse(any(), any())).thenReturn(symptomResponse())
-            whenever(with(dictionaryCommandService) { SymptomState.COMFORTABLE.isSafe() }).thenReturn(true)
-
             val result = service.create(userId, request)
 
             val symptomCaptor = argumentCaptor<Symptom>()
             val linkedMealCaptor = argumentCaptor<SymptomResponseDTO.LinkedMealDTO>()
             verify(symptomRepository).save(symptomCaptor.capture())
             verify(symptomConverter).toResponse(any(), linkedMealCaptor.capture())
-            verify(dictionaryCommandService).upsertSafeEntries(userId, MealRecordFixture.MEAL_RECORD_ID)
+            verify(dictionaryCommandService).upsertFromSymptom(
+                userId,
+                MealRecordFixture.MEAL_RECORD_ID,
+                SymptomState.COMFORTABLE,
+            )
             verify(userStreakService).updateOnComfortableRecorded(userId, SymptomFixture.OCCURRED_AT.toLocalDate())
-            verify(dictionaryCommandService).upsertSafeEntries(userId, MealRecordFixture.MEAL_RECORD_ID)
             verify(symptomPatternAnalysisRefreshService).refresh(saved, userId)
             assertThat(symptomCaptor.firstValue.user?.id).isEqualTo(userId)
             assertThat(symptomCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_ID)
@@ -144,13 +145,13 @@ class SymptomServiceTest {
 
             verify(userStreakService, never()).updateOnComfortableRecorded(any(), any())
             // SAFE 상태(GOOD)라도 연결된 끼니가 없으면 도감 등재를 예약하지 않는다
-            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
+            verify(dictionaryCommandService, never()).upsertFromSymptom(any(), any(), any())
             // 연결된 끼니가 없으면 패턴 분석도 갱신하지 않는다
             verify(symptomPatternAnalysisRefreshService, never()).refresh(any(), any())
         }
 
         @Test
-        fun `SAFE 상태가 아니면 도감 등재를 예약하지 않는다`() {
+        fun `연결된 끼니가 있으면 안전하지 않은 상태도 도감 서비스에 전달한다`() {
             val request = createRequest(symptomState = SymptomState.UNCOMFORTABLE)
             val saved = SymptomFixture.symptom(symptomState = SymptomState.UNCOMFORTABLE)
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
@@ -164,7 +165,11 @@ class SymptomServiceTest {
 
             service.create(userId, request)
 
-            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
+            verify(dictionaryCommandService).upsertFromSymptom(
+                userId,
+                MealRecordFixture.MEAL_RECORD_ID,
+                SymptomState.UNCOMFORTABLE,
+            )
         }
 
         @Test
@@ -283,7 +288,7 @@ class SymptomServiceTest {
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode").isEqualTo(CommonErrorCode.INVALID_REQUEST)
 
-            verify(dictionaryCommandService, never()).upsertSafeEntries(any(), any())
+            verify(dictionaryCommandService, never()).upsertFromSymptom(any(), any(), any())
         }
     }
 
