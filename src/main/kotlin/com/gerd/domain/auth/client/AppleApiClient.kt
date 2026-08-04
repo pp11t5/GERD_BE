@@ -34,29 +34,33 @@ class AppleApiClient(
             add("code", code)
             add("grant_type", "authorization_code")
         }
+        log.info { "애플 토큰 발급 요청: code=${mask(code)}" }
         try {
-            return restClient.post()
+            val token = restClient.post()
                 .uri(appleProperties.tokenUrl)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(body)
                 .retrieve()
                 .body<AppleTokenResponseDTO>()
                 ?: throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED)
+
+            log.info { "애플 토큰 발급 성공: accessToken=${mask(token.accessToken)}" }
+            return token
         } catch (exception: RestClientResponseException) {
             val appleError = runCatching {
                 exception.getResponseBodyAs(AppleErrorResponseDTO::class.java)
             }.getOrNull()
-            log.warn {
+            log.warn(exception) {
                 "애플 로그인 실패: status=${exception.statusCode}, error=${appleError?.error}"
             }
 
             throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED)
         } catch (exception: ResourceAccessException) {
-            log.warn { "애플 로그인 타임아웃" }
+            log.warn(exception) { "애플 로그인 타임아웃" }
 
             throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED)
         } catch (exception: RestClientException) {
-            log.warn { "애플 로그인 응답 처리 실패" }
+            log.warn(exception) { "애플 로그인 응답 처리 실패" }
 
             throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED)
         }
@@ -70,6 +74,7 @@ class AppleApiClient(
             add("token_type_hint", "refresh_token")
         }
 
+        log.info { "애플 연결 해제 요청: token=${mask(refreshToken)}" }
         try {
             restClient.post()
                 .uri(appleProperties.revokeUrl)
@@ -77,9 +82,15 @@ class AppleApiClient(
                 .body(body)
                 .retrieve()
                 .toBodilessEntity()
+
+            log.info { "애플 연결 해제 성공" }
         } catch (exception: RestClientException) {
-            log.warn { "애플 연결 해제 실패" }
+            log.warn(exception) { "애플 연결 해제 실패" }
             throw GeneralException(AuthErrorCode.APPLE_REVOKE_FAILED)
         }
     }
+
+    // 로그에 원문 노출되지 않도록 앞 4자만 남기고 마스킹
+    private fun mask(value: String): String =
+        if (value.length <= 4) "****" else "${value.take(4)}****"
 }
