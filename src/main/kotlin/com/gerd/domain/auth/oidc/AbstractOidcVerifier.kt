@@ -57,14 +57,17 @@ abstract class AbstractOidcVerifier(
 
         return findIn()
             ?: run {
-                log.warn { "OIDC 공개키 캐시 미스, 무효화 후 재조회: provider=$provider, kid=$kid" }
+                log.warn { "OIDC 공개키 캐시 미스, 무효화 후 재조회: provider=$provider, kid=${sanitizeForLog(kid)}" }
                 jwksPublicKeyProvider.invalidate(jwksUrl)
                 findIn() ?: run {
-                    log.warn { "OIDC 공개키를 찾을 수 없음: provider=$provider, kid=$kid" }
+                    log.warn { "OIDC 공개키를 찾을 수 없음: provider=$provider, kid=${sanitizeForLog(kid)}" }
                     throw GeneralException(AuthErrorCode.INVALID_TOKEN)
                 }
             }
     }
+
+    // 서명 검증 전 헤더에서 추출한 값이라 로그 위조 방지를 위해 개행 문자 제거
+    private fun sanitizeForLog(value: String): String = value.replace(Regex("[\r\n]"), "_")
 
     // iss, aud, exp, 서명 한 번에 검증 후 클레임 추출
     private fun extractClaims(
