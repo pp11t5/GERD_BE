@@ -7,6 +7,7 @@ import com.gerd.domain.auth.entity.enums.AuthProvider
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.RefreshTokenRepository
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.util.ProviderTokenUtil
 import com.gerd.global.fixture.UserFixture
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -30,6 +31,7 @@ class WithdrawServiceTest {
     @Mock private lateinit var userRepository: UserRepository
     @Mock private lateinit var authAccountRepository: AuthAccountRepository
     @Mock private lateinit var refreshTokenRepository: RefreshTokenRepository
+    @Mock private lateinit var accessTokenBlacklist: AccessTokenBlacklist
     @Mock private lateinit var kakaoApiClient: KakaoApiClient
     @Mock private lateinit var appleApiClient: AppleApiClient
     @Mock private lateinit var providerTokenUtil: ProviderTokenUtil
@@ -43,6 +45,7 @@ class WithdrawServiceTest {
             userRepository = userRepository,
             authAccountRepository = authAccountRepository,
             refreshTokenRepository = refreshTokenRepository,
+            accessTokenBlacklist = accessTokenBlacklist,
             kakaoApiClient = kakaoApiClient,
             appleApiClient = appleApiClient,
             providerTokenUtil = providerTokenUtil,

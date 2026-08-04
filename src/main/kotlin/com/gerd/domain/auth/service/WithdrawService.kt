@@ -8,6 +8,7 @@ import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.RefreshTokenRepository
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.util.ProviderTokenUtil
 import com.gerd.global.apiPayload.GeneralException
 import org.slf4j.LoggerFactory
@@ -27,6 +28,7 @@ class WithdrawService(
     private val userRepository: UserRepository,
     private val authAccountRepository: AuthAccountRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val accessTokenBlacklist: AccessTokenBlacklist,
     private val kakaoApiClient: KakaoApiClient,
     private val appleApiClient: AppleApiClient,
     private val providerTokenUtil: ProviderTokenUtil,
@@ -38,12 +40,15 @@ class WithdrawService(
 
     // status = DELETED로 접근 차단 + deleted_at 기록 + 모든 기기 로그아웃 + 하드 삭제 예약
     @Transactional
-    fun withdraw(userId: Long) {
+    fun withdraw(userId: Long, jti: String) {
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
 
         user.withdraw()
         refreshTokenRepository.deleteAllByUserId(userId)
+        // 리프레시 토큰은 즉시 삭제되지만, 탈퇴 요청에 쓰인 액세스 토큰은 만료 전까지
+        // stateless라 그대로 유효하므로 블랙리스트에 등록해 즉시 무효화
+        accessTokenBlacklist.blacklist(jti)
 
         // prod는 WithDrawScheduler(DB 폴링)가 담당하므로 in-memory 예약 생략
         // afterCommit: 트랜잭션 롤백 시 예약이 남아 정상 유저를 삭제하는 것을 방지

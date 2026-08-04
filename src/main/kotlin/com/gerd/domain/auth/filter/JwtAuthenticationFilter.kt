@@ -2,6 +2,7 @@ package com.gerd.domain.auth.filter
 
 import com.gerd.domain.auth.entity.enums.UserRole
 import com.gerd.domain.auth.exception.AuthErrorCode
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.CustomUserDetails
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.global.apiPayload.GeneralException
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 class JwtAuthenticationFilter(
     private val jwtProvider: JwtProvider,
+    private val accessTokenBlacklist: AccessTokenBlacklist,
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -27,6 +29,12 @@ class JwtAuthenticationFilter(
         extractToken(request)
             ?.let { token ->
                 val claims = jwtProvider.validateAccessToken(token)
+                val jti = jwtProvider.extractJti(claims)
+
+                // 탈퇴 등으로 무효화된 토큰 — 만료 전이어도 즉시 거부
+                if (accessTokenBlacklist.isBlacklisted(jti)) {
+                    throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+                }
 
                 val role = (claims["role"] as? String)?.let { UserRole.valueOf(it) }
                     ?: throw GeneralException(AuthErrorCode.INVALID_TOKEN)
@@ -34,6 +42,7 @@ class JwtAuthenticationFilter(
                 val userDetails = CustomUserDetails(
                     userId = jwtProvider.extractUserId(claims),
                     role = role,
+                    jti = jti,
                 )
 
                 SecurityContextHolder.getContext().authentication =
