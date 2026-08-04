@@ -145,7 +145,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
     // 도메인 예외의 공통 응답 변환
     @ExceptionHandler(GeneralException::class)
     fun handleGeneralException(e: GeneralException, request: HttpServletRequest): ResponseEntity<Any> {
-        log.warn("GeneralException: code={}, message={}", e.errorCode.code, e.message)
+        log.warn("GeneralException: code={}, message={}", e.errorCode.code, e.message, e)
         val body = ApiResponse.onFailure<Nothing>(e.errorCode)
         return handleExceptionInternal(e, body, HttpHeaders(), e.errorCode.httpStatus, ServletWebRequest(request))
             ?: ResponseEntity(body, e.errorCode.httpStatus)
