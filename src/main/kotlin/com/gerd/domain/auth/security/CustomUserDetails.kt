@@ -5,10 +5,11 @@ import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 
-// JWT claims(sub, role)에서 재구성한 일회성 인증 객체
+// JWT claims(sub, role, jti)에서 재구성한 일회성 인증 객체
 class CustomUserDetails(
     val userId: Long,
     val role: UserRole,
+    val jti: String = "",
 ) : UserDetails {
     override fun getAuthorities(): Collection<GrantedAuthority> =
         listOf(SimpleGrantedAuthority("ROLE_${role.name}"))

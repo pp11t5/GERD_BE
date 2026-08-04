@@ -84,7 +84,7 @@ class AuthController(
     override fun withdraw(
         @CurrentUser userDetails: CustomUserDetails,
     ): ResponseEntity<ApiResponse<Unit>> {
-        withdrawService.withdraw(userDetails.userId)
+        withdrawService.withdraw(userDetails.userId, userDetails.jti)
         return ResponseEntity
             .status(CommonSuccessCode.OK.httpStatus)
             .body(ApiResponse.onSuccess(Unit, CommonSuccessCode.OK))

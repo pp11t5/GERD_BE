@@ -5,6 +5,7 @@ import com.gerd.domain.auth.dto.AdminLoginRequestDTO
 import com.gerd.domain.auth.dto.AdminLoginResponseDTO
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.auth.service.AdminAuthService
 import com.gerd.global.apiPayload.GeneralException
@@ -31,6 +32,9 @@ class AdminAuthControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @MockitoBean
     private lateinit var userRepository: UserRepository

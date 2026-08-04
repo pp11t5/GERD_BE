@@ -1,5 +1,6 @@
 package com.gerd.domain.symptom.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.symptom.dto.SymptomResponseDTO
 import com.gerd.domain.symptom.entity.enums.SymptomState
@@ -40,6 +41,10 @@ class SymptomControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @Nested
     inner class `POST symptoms` {

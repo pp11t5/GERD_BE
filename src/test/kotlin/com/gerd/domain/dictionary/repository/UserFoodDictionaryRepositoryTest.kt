@@ -156,6 +156,25 @@ class UserFoodDictionaryRepositoryTest @Autowired constructor(
     }
 
     @Nested
+    inner class `도감 타입 upsert` {
+
+        @Test
+        fun `같은 사용자의 같은 음식은 새 행 없이 타입만 변경한다`() {
+            val user = saveUser("upsert@test.com")
+            val food = saveFood("바나나")
+
+            dictionaryRepository.upsertType(user.id!!, food.id!!, DictionaryType.CAUTION.name)
+            dictionaryRepository.upsertType(user.id!!, food.id!!, DictionaryType.SAFE.name)
+            em.flush()
+            em.clear()
+
+            val entries = dictionaryRepository.findAll()
+            assertThat(entries).hasSize(1)
+            assertThat(entries.single().dictionaryType).isEqualTo(DictionaryType.SAFE)
+        }
+    }
+
+    @Nested
     inner class `타입별 일괄 삭제` {
 
         @Test
@@ -179,7 +198,6 @@ class UserFoodDictionaryRepositoryTest @Autowired constructor(
         fun `다른 타입의 항목은 삭제하지 않는다`() {
             val user = saveUser("del-type@test.com")
             val food = saveFood("공통음식")
-            dictionaryRepository.save(entry(user, food, DictionaryType.SAFE))
             val caution = dictionaryRepository.save(entry(user, food, DictionaryType.CAUTION))
             em.flush(); em.clear()
 

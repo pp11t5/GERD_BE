@@ -20,21 +20,17 @@ class DictionaryCommandService(
     private val symptomRepository: SymptomRepository,
 ) {
 
-    // 안전한 상태에 있는지 확인
     private val SAFE_STATES = setOf(SymptomState.COMFORTABLE, SymptomState.GOOD)
 
-    fun SymptomState.isSafe() = this in SAFE_STATES
-
-    // SymptomService.create/update와 같은 트랜잭션에서 직접 호출 — 별도 이벤트/트랜잭션 분리 없음
     @Transactional
-    fun upsertSafeEntries(userId: Long, mealRecordId: Long) {
+    fun upsertFromSymptom(userId: Long, mealRecordId: Long, symptomState: SymptomState) {
+        if (symptomState !in SAFE_STATES) return
         val foodIds = mealFoodRepository.findFoodIdsByMealRecordId(mealRecordId)
         if (foodIds.isEmpty()) return
         if (!userRepository.existsById(userId)) throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
 
-        // 조회 후 저장 대신 원자적 upsert로 처리 — 동시 요청이 겹쳐도 uq_user_food_dict 충돌로 롤백되지 않는다
         foodIds.forEach { foodId ->
-            dictionaryRepository.insertIfAbsent(userId, foodId, DictionaryType.SAFE.name)
+            dictionaryRepository.upsertType(userId, foodId, DictionaryType.SAFE.name)
         }
     }
 
@@ -58,20 +54,16 @@ class DictionaryCommandService(
     }
 
     /**
-     * 유저-음식-판정 등급에 따라 CAUTION/RISK 사전 항목 추가
-     * 이미 존재하는 경우에는 아무 작업도 하지 않음
+     * 음식 판정 결과로 도감 항목을 새로 만들거나 기존 타입을 변경한다.
      */
     @Transactional
-    fun upsertCautionRiskEntry(userId: Long, foodId: Long, grade: JudgmentGrade) {
+    fun upsertFromJudgment(userId: Long, foodId: Long, grade: JudgmentGrade) {
         val type = when (grade) {
             JudgmentGrade.CAUTION -> DictionaryType.CAUTION
             JudgmentGrade.RISK -> DictionaryType.RISK
-            else -> return
+            JudgmentGrade.RECOMMEND, JudgmentGrade.UNKNOWN -> return
         }
         if (!userRepository.existsById(userId)) throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
-        // 끼니 저장과 같은 트랜잭션에서 실행되므로, 동시 요청이 겹쳐도 uq_user_food_dict 충돌로
-        // 전체 트랜잭션이 롤백되지 않도록 존재 확인 후 저장 대신 원자적 upsert로 처리
-        dictionaryRepository.insertIfAbsent(userId, foodId, type.name)
+        dictionaryRepository.upsertType(userId, foodId, type.name)
     }
 }
-

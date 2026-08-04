@@ -1,6 +1,7 @@
 package com.gerd.domain.auth.filter
 
 import com.gerd.domain.auth.exception.AuthErrorCode
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.global.apiPayload.GeneralException
 import io.jsonwebtoken.Claims
@@ -27,6 +28,9 @@ class JwtAuthenticationFilterTest {
     @Mock
     private lateinit var jwtProvider: JwtProvider
 
+    @Mock
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
+
     @InjectMocks
     private lateinit var filter: JwtAuthenticationFilter
 
@@ -46,6 +50,7 @@ class JwtAuthenticationFilterTest {
             val claims = mock<Claims>()
             whenever(jwtProvider.validateAccessToken("access.token")).thenReturn(claims)
             whenever(jwtProvider.extractUserId(claims)).thenReturn(1L)
+            whenever(jwtProvider.extractJti(claims)).thenReturn("jti-1")
             whenever(claims["role"]).thenReturn("USER")
 
             filter.doFilter(requestWithBearer("access.token"), MockHttpServletResponse(), MockFilterChain())
@@ -76,6 +81,25 @@ class JwtAuthenticationFilterTest {
         fun `access token 검증 중 예외가 발생하면 그대로 전파한다`() {
             whenever(jwtProvider.validateAccessToken("access.token"))
                 .thenThrow(GeneralException(AuthErrorCode.INVALID_TOKEN))
+
+            assertThatThrownBy {
+                filter.doFilter(requestWithBearer("access.token"), MockHttpServletResponse(), MockFilterChain())
+            }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.INVALID_TOKEN)
+        }
+    }
+
+    @Nested
+    inner class `블랙리스트` {
+
+        @Test
+        fun `탈퇴 등으로 블랙리스트에 등록된 토큰이면 즉시 거부한다`() {
+            val claims = mock<Claims>()
+            whenever(jwtProvider.validateAccessToken("access.token")).thenReturn(claims)
+            whenever(jwtProvider.extractJti(claims)).thenReturn("jti-1")
+            whenever(accessTokenBlacklist.isBlacklisted("jti-1")).thenReturn(true)
 
             assertThatThrownBy {
                 filter.doFilter(requestWithBearer("access.token"), MockHttpServletResponse(), MockFilterChain())

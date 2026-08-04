@@ -1,5 +1,6 @@
 package com.gerd.domain.food.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.food.dto.AdminUserFoodDTO
 import com.gerd.domain.food.exception.FoodErrorCode
@@ -31,6 +32,10 @@ class AdminFoodControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     private fun pageResponse(vararg items: AdminUserFoodDTO) = PageResponse(
         content = items.toList(),

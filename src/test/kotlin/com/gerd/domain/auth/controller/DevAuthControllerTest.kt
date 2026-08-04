@@ -3,6 +3,7 @@ package com.gerd.domain.auth.controller
 import tools.jackson.databind.ObjectMapper
 import com.gerd.domain.auth.dto.DevLoginRequestDTO
 import com.gerd.domain.auth.exception.AuthErrorCode
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.auth.service.AuthService
 import com.gerd.global.apiPayload.GeneralException
@@ -32,6 +33,9 @@ class DevAuthControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @Nested
     inner class `POST dev-login` {

@@ -1,5 +1,6 @@
 package com.gerd.domain.notification.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.fcm.exception.FcmErrorCode
 import com.gerd.domain.notification.entity.enums.NotificationType
@@ -33,6 +34,10 @@ class AdminNotificationTestControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @Test
     @WithCustomUser(role = "ADMIN")
