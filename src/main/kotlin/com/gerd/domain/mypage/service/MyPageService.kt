@@ -97,6 +97,7 @@ class MyPageService(
         )
     }
 
+    @Transactional
     fun updateNickname(userId: Long, request: NicknameUpdateRequestDTO) {
         nicknameService.changeNickname(userId, request.nickname)
     }
