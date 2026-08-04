@@ -5,6 +5,7 @@ import com.gerd.global.ai.LlmClient
 import com.gerd.global.ai.LlmRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
+import io.github.resilience4j.retry.annotation.Retry
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
 
@@ -16,7 +17,8 @@ class JudgmentGeminiAdapter(
     private val objectMapper: ObjectMapper,
 ) {
 
-    @CircuitBreaker(name = "gemini-judgment", fallbackMethod = "fallback")
+    @Retry(name = "gemini-judgment", fallbackMethod = "fallback")
+    @CircuitBreaker(name = "gemini-judgment")
     fun generateJudgment(
         systemInstruction: String,
         userContent: String,
@@ -43,14 +45,14 @@ class JudgmentGeminiAdapter(
         }
     }
 
-    // CB OPEN 또는 예외 발생 시 null 반환 — 서비스 레이어가 CAUTION 폴백으로 처리
+    // 재시도 소진 또는 CB OPEN 시 null 반환 — 서비스 레이어가 CAUTION 폴백으로 처리
     private fun fallback(
         systemInstruction: String,
         userContent: String,
         responseSchema: Map<String, Any>,
         e: Exception,
     ): LlmJudgmentDTO? {
-        log.warn { "판정 CB 폴백: ${e.javaClass.simpleName}" }
+        log.error(e) { "판정 CB 폴백: ${e.javaClass.simpleName}" }
         return null
     }
 
