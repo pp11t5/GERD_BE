@@ -1,5 +1,6 @@
 package com.gerd.domain.dictionary.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.dictionary.dto.CautionRiskFoodItemDTO
 import com.gerd.domain.dictionary.dto.DictionaryCountResponseDTO
@@ -34,6 +35,10 @@ class DictionaryControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @Nested
     inner class `GET dictionary count` {

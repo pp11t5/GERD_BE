@@ -1,5 +1,6 @@
 package com.gerd.domain.streak.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.streak.dto.UserStreakResponseDTO
 import com.gerd.domain.streak.service.UserStreakService
@@ -26,6 +27,10 @@ class UserStreakControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @Nested
     inner class `GET 내 스트릭 조회` {

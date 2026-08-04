@@ -1,5 +1,6 @@
 package com.gerd.domain.meal.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
@@ -48,6 +49,10 @@ class MealRecordControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @Nested
     inner class `POST meal-records - 신규 끼니 (ID)` {

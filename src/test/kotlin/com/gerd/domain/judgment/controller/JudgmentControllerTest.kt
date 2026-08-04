@@ -1,5 +1,6 @@
 package com.gerd.domain.judgment.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
@@ -38,6 +39,7 @@ class JudgmentControllerTest @Autowired constructor(
     @MockitoBean private lateinit var foodJudgmentQueryService: FoodJudgmentQueryService
     @MockitoBean private lateinit var foodSymptomQueryService: FoodSymptomQueryService
     @MockitoBean private lateinit var jwtProvider: JwtProvider
+    @MockitoBean private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     private val foodExternalId = FoodFixture.EXTERNAL_ID.toString()
 

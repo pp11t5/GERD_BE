@@ -4,6 +4,7 @@ import com.gerd.domain.food.dto.FoodSearchResultDTO
 import com.gerd.domain.food.dto.FoodSummaryDTO
 import com.gerd.domain.food.dto.RecentFoodDTO
 import com.gerd.domain.food.exception.FoodErrorCode
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import org.springframework.transaction.TransactionTimedOutException
 import com.gerd.domain.food.service.FoodCategoryReader
@@ -43,6 +44,9 @@ class FoodControllerTest @Autowired constructor(
     // 보안 필터 체인(JwtAuthenticationFilter)이 컨텍스트에서 요구하는 빈 — addFilters=false라 동작은 안 하지만 빈은 필요
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     private fun recentFood() = RecentFoodDTO(
         id = 1L,

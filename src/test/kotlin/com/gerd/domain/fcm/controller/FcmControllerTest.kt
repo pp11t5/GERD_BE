@@ -1,5 +1,6 @@
 package com.gerd.domain.fcm.controller
 
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.fcm.exception.FcmErrorCode
 import com.gerd.domain.fcm.service.FcmTokenService
@@ -29,6 +30,7 @@ class FcmControllerTest @Autowired constructor(
 
     @MockitoBean private lateinit var fcmTokenService: FcmTokenService
     @MockitoBean private lateinit var jwtProvider: JwtProvider
+    @MockitoBean private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @Nested
     inner class `POST register` {

@@ -11,6 +11,7 @@ import com.gerd.domain.auth.service.AuthService
 import com.gerd.domain.auth.service.OAuthService
 import com.gerd.domain.auth.service.WithdrawService
 import com.gerd.global.apiPayload.GeneralException
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.global.fixture.AuthTokenFixture
 import org.junit.jupiter.api.Nested
@@ -44,6 +45,9 @@ class AuthControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @MockitoBean
     private lateinit var userRepository: UserRepository

@@ -1,6 +1,7 @@
 package com.gerd.domain.onboarding.controller
 
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.auth.security.AccessTokenBlacklist
 import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.domain.food.entity.enums.TriggerCode
 import com.gerd.domain.onboarding.dto.OnboardingRequestDTO
@@ -37,6 +38,10 @@ class OnboardingControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var jwtProvider: JwtProvider
+
+
+    @MockitoBean
+    private lateinit var accessTokenBlacklist: AccessTokenBlacklist
 
     @MockitoBean
     private lateinit var userRepository: UserRepository
