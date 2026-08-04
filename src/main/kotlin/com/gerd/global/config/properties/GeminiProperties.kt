@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component
 @ConfigurationProperties(prefix = "gemini")
 data class GeminiProperties(
     var apiKey: String = "",
-    var model: String = "gemini-2.5-flash-lite",
+    var model: String = "gemini-3.5-flash-lite",
     var baseUrl: String = "https://generativelanguage.googleapis.com",
     var connectTimeoutMs: Long = 3000,
     var readTimeoutMs: Long = 15000,

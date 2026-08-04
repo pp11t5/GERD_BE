@@ -54,15 +54,15 @@ class AppleApiClient(
                 "애플 로그인 실패: status=${exception.statusCode}, error=${appleError?.error}"
             }
 
-            throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED)
+            throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED, exception)
         } catch (exception: ResourceAccessException) {
             log.warn(exception) { "애플 로그인 타임아웃" }
 
-            throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED)
+            throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED, exception)
         } catch (exception: RestClientException) {
             log.warn(exception) { "애플 로그인 응답 처리 실패" }
 
-            throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED)
+            throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED, exception)
         }
     }
 
@@ -86,7 +86,7 @@ class AppleApiClient(
             log.info { "애플 연결 해제 성공" }
         } catch (exception: RestClientException) {
             log.warn(exception) { "애플 연결 해제 실패" }
-            throw GeneralException(AuthErrorCode.APPLE_REVOKE_FAILED)
+            throw GeneralException(AuthErrorCode.APPLE_REVOKE_FAILED, exception)
         }
     }
 

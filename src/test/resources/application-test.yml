@@ -58,3 +58,7 @@ resilience4j:
         failure-rate-threshold: 100
         wait-duration-in-open-state: 1s
         permitted-number-of-calls-in-half-open-state: 1
+  retry:
+    instances:
+      gemini-judgment:          # call() 1회 = gemini 1회 호출 전제인 CB 테스트 호출 횟수 검증 보존
+        max-attempts: 1
