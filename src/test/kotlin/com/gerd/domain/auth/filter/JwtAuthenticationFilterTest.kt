@@ -50,6 +50,7 @@ class JwtAuthenticationFilterTest {
             val claims = mock<Claims>()
             whenever(jwtProvider.validateAccessToken("access.token")).thenReturn(claims)
             whenever(jwtProvider.extractUserId(claims)).thenReturn(1L)
+            whenever(jwtProvider.extractJti(claims)).thenReturn("jti-1")
             whenever(claims["role"]).thenReturn("USER")
 
             filter.doFilter(requestWithBearer("access.token"), MockHttpServletResponse(), MockFilterChain())
