@@ -34,6 +34,7 @@ notification:
     delay: ${POST_MEAL_NOTIFICATION_DELAY:PT2H}
     quiet-hours-start: ${POST_MEAL_NOTIFICATION_QUIET_HOURS_START:22:00}
     deferred-time: ${POST_MEAL_NOTIFICATION_DEFERRED_TIME:09:00}
+    cooldown: ${POST_MEAL_NOTIFICATION_COOLDOWN:PT90M}
 
 report:
   weekly:

@@ -11,4 +11,5 @@ data class NotificationProperties(
     var delay: Duration = Duration.ofHours(2),
     var quietHoursStart: LocalTime = LocalTime.of(22, 0),
     var deferredTime: LocalTime = LocalTime.of(9, 0),
+    var cooldown: Duration = Duration.ofMinutes(90),
 )

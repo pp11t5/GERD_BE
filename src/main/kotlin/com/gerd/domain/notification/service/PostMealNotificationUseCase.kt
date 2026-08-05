@@ -52,13 +52,13 @@ class PostMealNotificationUseCase(
         val (scheduledAt, delayed) = resolveSchedule(now.plus(notificationProperties.delay))
 
         // 2) 쿨다운은 즉시 발송분에만 적용 — 이연분은 설정된 시각의 묶음 발송 규칙이라 제외
-        // 90분 내 PENDING/SENT 이력 존재 시 return — CANCELLED는 쿨다운에서 제외
+        // 쿨다운 기간 내 PENDING/SENT 이력 존재 시 return — CANCELLED는 쿨다운에서 제외
         if (!delayed &&
             notificationPendingRepository.existsByUserIdAndTypeAndDelayedFalseAndStatusInAndCreatedAtAfter(
                 userId,
                 NotificationType.POST_MEAL,
                 COOLDOWN_STATUSES,
-                now.minusMinutes(COOLDOWN_MINUTES),
+                now.minus(notificationProperties.cooldown),
             )
         ) return
 
@@ -111,7 +111,6 @@ class PostMealNotificationUseCase(
     }
 
     companion object {
-        private const val COOLDOWN_MINUTES = 90L          // 낮 즉시 발송 최소 간격
         private val COOLDOWN_STATUSES = setOf(PENDING, SENT)
     }
 }
