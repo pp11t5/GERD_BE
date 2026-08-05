@@ -67,3 +67,15 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+      environment: ${SENTRY_ENVIRONMENT:prod}
+  otlp:
+    metrics:
+      export:
+        enabled: true
+        url: ${BETTERSTACK_OTLP_URL}/v1/metrics
+        headers:
+          Authorization: Bearer ${BETTERSTACK_SOURCE_TOKEN}
+        step: 30s
+logging:
+  level:
+    io.micrometer.registry.otlp: WARN
