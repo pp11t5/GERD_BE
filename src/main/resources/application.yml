@@ -70,7 +70,7 @@ gemini:
   model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
   base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
   connect-timeout-ms: ${GEMINI_CONNECT_TIMEOUT_MS:3000}
-  read-timeout-ms: ${GEMINI_READ_TIMEOUT_MS:5000}
+  read-timeout-ms: ${GEMINI_READ_TIMEOUT_MS:3000}
 
 openai:
   api-key: ${OPENAI_API_KEY:}
@@ -94,7 +94,7 @@ resilience4j:
         wait-duration-in-open-state: 30s
     instances:
       gemini-judgment:
-        slow-call-duration-threshold: 10s
+        slow-call-duration-threshold: 2s
   retry:
     configs:
       default:
@@ -104,6 +104,9 @@ resilience4j:
       gemini-judgment:
         ignore-exceptions:
           - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$Forbidden
 
 sentry:
   dsn: ${SENTRY_DSN:}

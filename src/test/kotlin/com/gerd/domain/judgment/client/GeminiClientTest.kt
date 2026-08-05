@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
 import tools.jackson.databind.json.JsonMapper
 import java.net.InetSocketAddress
@@ -105,11 +106,11 @@ class GeminiClientTest {
         }
 
         @Test
-        fun `HTTP 429(한도 초과)면 null을 반환한다`() {
+        fun `HTTP 429(한도 초과)면 예외를 전파한다(재시도 대상)`() {
             responseStatus = 429
             responseBody = """{"error":"rate limit"}"""
 
-            assertThat(call()).isNull()
+            assertThrows<HttpClientErrorException.TooManyRequests> { call() }
         }
 
         @Test
