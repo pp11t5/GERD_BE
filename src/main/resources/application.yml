@@ -104,6 +104,9 @@ resilience4j:
       gemini-judgment:
         ignore-exceptions:
           - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$Forbidden
 
 sentry:
   dsn: ${SENTRY_DSN:}
