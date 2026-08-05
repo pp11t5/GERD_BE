@@ -92,7 +92,8 @@ class FcmClient(
     // 발송 실패 시 만료 토큰 정리
     private fun send(message: Message, token: String) {
         try {
-            firebaseMessaging.send(message)
+            val messageId = firebaseMessaging.send(message)
+            log.info { "FCM 발송 성공: messageId=$messageId" }
         } catch (e: FirebaseMessagingException) {
             if (e.messagingErrorCode in INVALID_TOKEN_CODES) {
                 fcmTokenService.deleteByToken(token)

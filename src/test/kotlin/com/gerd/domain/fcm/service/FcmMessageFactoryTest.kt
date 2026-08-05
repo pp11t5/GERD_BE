@@ -19,12 +19,25 @@ class FcmMessageFactoryTest {
         targetId = "record-1",
     )
 
-    // Message.getData()가 package-private이라 리플렉션으로 직접 조회
+    // Message.getData()/getNotification()이 package-private이라 리플렉션으로 직접 조회
     private fun dataOf(message: Message): Map<String, String> {
         val getData = Message::class.java.getDeclaredMethod("getData")
         getData.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         return getData.invoke(message) as Map<String, String>
+    }
+
+    private fun notificationOf(message: Message): Any? {
+        val getNotification = Message::class.java.getDeclaredMethod("getNotification")
+        getNotification.isAccessible = true
+        return getNotification.invoke(message)
+    }
+
+    // Notification은 getter도 없이 private final 필드뿐이라 필드 리플렉션으로 조회
+    private fun titleBodyOf(notification: Any): Pair<String, String> {
+        val titleField = notification.javaClass.getDeclaredField("title").apply { isAccessible = true }
+        val bodyField = notification.javaClass.getDeclaredField("body").apply { isAccessible = true }
+        return (titleField.get(notification) as String) to (bodyField.get(notification) as String)
     }
 
     @Nested
@@ -60,6 +73,15 @@ class FcmMessageFactoryTest {
             val message = factory.build("fcm-token", DevicePlatform.ANDROID, noTargetPayload)
 
             assertThat(dataOf(message)).containsExactlyEntriesOf(mapOf("type" to "daily_record"))
+        }
+
+        @Test
+        fun `notification에 title과 body가 채워진다`() {
+            val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
+
+            val notification = notificationOf(message)
+            assertThat(notification).isNotNull
+            assertThat(titleBodyOf(notification!!)).isEqualTo("테스트 제목" to "테스트 내용")
         }
     }
 }

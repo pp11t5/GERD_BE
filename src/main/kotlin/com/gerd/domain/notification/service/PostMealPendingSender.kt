@@ -3,6 +3,7 @@ package com.gerd.domain.notification.service
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
+import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
 import com.gerd.domain.notification.entity.enums.NotificationSettingType
@@ -29,6 +30,7 @@ class PostMealPendingSender(
     private val userNotificationSettingRepository: UserNotificationSettingRepository,
     private val userFcmTokenRepository: UserFcmTokenRepository,
     private val fcmPushSender: FcmPushSender,
+    private val mealRecordRepository: MealRecordRepository,
 ) {
 
     // 호출 즉시 반환, 별도 스레드/트랜잭션에서 실행
@@ -75,16 +77,20 @@ class PostMealPendingSender(
             // 이연 단건 — 리치 푸시, 과거형 카피
             pendings.first().delayed -> NotificationPayloadFactory.of(
                 type = NotificationType.POST_MEAL_DELAYED_SINGLE,
-                targetId = pendings.first().mealRecordId?.toString(),
+                targetId = resolveTargetId(pendings.first().mealRecordId),
             )
             // 낮 단건 — 리치 푸시, 바로 증상 기록
             else -> NotificationPayloadFactory.of(
                 type = NotificationType.POST_MEAL,
-                targetId = pendings.first().mealRecordId?.toString(),
+                targetId = resolveTargetId(pendings.first().mealRecordId),
             )
         }
         fcmPushSender.send(fcmToken, payload)
         pendings.forEach { it.markSent() }
         log.info { "식후 알림 발송: userId=${fcmToken.userId}, type=${payload.type.code}, ${pendings.size}건" }
     }
+
+    // targetId는 내부 PK가 아니라 외부 노출용 UUID(externalId)를 내려준다 — 다른 API가 끼니를 참조하는 방식과 통일
+    private fun resolveTargetId(mealRecordId: Long?): String? =
+        mealRecordId?.let { mealRecordRepository.findById(it).orElse(null)?.externalId?.toString() }
 }
