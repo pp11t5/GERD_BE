@@ -68,7 +68,7 @@ class GeminiClient(
             throw e
         } catch (e: Exception) {
             log.warn { "Gemini 호출 실패: ${e.javaClass.simpleName} - ${e.message}" }
-            null
+            throw e
         }
     }
 
