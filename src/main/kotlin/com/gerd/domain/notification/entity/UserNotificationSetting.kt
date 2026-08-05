@@ -80,6 +80,13 @@ class UserNotificationSetting(
         this.weeklyReportEnabled = weeklyReportEnabled
     }
 
+    // 마케팅 동의 시 전체 알림 활성화 — 시간대 설정은 유지
+    fun enableAll() {
+        postMealNotificationEnabled = true
+        dailyRecordNotificationEnabled = true
+        weeklyReportEnabled = true
+    }
+
     // 토글 종류별 활성 여부 조회
     fun isEnabled(type: NotificationSettingType): Boolean = when (type) {
         NotificationSettingType.POST_MEAL -> postMealNotificationEnabled

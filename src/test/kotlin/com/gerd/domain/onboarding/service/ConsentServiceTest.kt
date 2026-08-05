@@ -1,5 +1,8 @@
 package com.gerd.domain.onboarding.service
 
+import com.gerd.domain.notification.entity.UserNotificationSetting
+import com.gerd.domain.notification.exception.NotificationErrorCode
+import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.domain.onboarding.dto.ConsentRequestDTO
 import com.gerd.domain.onboarding.entity.Term
 import com.gerd.domain.onboarding.entity.UserConsent
@@ -8,6 +11,7 @@ import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.TermRepository
 import com.gerd.domain.onboarding.repository.UserConsentRepository
 import com.gerd.global.apiPayload.GeneralException
+import com.gerd.global.fixture.UserFixture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
@@ -23,6 +27,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class ConsentServiceTest {
@@ -33,10 +38,15 @@ class ConsentServiceTest {
     @Mock
     private lateinit var termRepository: TermRepository
 
+    @Mock
+    private lateinit var userNotificationSettingRepository: UserNotificationSettingRepository
+
     @InjectMocks
     private lateinit var consentService: ConsentService
 
     private val effectiveDate = LocalDate.of(2026, 1, 1)
+
+    private fun notificationSetting() = UserNotificationSetting(user = UserFixture.user())
 
     private fun term(id: Long, code: String, required: Boolean = true) = Term(
         id = id, code = code, version = "1.0",
@@ -88,6 +98,42 @@ class ConsentServiceTest {
 
                 assertThat(existing.agreed).isFalse()
                 verify(userConsentRepository).saveAll(any<List<UserConsent>>())
+            }
+
+            @Test
+            fun `마케팅에 동의하면 알림 설정을 전부 활성화한다`() {
+                val setting = notificationSetting()
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
+                whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
+                whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.of(setting))
+
+                consentService.submitConsent(1L, allConsentRequest(marketing = true))
+
+                assertThat(setting.postMealNotificationEnabled).isTrue()
+                assertThat(setting.dailyRecordNotificationEnabled).isTrue()
+                assertThat(setting.weeklyReportEnabled).isTrue()
+            }
+
+            @Test
+            fun `마케팅에 동의하지 않으면 알림 설정을 건드리지 않는다`() {
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
+                whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
+
+                consentService.submitConsent(1L, allConsentRequest(marketing = false))
+
+                verify(userNotificationSettingRepository, never()).findById(any())
+            }
+
+            @Test
+            fun `가입 시 생성됐어야 할 알림 설정이 없으면 NOTIFICATION_SETTING_NOT_FOUND 예외가 발생한다`() {
+                whenever(termRepository.findLatestAll()).thenReturn(allTerms)
+                whenever(userConsentRepository.findByIdUserId(1L)).thenReturn(emptyList())
+                whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.empty())
+
+                assertThatThrownBy { consentService.submitConsent(1L, allConsentRequest(marketing = true)) }
+                    .isInstanceOf(GeneralException::class.java)
+                    .extracting("errorCode")
+                    .isEqualTo(NotificationErrorCode.NOTIFICATION_SETTING_NOT_FOUND)
             }
         }
 
@@ -149,12 +195,17 @@ class ConsentServiceTest {
         @Test
         fun `마케팅 동의를 off에서 on으로 전환하고 변경된 상태를 반환한다`() {
             val consent = UserConsent(UserConsentId(1L, 4L), marketingTerm, agreed = false, agreedAt = LocalDateTime.now())
+            val setting = notificationSetting()
             whenever(userConsentRepository.findLatestByUserIdAndTermCode(1L, "marketing")).thenReturn(consent)
+            whenever(userNotificationSettingRepository.findById(1L)).thenReturn(Optional.of(setting))
 
             val result = consentService.toggleMarketing(1L)
 
             assertThat(result).isTrue()
             assertThat(consent.agreed).isTrue()
+            assertThat(setting.postMealNotificationEnabled).isTrue()
+            assertThat(setting.dailyRecordNotificationEnabled).isTrue()
+            assertThat(setting.weeklyReportEnabled).isTrue()
         }
 
         @Test
@@ -166,6 +217,7 @@ class ConsentServiceTest {
 
             assertThat(result).isFalse()
             assertThat(consent.agreed).isFalse()
+            verify(userNotificationSettingRepository, never()).findById(any())
         }
 
         @Test
