@@ -1,5 +1,7 @@
 package com.gerd.domain.onboarding.service
 
+import com.gerd.domain.notification.exception.NotificationErrorCode
+import com.gerd.domain.notification.repository.UserNotificationSettingRepository
 import com.gerd.domain.onboarding.dto.ConsentRequestDTO
 import com.gerd.domain.onboarding.entity.Term
 import com.gerd.domain.onboarding.entity.UserConsent
@@ -17,18 +19,23 @@ import java.time.LocalDateTime
 class ConsentService(
     private val userConsentRepository: UserConsentRepository,
     private val termRepository: TermRepository,
+    private val userNotificationSettingRepository: UserNotificationSettingRepository,
 ) {
 
     fun getTerms(): List<Term> = termRepository.findLatestAll()
 
     fun isMarketingAgreed(userId: Long): Boolean =
-        userConsentRepository.findLatestByUserIdAndTermCode(userId, "marketing")?.agreed ?: false
+        userConsentRepository.findLatestByUserIdAndTermCode(userId, MARKETING_TERM_CODE)?.agreed ?: false
 
     @Transactional
     fun toggleMarketing(userId: Long): Boolean {
-        val consent = userConsentRepository.findLatestByUserIdAndTermCode(userId, "marketing")
+        val consent = userConsentRepository.findLatestByUserIdAndTermCode(userId, MARKETING_TERM_CODE)
             ?: throw GeneralException(OnboardingErrorCode.MARKETING_CONSENT_NOT_FOUND)
         consent.updateAgreement(!consent.agreed, LocalDateTime.now())
+        if (consent.agreed) {
+            enableAllNotifications(userId)
+        }
+
         return consent.agreed
     }
 
@@ -54,5 +61,24 @@ class ConsentService(
                 ?: UserConsent(UserConsentId(userId, term.id), term, agreed, now)
         }
         userConsentRepository.saveAll(consents)
+
+        val marketingAgreed = latestTerms
+            .firstOrNull { it.code == MARKETING_TERM_CODE }
+            ?.let { agreedByTermId[it.id]?.agreed == true }
+            ?: false
+        if (marketingAgreed) {
+            enableAllNotifications(userId)
+        }
+    }
+
+    // 마케팅 동의 시 알림 설정을 전부 활성화 — 가입 시 알림 설정이 함께 생성되므로 항상 존재해야 정상
+    private fun enableAllNotifications(userId: Long) {
+        userNotificationSettingRepository.findById(userId)
+            .orElseThrow { GeneralException(NotificationErrorCode.NOTIFICATION_SETTING_NOT_FOUND) }
+            .enableAll()
+    }
+
+    companion object {
+        private const val MARKETING_TERM_CODE = "marketing"
     }
 }
