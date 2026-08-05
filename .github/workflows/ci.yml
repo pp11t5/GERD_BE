@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - develop
 jobs:
   # ✔ 빠르게 컴파일만 체크하는 build job
   build:
