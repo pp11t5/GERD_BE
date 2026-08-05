@@ -3,6 +3,12 @@ app:
     grace-period: P14D
     schedule-in-memory: false
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 spring:
   datasource:
     url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require&TimeZone=Asia/Seoul
