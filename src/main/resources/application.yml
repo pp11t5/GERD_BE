@@ -119,6 +119,10 @@ admin:
   email: ${ADMIN_EMAIL:}
   secret: ${ADMIN_SECRET:}
 
+swagger:
+  username: ${SWAGGER_USERNAME:admin}
+  password: ${SWAGGER_PASSWORD:admin}
+
 management:
   endpoints:
     web:
