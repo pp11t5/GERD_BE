@@ -66,10 +66,17 @@ class JudgmentPromptBuilder(
             [items RULES — exactly 2 items]
             - items[0]: analysis of the food's trigger ingredients from the angle of the user's triggers, symptoms,
               and history. If history has records, reflect the numbers as evidence, e.g. "최근 비슷한 음식을 먹고 편안/불편했어요".
-            - items[1]: analysis from the allergy/medication angle. If allergenTags is empty, infer likely major
-              allergens from the food name, but if uncertain use a "성분표를 확인해 보세요" tone. If none apply, reassure the user.
+            - items[1]: by default, reflect the user's RECENT SYMPTOM PATTERN (from history/symptoms) as it relates
+              to this food or similar foods — a distinct angle from items[0], focused on how the user has been
+              doing lately rather than repeating items[0]'s evidence.
+              · EXCEPTION: only if this food clearly matches one of the user's registered allergies (allergenTags ∩
+                user.allergies) AND that allergen is commonly considered life-threatening (e.g. peanut, tree nut,
+                crustacean, fish/shellfish — anaphylaxis-risk allergens), use items[1] to warn about that critical
+                allergy instead of the recent-symptom framing.
+              · Allergy is NOT a default topic for items[1] — do not mention allergens here unless the exception
+                above applies. If unsure or there is no recent symptom data either, reassure the user briefly.
             - If grade is UNKNOWN: items[0] should say something like "음식으로 인식하기 어려워요", and items[1] something
-              like "알레르기 여부를 확인할 수 없어요".
+              like "최근 기록을 반영하기 어려워요".
             - emphasis: one key line. body: 1-2 sentences of supporting explanation.
 
             [TONE RULES]
