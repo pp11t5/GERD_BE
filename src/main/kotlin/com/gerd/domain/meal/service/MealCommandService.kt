@@ -9,6 +9,7 @@ import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.food.repository.UserFoodRepository
 import com.gerd.domain.food.service.FoodAccessPolicy
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
@@ -39,6 +40,7 @@ class MealCommandService(
     private val mealRecordRepository: MealRecordRepository,
     private val userRepository: UserRepository,
     private val foodRepository: FoodRepository,
+    private val userFoodRepository: UserFoodRepository,
     private val mealRecordConverter: MealRecordConverter,
     private val foodJudgmentQueryService: FoodJudgmentQueryService,
     private val objectMapper: ObjectMapper,
@@ -225,14 +227,17 @@ class MealCommandService(
 
     private fun resolveOrCreateUserFood(name: String, user: User): Food {
         val ownerId = user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
-        foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER)?.let { return it }
-        return runCatching {
-            foodRepository.save(Food(name = name, source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = ownerId))
-        }.getOrElse { e ->
-            if (e !is DataIntegrityViolationException) throw e
-            // 경합 패자 — 다른 트랜잭션이 (owner, source, name) 유니크를 먼저 차지했으므로 그 음식을 재조회해 재사용
-            foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER) ?: throw e
-        }
+        val food = foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER)
+            ?: runCatching {
+                foodRepository.save(Food(name = name, source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = ownerId))
+            }.getOrElse { e ->
+                if (e !is DataIntegrityViolationException) throw e
+                // 경합 패자 — 다른 트랜잭션이 (owner, source, name) 유니크를 먼저 차지했으므로 그 음식을 재조회해 재사용
+                foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER) ?: throw e
+            }
+        // 관리자 승격 검토 목록 노출용 판정 근거 없는 유저 음식 등록
+        userFoodRepository.insertIfAbsent(ownerId, food.id!!, isUnknown = true)
+        return food
     }
 
     private fun resolveOwnedFood(mealFoodId: String, userId: Long): MealFood {
