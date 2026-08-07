@@ -1,5 +1,6 @@
 package com.gerd.domain.food.service
 
+import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
 import com.gerd.domain.food.dto.AdminUserFoodDTO
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
@@ -20,6 +21,7 @@ private val log = KotlinLogging.logger {}
 class AdminFoodService(
     private val foodRepository: FoodRepository,
     private val userFoodRepository: UserFoodRepository,
+    private val dictionaryRepository: UserFoodDictionaryRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -44,9 +46,24 @@ class AdminFoodService(
             ?: throw GeneralException(FoodErrorCode.FOOD_NOT_FOUND)
 
         val foodId = requireNotNull(food.id)
+        mergeDuplicateUserFoods(food.name, foodId)
+
         userFoodRepository.deleteAllByFoodId(foodId)
         food.promote()
         log.info { "음식 승격 완료: foodId=$foodId name=${food.name} → CURATED/PUBLIC" }
+    }
+
+    // 동일 이름의 다른 유저 소유 USER 음식을 승격 음식으로 흡수 — 도감 등재 이전 후 정리, 원본은 소프트 삭제
+    private fun mergeDuplicateUserFoods(name: String, promotedFoodId: Long) {
+        val duplicates = foodRepository.findByNameAndSourceAndIdNot(name, FoodSource.USER, promotedFoodId)
+        duplicates.forEach { duplicate ->
+            val duplicateId = requireNotNull(duplicate.id)
+            dictionaryRepository.migrateFoodId(duplicateId, promotedFoodId)
+            dictionaryRepository.deleteAllByFoodId(duplicateId)
+            userFoodRepository.deleteAllByFoodId(duplicateId)
+            foodRepository.delete(duplicate)
+            log.info { "중복 유저 음식 병합: foodId=$duplicateId name=$name → foodId=$promotedFoodId" }
+        }
     }
 
     companion object {

@@ -3,7 +3,9 @@ package com.gerd.domain.judgment.service
 import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.TriggerCode
+import com.gerd.domain.food.service.FoodCategoryAssigner
 import com.gerd.domain.judgment.dto.CachedJudgment
+import com.gerd.domain.judgment.dto.LlmJudgmentDTO
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
@@ -33,15 +35,16 @@ class FoodJudgmentQueryService(
     private val judgmentGeminiAdapter: JudgmentGeminiAdapter,
     private val safetyOverrideRule: SafetyOverrideRule,
     private val judgmentResponseAssembler: JudgmentResponseAssembler,
+    private val foodCategoryAssigner: FoodCategoryAssigner,
 ) {
 
     fun getJudgment(foodExternalId: String, userId: Long): Pair<JudgmentResponseDTO, Boolean> {
         val context = judgmentContextReader.load(foodExternalId, userId)
 
-        // ⓪ 출처 게이트: 유저 입력 음식은 검수 라벨·grounding이 없어 LLM에 줄 근거가 없다 → 환각 방지 위해 즉시 폴백(CAUTION) (ADR-0003)
+        // ⓪ 출처 게이트: 유저 입력 음식은 검수 라벨·grounding 없음(ADR-0003) → DB 태그 없이도 판정 가능한
+        // 텍스트 파이프라인(이름 기반 LLM 추출 + 캐싱)에 위임, 텍스트 최초 등록 시와 동일 방식이라 일관성도 유지
         if (context.food.source == FoodSource.USER) {
-            log.info { "판정 폴백(UNKNOWN) - USER 음식: foodId=${context.food.id} userId=$userId" }
-            return judgmentResponseAssembler.assembleFallback(context) to false
+            return getJudgmentForUserFood(context, userId)
         }
 
         val snapshot = judgmentSnapshotFactory.create(context)
@@ -76,12 +79,35 @@ class FoodJudgmentQueryService(
         return judgmentResponseAssembler.toTextResponse(cached) to !loaderRan
     }
 
-    private fun judgeText(foodText: String, snapshot: LlmInputSnapshotDTO, userContext: UserContext): CachedJudgment? {
-        val llmJudgment = judgmentGeminiAdapter.generateJudgment(
+    // 유저 음식(ID) 재판정 — 텍스트 판정과 동일한 캐시 키(이름+유저 컨텍스트)로 최초 등록 때의 결과 재사용
+    private fun getJudgmentForUserFood(context: JudgmentContext, userId: Long): Pair<JudgmentResponseDTO, Boolean> {
+        val userContext = judgmentContextReader.loadUserContext(userId)
+        val snapshot = judgmentSnapshotFactory.createForText(context.food.name, userContext)
+        val key = judgmentCacheKeyFactory.createTextKey(snapshot)
+
+        var loaderRan = false
+        val cached = judgmentCache.get(key) {
+            loaderRan = true
+            log.info { "판정 캐시 MISS - LLM 호출(유저 음식): foodId=${context.food.id} userId=$userId" }
+            judgeUserFood(context, snapshot, userContext)
+        } ?: run {
+            log.warn { "판정 폴백(UNKNOWN) - LLM 실패: foodId=${context.food.id} userId=$userId" }
+            return judgmentResponseAssembler.assembleFallback(context) to false
+        }
+
+        if (!loaderRan) log.debug { "판정 캐시 HIT(유저 음식): foodId=${context.food.id} userId=$userId" }
+        return judgmentResponseAssembler.toResponseFromTextCache(cached, context) to !loaderRan
+    }
+
+    private fun callLlm(snapshot: LlmInputSnapshotDTO): LlmJudgmentDTO? =
+        judgmentGeminiAdapter.generateJudgment(
             systemInstruction = judgmentPromptBuilder.buildSystemInstruction(),
             userContent = judgmentPromptBuilder.buildUserContent(snapshot),
             responseSchema = judgmentPromptBuilder.buildResponseSchema(),
-        ) ?: return null
+        )
+
+    private fun judgeText(foodText: String, snapshot: LlmInputSnapshotDTO, userContext: UserContext): CachedJudgment? {
+        val llmJudgment = callLlm(snapshot) ?: return null
 
         // 텍스트 음식은 DB 태그가 없어, LLM이 추출한 코드(스키마 enum 제한)를 음식 태그로 써서 안전 오버라이드(②)를 발동한다.
         // 스키마 밖 코드는 방어적으로 한 번 더 거른다.
@@ -97,13 +123,26 @@ class FoodJudgmentQueryService(
         return judgmentResponseAssembler.assembleTextCacheable(foodText, llmJudgment, override)
     }
 
+    // 유저 음식(ID) 재판정 전용 — judgeText와 동일한 LLM 판정에, 미분류 음식이면 카테고리 등재까지 함께 수행
+    private fun judgeUserFood(context: JudgmentContext, snapshot: LlmInputSnapshotDTO, userContext: UserContext): CachedJudgment? {
+        val llmJudgment = callLlm(snapshot) ?: return null
+        foodCategoryAssigner.assignIfPresent(context.food, llmJudgment.categoryCode)
+
+        val override = safetyOverrideRule.apply(
+            llmGrade = llmJudgment.grade,
+            foodTriggers = llmJudgment.triggerTags.toValidTags(TRIGGER_CODES),
+            foodAllergens = llmJudgment.allergenTags.toValidTags(ALLERGEN_CODES),
+            userTriggers = userContext.userTriggers,
+            userAllergens = userContext.userAllergens,
+        )
+
+        return judgmentResponseAssembler.assembleTextCacheable(context.food.name, llmJudgment, override)
+    }
+
     // LLM, 안전 오버라이드, 조립하며 실패 시 캐시에 남기지 않음
     private fun judge(context: JudgmentContext, snapshot: LlmInputSnapshotDTO): CachedJudgment? {
-        val llmJudgment = judgmentGeminiAdapter.generateJudgment(
-            systemInstruction = judgmentPromptBuilder.buildSystemInstruction(),
-            userContent = judgmentPromptBuilder.buildUserContent(snapshot),
-            responseSchema = judgmentPromptBuilder.buildResponseSchema(),
-        ) ?: return null
+        val llmJudgment = callLlm(snapshot) ?: return null
+        if (context.category == null) foodCategoryAssigner.assignIfPresent(context.food, llmJudgment.categoryCode)
 
         val override = safetyOverrideRule.apply(
             llmGrade = llmJudgment.grade,

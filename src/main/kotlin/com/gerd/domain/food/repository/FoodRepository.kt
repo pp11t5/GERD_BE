@@ -15,6 +15,9 @@ interface FoodRepository : JpaRepository<Food, Long>, FoodRepositoryCustom {
     // 텍스트 기록 시 동일 이름의 USER 음식 재사용 여부 확인
     fun findByNameAndOwnerUserIdAndSource(name: String, ownerUserId: Long, source: FoodSource): Food?
 
+    // 승격 시 병합 대상 조회 — 승격 음식을 제외한 동일 이름의 다른 유저 소유 USER 음식
+    fun findByNameAndSourceAndIdNot(name: String, source: FoodSource, id: Long): List<Food>
+
     // 식사 기록 조회용 — 삭제된 음식도 포함 (D5: food soft-delete 후에도 기록의 음식 정보 보존)
     @Query(value = "SELECT * FROM foods WHERE food_id IN (:ids)", nativeQuery = true)
     fun findAllByIdsIncludingDeleted(@Param("ids") ids: Collection<Long>): List<Food>

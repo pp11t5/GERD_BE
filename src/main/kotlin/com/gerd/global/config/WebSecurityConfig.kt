@@ -4,11 +4,17 @@ import com.gerd.domain.auth.filter.JwtAuthenticationFilter
 import com.gerd.domain.auth.filter.JwtExceptionFilter
 import com.gerd.domain.auth.security.CustomAccessDeniedHandler
 import com.gerd.domain.auth.security.CustomAuthenticationEntryPoint
+import com.gerd.global.config.properties.SwaggerProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.provisioning.InMemoryUserDetailsManager
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
@@ -22,12 +28,15 @@ class WebSecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter,
     private val customAccessDeniedHandler: CustomAccessDeniedHandler,
     private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
+    private val swaggerProperties: SwaggerProperties,
 ) {
     companion object {
-        val PUBLIC_URLS = arrayOf(
-            "/actuator/health",
+        val SWAGGER_URLS = arrayOf(
             "/swagger-ui/**",
             "/v3/api-docs/**",
+        )
+        val PUBLIC_URLS = arrayOf(
+            "/actuator/health",
             "/health/**",
             "/api/v1/auth/dev-login",
             "/api/v1/auth/refresh",
@@ -38,7 +47,36 @@ class WebSecurityConfig(
         )
     }
 
+    // swagger 경로만 Basic Auth로 별도 보호 — JWT 체인보다 먼저 매칭되도록 순서 고정
     @Bean
+    @Order(1)
+    fun swaggerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .securityMatcher(*SWAGGER_URLS)
+            .csrf { it.disable() }
+            .cors { it.configurationSource(corsConfigurationSource()) }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .authorizeHttpRequests { it.anyRequest().authenticated() }
+            .httpBasic { }
+
+        return http.build()
+    }
+
+    @Bean
+    fun swaggerUserDetailsService(): InMemoryUserDetailsManager {
+        val user = User.builder()
+            .username(swaggerProperties.username)
+            .password(passwordEncoder().encode(swaggerProperties.password))
+            .roles("SWAGGER")
+            .build()
+        return InMemoryUserDetailsManager(user)
+    }
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
+
+    @Bean
+    @Order(2)
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
@@ -50,8 +88,6 @@ class WebSecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers(*PUBLIC_URLS).permitAll()
-                    // TODO: 관리자 로그인 API 미구현 — 현재 ADMIN 역할 분기만 존재
-                    .requestMatchers("/v3/api-docs/admin").hasRole("ADMIN")
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }

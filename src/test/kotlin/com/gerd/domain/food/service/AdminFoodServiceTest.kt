@@ -1,5 +1,6 @@
 package com.gerd.domain.food.service
 
+import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
 import com.gerd.domain.food.entity.UserFood
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
@@ -33,6 +34,9 @@ class AdminFoodServiceTest {
 
     @Mock
     private lateinit var userFoodRepository: UserFoodRepository
+
+    @Mock
+    private lateinit var dictionaryRepository: UserFoodDictionaryRepository
 
     @InjectMocks
     private lateinit var service: AdminFoodService
@@ -142,6 +146,38 @@ class AdminFoodServiceTest {
             verify(userFoodRepository).deleteAllByFoodId(7L)
             assertThat(food.source).isEqualTo(FoodSource.CURATED)
             assertThat(food.visibility).isEqualTo(FoodVisibility.PUBLIC)
+        }
+
+        @Test
+        fun `동일 이름의 다른 유저 USER 음식이 있으면 도감을 이전하고 소프트 삭제한다`() {
+            val uuid = FoodFixture.EXTERNAL_ID
+            val food = FoodFixture.food(id = 7, name = "된장찌개", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, externalId = uuid)
+            val duplicate = FoodFixture.food(id = 9, name = "된장찌개", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE)
+            whenever(foodRepository.findByExternalId(uuid)).thenReturn(food)
+            whenever(foodRepository.findByNameAndSourceAndIdNot("된장찌개", FoodSource.USER, 7L))
+                .thenReturn(listOf(duplicate))
+
+            service.promote(uuid.toString())
+
+            verify(dictionaryRepository).migrateFoodId(9L, 7L)
+            verify(dictionaryRepository).deleteAllByFoodId(9L)
+            verify(userFoodRepository).deleteAllByFoodId(9L)
+            verify(foodRepository).delete(duplicate)
+            verify(userFoodRepository).deleteAllByFoodId(7L)
+        }
+
+        @Test
+        fun `동일 이름의 중복이 없으면 병합 없이 승격만 한다`() {
+            val uuid = FoodFixture.EXTERNAL_ID
+            val food = FoodFixture.food(id = 7, name = "된장찌개", source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, externalId = uuid)
+            whenever(foodRepository.findByExternalId(uuid)).thenReturn(food)
+            whenever(foodRepository.findByNameAndSourceAndIdNot("된장찌개", FoodSource.USER, 7L))
+                .thenReturn(emptyList())
+
+            service.promote(uuid.toString())
+
+            verify(foodRepository, never()).delete(any())
+            verify(dictionaryRepository, never()).migrateFoodId(any(), any())
         }
 
         @Test

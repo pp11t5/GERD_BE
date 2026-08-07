@@ -17,6 +17,8 @@ data class LlmJudgmentDTO(
     // DB 음식(ID 판정)은 검수 태그를 쓰므로 이 값은 무시된다. 스키마 enum으로 코드 집합이 제한된다.
     val triggerTags: List<String> = emptyList(),
     val allergenTags: List<String> = emptyList(),
+    // 카테고리 미분류 음식(food.category == null)일 때만 채워짐 — 이미 분류된 음식은 null (ADR 없음, 신규 분류 기능)
+    val categoryCode: String? = null,
 ) {
 
     data class LlmJudgmentItemDTO(

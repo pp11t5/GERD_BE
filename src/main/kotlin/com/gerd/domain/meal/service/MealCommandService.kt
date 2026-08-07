@@ -9,7 +9,9 @@ import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.food.repository.UserFoodRepository
 import com.gerd.domain.food.service.FoodAccessPolicy
+import com.gerd.domain.food.service.FoodCategoryAssigner
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.JudgmentItemDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.FoodJudgmentQueryService
@@ -39,6 +41,8 @@ class MealCommandService(
     private val mealRecordRepository: MealRecordRepository,
     private val userRepository: UserRepository,
     private val foodRepository: FoodRepository,
+    private val userFoodRepository: UserFoodRepository,
+    private val foodCategoryAssigner: FoodCategoryAssigner,
     private val mealRecordConverter: MealRecordConverter,
     private val foodJudgmentQueryService: FoodJudgmentQueryService,
     private val objectMapper: ObjectMapper,
@@ -69,6 +73,7 @@ class MealCommandService(
         requireRecordable(snapshot.grade)
         // 음식 생성은 쓰기 tx 밖에서 — 유니크 제약 위반 시 자체 트랜잭션만 롤백돼 catch-재조회가 동작한다(같은 tx면 abort돼 후속 쿼리 실패)
         val food = resolveOrCreateUserFood(normalizedName, user)
+        foodCategoryAssigner.assignIfPresent(food, snapshot.categoryCode)
         return writeTransactionTemplate.execute {
             saveFoodToNewMeal(food, rawEatenAt, snapshot.grade, snapshot.analysisJson, user)
         } ?: error("meal record save transaction returned null")
@@ -94,6 +99,7 @@ class MealCommandService(
         requireRecordable(snapshot.grade)
         // 음식 생성은 쓰기 tx 밖에서 (createNewByText 주석 참고)
         val food = resolveOrCreateUserFood(normalizedName, user)
+        foodCategoryAssigner.assignIfPresent(food, snapshot.categoryCode)
         return writeTransactionTemplate.execute {
             val mealRecord = findMealRecord(rawMealRecordId, user)
             saveFoodToExistingMeal(food, rawEatenAt, mealRecord, snapshot.grade, snapshot.analysisJson, user)
@@ -225,14 +231,17 @@ class MealCommandService(
 
     private fun resolveOrCreateUserFood(name: String, user: User): Food {
         val ownerId = user.id ?: throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
-        foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER)?.let { return it }
-        return runCatching {
-            foodRepository.save(Food(name = name, source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = ownerId))
-        }.getOrElse { e ->
-            if (e !is DataIntegrityViolationException) throw e
-            // 경합 패자 — 다른 트랜잭션이 (owner, source, name) 유니크를 먼저 차지했으므로 그 음식을 재조회해 재사용
-            foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER) ?: throw e
-        }
+        val food = foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER)
+            ?: runCatching {
+                foodRepository.save(Food(name = name, source = FoodSource.USER, visibility = FoodVisibility.PRIVATE, ownerUserId = ownerId))
+            }.getOrElse { e ->
+                if (e !is DataIntegrityViolationException) throw e
+                // 경합 패자 — 다른 트랜잭션이 (owner, source, name) 유니크를 먼저 차지했으므로 그 음식을 재조회해 재사용
+                foodRepository.findByNameAndOwnerUserIdAndSource(name, ownerId, FoodSource.USER) ?: throw e
+            }
+        // 관리자 승격 검토 목록 노출용 판정 근거 없는 유저 음식 등록
+        userFoodRepository.insertIfAbsent(ownerId, food.id!!, isUnknown = true)
+        return food
     }
 
     private fun resolveOwnedFood(mealFoodId: String, userId: Long): MealFood {
@@ -252,14 +261,14 @@ class MealCommandService(
     // 캐시 우선 — getJudgmentByText 내부가 judgmentCache.get(key)로 히트 시 LLM 호출 없이 캐시값 반환 (위와 동일하게 tx 밖에서 호출)
     private fun loadTextJudgmentSnapshot(foodName: String, userId: Long): MealJudgmentSnapshot {
         val judgment = foodJudgmentQueryService.getJudgmentByText(foodName, userId).first
-        return toSnapshot(judgment.grade, judgment.items)
+        return toSnapshot(judgment.grade, judgment.items, judgment.categoryCode)
     }
 
     private fun requireRecordable(grade: JudgmentGrade) {
         if (grade == JudgmentGrade.UNKNOWN) throw GeneralException(MealErrorCode.UNKNOWN_GRADE_NOT_RECORDABLE)
     }
 
-    private fun toSnapshot(grade: JudgmentGrade, items: List<JudgmentItemDTO>): MealJudgmentSnapshot =
+    private fun toSnapshot(grade: JudgmentGrade, items: List<JudgmentItemDTO>, categoryCode: String? = null): MealJudgmentSnapshot =
         MealJudgmentSnapshot(
             grade = grade,
             analysisJson = objectMapper.writeValueAsString(
@@ -269,6 +278,7 @@ class MealCommandService(
                     allergyAnalysis = items.toAnalysisItem(index = 1),
                 ),
             ),
+            categoryCode = categoryCode,
         )
 
     private fun List<JudgmentItemDTO>.toAnalysisItem(index: Int): MealAnalysisSnapshotDTO.AnalysisItemDTO {
@@ -282,6 +292,7 @@ class MealCommandService(
     private data class MealJudgmentSnapshot(
         val grade: JudgmentGrade,
         val analysisJson: String,
+        val categoryCode: String? = null,
     )
 
     companion object {

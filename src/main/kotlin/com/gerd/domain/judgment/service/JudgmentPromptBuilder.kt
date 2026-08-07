@@ -1,7 +1,9 @@
 package com.gerd.domain.judgment.service
 
+import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.entity.enums.TriggerCode
+import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
@@ -15,17 +17,49 @@ import tools.jackson.databind.ObjectMapper
 @Component
 class JudgmentPromptBuilder(
     private val objectMapper: ObjectMapper,
+    private val foodCategoryReader: FoodCategoryReader,
 ) {
 
-    fun buildSystemInstruction(): String = SYSTEM_INSTRUCTION
+    // 카테고리 13종은 시드로 고정 적재되는 마스터라 프로세스 생애주기 동안 한 번만 조회
+    private val categories by lazy { foodCategoryReader.getAll() }
+
+    fun buildSystemInstruction(): String = SYSTEM_INSTRUCTION_BODY + "\n\n" + buildCategorySection(categories)
 
     fun buildUserContent(snapshot: LlmInputSnapshotDTO): String =
         objectMapper.writeValueAsString(snapshot)
 
-    fun buildResponseSchema(): Map<String, Any> = RESPONSE_SCHEMA
+    fun buildResponseSchema(): Map<String, Any> = buildResponseSchema(categories.map { it.code })
+
+    private fun buildCategorySection(categories: List<FoodCategoryDTO>): String {
+        val header = """
+            [CATEGORY CLASSIFICATION]
+            - food.category tells you whether this food already has a category: null means it is NOT yet classified.
+            - If food.category is null, classify the food into exactly one of the categories below by its `code`,
+              and return that code as `categoryCode`. Choose based on general knowledge of the food name/attributes.
+              If genuinely unclassifiable, return null for `categoryCode`. Allowed categories:
+        """.trimIndent()
+        val categoryList = categories.joinToString("\n") { "  · ${it.code}: ${it.displayName}" }
+        val footer = """
+            - If food.category is already set (non-null), always return null for `categoryCode` — do not
+              reclassify a food that already has a category.
+        """.trimIndent()
+        return "$header\n$categoryList\n$footer"
+    }
+
+    private fun buildResponseSchema(categoryCodes: List<String>): Map<String, Any> =
+        RESPONSE_SCHEMA + mapOf(
+            "properties" to (RESPONSE_SCHEMA["properties"] as Map<*, *> + mapOf(
+                "categoryCode" to mapOf(
+                    "type" to "STRING",
+                    "nullable" to true,
+                    "enum" to categoryCodes,
+                ),
+            )),
+            "required" to (RESPONSE_SCHEMA["required"] as List<*> + "categoryCode"),
+        )
 
     companion object {
-        private val SYSTEM_INSTRUCTION = """
+        private val SYSTEM_INSTRUCTION_BODY = """
             You are a food-analysis assistant for a GERD (gastroesophageal reflux disease) management app.
             Using the input JSON's food info (food), user health context (user), and recent history (history),
             decide whether this user can safely eat this food, and produce a traffic-light grade with analysis items.
@@ -66,10 +100,17 @@ class JudgmentPromptBuilder(
             [items RULES — exactly 2 items]
             - items[0]: analysis of the food's trigger ingredients from the angle of the user's triggers, symptoms,
               and history. If history has records, reflect the numbers as evidence, e.g. "최근 비슷한 음식을 먹고 편안/불편했어요".
-            - items[1]: analysis from the allergy/medication angle. If allergenTags is empty, infer likely major
-              allergens from the food name, but if uncertain use a "성분표를 확인해 보세요" tone. If none apply, reassure the user.
+            - items[1]: by default, reflect the user's RECENT SYMPTOM PATTERN (from history/symptoms) as it relates
+              to this food or similar foods — a distinct angle from items[0], focused on how the user has been
+              doing lately rather than repeating items[0]'s evidence.
+              · EXCEPTION: only if this food clearly matches one of the user's registered allergies (allergenTags ∩
+                user.allergies) AND that allergen is commonly considered life-threatening (e.g. peanut, tree nut,
+                crustacean, fish/shellfish — anaphylaxis-risk allergens), use items[1] to warn about that critical
+                allergy instead of the recent-symptom framing.
+              · Allergy is NOT a default topic for items[1] — do not mention allergens here unless the exception
+                above applies. If unsure or there is no recent symptom data either, reassure the user briefly.
             - If grade is UNKNOWN: items[0] should say something like "음식으로 인식하기 어려워요", and items[1] something
-              like "알레르기 여부를 확인할 수 없어요".
+              like "최근 기록을 반영하기 어려워요".
             - emphasis: one key line. body: 1-2 sentences of supporting explanation.
 
             [TONE RULES]
