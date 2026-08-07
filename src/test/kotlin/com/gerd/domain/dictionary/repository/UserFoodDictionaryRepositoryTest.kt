@@ -210,6 +210,47 @@ class UserFoodDictionaryRepositoryTest @Autowired constructor(
         }
     }
 
+    @Nested
+    inner class `승격 병합` {
+
+        @Test
+        fun `중복 음식의 등재를 승격 음식으로 이전한다`() {
+            val user = saveUser("merge@test.com")
+            val duplicate = saveFood("된장찌개-중복")
+            val promoted = saveFood("된장찌개")
+            dictionaryRepository.save(entry(user, duplicate, DictionaryType.CAUTION))
+            em.flush(); em.clear()
+
+            dictionaryRepository.migrateFoodId(duplicate.id!!, promoted.id!!)
+            dictionaryRepository.deleteAllByFoodId(duplicate.id!!)
+            em.flush(); em.clear()
+
+            val entries = dictionaryRepository.findAll()
+            assertThat(entries).hasSize(1)
+            assertThat(entries.single().food.id).isEqualTo(promoted.id)
+            assertThat(entries.single().dictionaryType).isEqualTo(DictionaryType.CAUTION)
+        }
+
+        @Test
+        fun `승격 음식에 이미 등재가 있으면 유지하고 중복 생성하지 않는다`() {
+            val user = saveUser("merge-conflict@test.com")
+            val duplicate = saveFood("된장찌개-중복")
+            val promoted = saveFood("된장찌개")
+            dictionaryRepository.save(entry(user, duplicate, DictionaryType.RISK))
+            dictionaryRepository.save(entry(user, promoted, DictionaryType.SAFE))
+            em.flush(); em.clear()
+
+            dictionaryRepository.migrateFoodId(duplicate.id!!, promoted.id!!)
+            dictionaryRepository.deleteAllByFoodId(duplicate.id!!)
+            em.flush(); em.clear()
+
+            val entries = dictionaryRepository.findAll()
+            assertThat(entries).hasSize(1)
+            assertThat(entries.single().food.id).isEqualTo(promoted.id)
+            assertThat(entries.single().dictionaryType).isEqualTo(DictionaryType.SAFE)
+        }
+    }
+
     private fun saveUser(email: String = "user@test.com"): User =
         User(email = email, nickname = email.substringBefore("@")).also {
             em.persist(it)

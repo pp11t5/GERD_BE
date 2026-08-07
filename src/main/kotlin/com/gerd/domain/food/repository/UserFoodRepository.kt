@@ -29,4 +29,17 @@ interface UserFoodRepository : JpaRepository<UserFood, Long> {
     fun deleteAllByFoodId(@Param("foodId") foodId: Long)
 
     fun existsByUserIdAndFoodId(userId: Long, foodId: Long): Boolean
+
+    // 관리자 검토 목록 노출용 유저-음식 매핑 등록, 존재하면 무시(경합 시 예외 없음)
+    @Transactional
+    @Modifying
+    @Query(
+        value = """
+            INSERT INTO user_foods (user_id, food_id, is_unknown, created_at, modified_at)
+            VALUES (:userId, :foodId, :isUnknown, now(), now())
+            ON CONFLICT (user_id, food_id) DO NOTHING
+        """,
+        nativeQuery = true,
+    )
+    fun insertIfAbsent(userId: Long, foodId: Long, isUnknown: Boolean)
 }

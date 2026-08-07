@@ -71,6 +71,19 @@ class JudgmentResponseAssembler {
             substitutes = cached.substitutes,
         )
 
+    // 유저 음식(ID)이 텍스트 판정 파이프라인 캐시를 재사용할 때 조립 — 캐시는 이름 기준 공용이라 foodExternalId·category는 컨텍스트에서 보충
+    fun toResponseFromTextCache(cached: CachedJudgment, context: JudgmentContext): JudgmentResponseDTO =
+        JudgmentResponseDTO(
+            foodExternalId = context.foodExternalId,
+            foodName = cached.foodName,
+            category = context.category,
+            grade = cached.grade,
+            personalTitle = cached.personalTitle,
+            items = cached.items,
+            stateRecords = context.stateRecords,
+            substitutes = emptyList(),
+        )
+
     // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 UNKNOWN(판단 불가)으로 안내, 캐시하지 않는다
     fun assembleFallback(context: JudgmentContext): JudgmentResponseDTO =
         JudgmentResponseDTO(
@@ -100,6 +113,7 @@ class JudgmentResponseAssembler {
             personalTitle = resolveTitle(llmJudgment, override),
             items = baseItems,
             substitutes = emptyList(),
+            categoryCode = llmJudgment.categoryCode,
         )
     }
 
@@ -111,6 +125,7 @@ class JudgmentResponseAssembler {
             items = cached.items,
             stateRecords = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),
             substitutes = emptyList(),
+            categoryCode = cached.categoryCode,
         )
 
     fun assembleTextFallback(foodName: String): TextJudgmentResponseDTO =

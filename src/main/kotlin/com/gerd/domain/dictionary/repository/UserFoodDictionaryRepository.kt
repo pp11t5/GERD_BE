@@ -64,4 +64,26 @@ interface UserFoodDictionaryRepository : JpaRepository<UserFoodDictionary, Long>
     @Modifying
     @Query("DELETE FROM UserFoodDictionary d WHERE d.user.id = :userId AND d.food.id IN :foodIds AND d.dictionaryType = :type")
     fun deleteByUserIdAndFoodIdsAndType(userId: Long, foodIds: List<Long>, type: DictionaryType)
+
+    // RECOMMEND 재판정 시 기존 주의/위험 등재 제거
+    @Modifying
+    @Query("DELETE FROM UserFoodDictionary d WHERE d.user.id = :userId AND d.food.id = :foodId AND d.dictionaryType IN :types")
+    fun deleteByUserIdAndFoodIdAndTypeIn(userId: Long, foodId: Long, types: List<DictionaryType>)
+
+    // 음식 승격 시 중복 유저 음식의 등재를 승격 음식으로 이전, 승격 음식에 이미 등재가 있으면 유지(중복 생성 없음)
+    @Modifying
+    @Query(
+        value = """
+            INSERT INTO user_food_dictionaries (user_id, food_id, dictionary_type, created_at, modified_at)
+            SELECT user_id, :newFoodId, dictionary_type, now(), now()
+            FROM user_food_dictionaries WHERE food_id = :oldFoodId
+            ON CONFLICT (user_id, food_id) DO NOTHING
+        """,
+        nativeQuery = true,
+    )
+    fun migrateFoodId(oldFoodId: Long, newFoodId: Long)
+
+    @Modifying
+    @Query("DELETE FROM UserFoodDictionary d WHERE d.food.id = :foodId")
+    fun deleteAllByFoodId(foodId: Long)
 }

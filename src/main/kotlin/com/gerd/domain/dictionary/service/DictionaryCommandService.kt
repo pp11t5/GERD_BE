@@ -54,16 +54,25 @@ class DictionaryCommandService(
     }
 
     /**
-     * 음식 판정 결과로 도감 항목을 새로 만들거나 기존 타입을 변경한다.
+     * 판정 결과에 따른 도감 항목 생성·타입 변경
+     * RECOMMEND 재판정 시 기존 주의/위험 등재 제거, UNKNOWN(판정 실패)은 기존 등재 유지
      */
     @Transactional
     fun upsertFromJudgment(userId: Long, foodId: Long, grade: JudgmentGrade) {
+        if (grade == JudgmentGrade.UNKNOWN) return
+        if (!userRepository.existsById(userId)) throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
+
         val type = when (grade) {
             JudgmentGrade.CAUTION -> DictionaryType.CAUTION
             JudgmentGrade.RISK -> DictionaryType.RISK
-            JudgmentGrade.RECOMMEND, JudgmentGrade.UNKNOWN -> return
+            JudgmentGrade.RECOMMEND -> null
+            JudgmentGrade.UNKNOWN -> return
         }
-        if (!userRepository.existsById(userId)) throw GeneralException(AuthErrorCode.USER_NOT_FOUND)
-        dictionaryRepository.upsertType(userId, foodId, type.name)
+
+        if (type == null) {
+            dictionaryRepository.deleteByUserIdAndFoodIdAndTypeIn(userId, foodId, listOf(DictionaryType.CAUTION, DictionaryType.RISK))
+        } else {
+            dictionaryRepository.upsertType(userId, foodId, type.name)
+        }
     }
 }

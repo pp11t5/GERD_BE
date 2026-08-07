@@ -146,10 +146,29 @@ class DictionaryCommandServiceTest {
     inner class `판정 결과 적재` {
 
         @Test
-        fun `RECOMMEND 판정이면 도감을 변경하지 않는다`() {
+        fun `RECOMMEND 판정이면 기존 주의·위험 등재를 제거한다`() {
+            whenever(userRepository.existsById(userId)).thenReturn(true)
+
             service.upsertFromJudgment(userId, 1L, JudgmentGrade.RECOMMEND)
 
+            verify(dictionaryRepository).deleteByUserIdAndFoodIdAndTypeIn(
+                userId,
+                1L,
+                listOf(DictionaryType.CAUTION, DictionaryType.RISK),
+            )
             verify(dictionaryRepository, never()).upsertType(any(), any(), any())
+        }
+
+        @Test
+        fun `RECOMMEND 판정이어도 유저가 존재하지 않으면 USER_NOT_FOUND`() {
+            whenever(userRepository.existsById(userId)).thenReturn(false)
+
+            assertThatThrownBy { service.upsertFromJudgment(userId, 1L, JudgmentGrade.RECOMMEND) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
+
+            verify(dictionaryRepository, never()).deleteByUserIdAndFoodIdAndTypeIn(any(), any(), any())
         }
 
         @Test
