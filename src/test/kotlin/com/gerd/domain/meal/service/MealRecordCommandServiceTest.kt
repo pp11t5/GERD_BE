@@ -8,6 +8,7 @@ import com.gerd.domain.food.entity.enums.FoodVisibility
 import com.gerd.domain.food.exception.FoodErrorCode
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.food.repository.UserFoodRepository
+import com.gerd.domain.food.service.FoodCategoryAssigner
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.meal.dto.MealAnalysisSnapshotDTO
@@ -34,6 +35,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -65,6 +67,9 @@ class MealRecordCommandServiceTest {
 
     @Mock
     private lateinit var userFoodRepository: UserFoodRepository
+
+    @Mock
+    private lateinit var foodCategoryAssigner: FoodCategoryAssigner
 
     @Mock
     private lateinit var mealRecordConverter: MealRecordConverter
@@ -101,6 +106,7 @@ class MealRecordCommandServiceTest {
             userRepository = userRepository,
             foodRepository = foodRepository,
             userFoodRepository = userFoodRepository,
+            foodCategoryAssigner = foodCategoryAssigner,
             mealRecordConverter = mealRecordConverter,
             foodJudgmentQueryService = foodJudgmentQueryService,
             objectMapper = objectMapper,
@@ -258,6 +264,38 @@ class MealRecordCommandServiceTest {
             verify(foodRepository, never()).save(any())
             verify(userFoodRepository).insertIfAbsent(userId, 30L, isUnknown = true)
         }
+
+        @Test
+        fun `판정 결과에 분류 코드가 있으면 카테고리 등록을 시도한다`() {
+            whenever(transactionManager.getTransaction(any())).thenAnswer { SimpleTransactionStatus() }
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(UserFixture.user()))
+            whenever(foodJudgmentQueryService.getJudgmentByText("된장찌개", userId))
+                .thenReturn(textJudgment(categoryCode = "soup_stew") to true)
+            whenever(foodRepository.findByNameAndOwnerUserIdAndSource("된장찌개", userId, FoodSource.USER))
+                .thenReturn(null)
+            whenever(foodRepository.save(any())).thenAnswer { invocation ->
+                (invocation.arguments[0] as Food).apply { ReflectionTestUtils.setField(this, "id", 20L) }
+            }
+            whenever(mealRecordConverter.parseEatenAt(null)).thenReturn(MealRecordFixture.EATEN_AT)
+            whenever(mealRecordRepository.save(any())).thenAnswer { invocation ->
+                (invocation.arguments[0] as MealRecord).apply {
+                    ReflectionTestUtils.setField(this, "id", MealRecordFixture.MEAL_RECORD_ID)
+                }
+            }
+            whenever(mealFoodRepository.save(any())).thenAnswer { invocation ->
+                (invocation.arguments[0] as MealFood).apply {
+                    ReflectionTestUtils.setField(this, "id", 1L)
+                    externalId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID
+                }
+            }
+            whenever(mealRecordConverter.toSummary(any(), any())).thenReturn(mealFoodDetail())
+
+            service.createNewByText(foodName = "된장찌개", rawEatenAt = null, userId = userId)
+
+            val foodCaptor = argumentCaptor<Food>()
+            verify(foodCategoryAssigner).assignIfPresent(foodCaptor.capture(), eq("soup_stew"))
+            assertThat(foodCaptor.firstValue.id).isEqualTo(20L)
+        }
     }
 
     @Nested
@@ -354,17 +392,19 @@ class MealRecordCommandServiceTest {
         substitutes = emptyList(),
     )
 
-    private fun textJudgment(grade: JudgmentGrade = JudgmentGrade.CAUTION) = com.gerd.domain.judgment.dto.TextJudgmentResponseDTO(
-        foodName = "된장찌개",
-        grade = grade,
-        personalTitle = "속이 불편할 수 있어요",
-        items = listOf(
-            JudgmentResponseDTO.JudgmentItemDTO("맵고 짤 수 있어요", "천천히 드세요"),
-            JudgmentResponseDTO.JudgmentItemDTO("자극 가능성이 있어요", "식후 바로 눕지 마세요"),
-        ),
-        stateRecords = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),
-        substitutes = emptyList(),
-    )
+    private fun textJudgment(grade: JudgmentGrade = JudgmentGrade.CAUTION, categoryCode: String? = null) =
+        com.gerd.domain.judgment.dto.TextJudgmentResponseDTO(
+            foodName = "된장찌개",
+            grade = grade,
+            personalTitle = "속이 불편할 수 있어요",
+            items = listOf(
+                JudgmentResponseDTO.JudgmentItemDTO("맵고 짤 수 있어요", "천천히 드세요"),
+                JudgmentResponseDTO.JudgmentItemDTO("자극 가능성이 있어요", "식후 바로 눕지 마세요"),
+            ),
+            stateRecords = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),
+            substitutes = emptyList(),
+            categoryCode = categoryCode,
+        )
 
     private fun mealFoodDetail() = com.gerd.domain.meal.dto.MealFoodRecordDetailDTO(
         mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),

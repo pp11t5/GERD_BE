@@ -26,4 +26,7 @@ data class TextJudgmentResponseDTO(
     // 텍스트 입력은 DB 음식 엔티티가 없어 대체식단 조회 불가 — 항상 빈 배열
     @field:Schema(description = "대체 식단 — 텍스트 판정에서는 항상 빈 배열")
     val substitutes: List<SubstituteDTO>,
+
+    @field:Schema(description = "LLM이 분류한 카테고리 code — 이미 분류된 음식이거나 분류 불가 시 null", example = "soup_stew")
+    val categoryCode: String? = null,
 )

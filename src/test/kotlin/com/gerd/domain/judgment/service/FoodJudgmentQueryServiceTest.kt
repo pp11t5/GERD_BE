@@ -2,6 +2,8 @@ package com.gerd.domain.judgment.service
 
 import com.gerd.domain.food.entity.enums.FoodSource
 import com.gerd.domain.food.entity.enums.FoodVisibility
+import com.gerd.domain.food.service.FoodCategoryAssigner
+import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.JudgmentContext
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
@@ -28,6 +30,8 @@ class FoodJudgmentQueryServiceTest {
 
     @Mock private lateinit var judgmentContextReader: JudgmentContextReader
     @Mock private lateinit var judgmentGeminiAdapter: JudgmentGeminiAdapter
+    @Mock private lateinit var foodCategoryReader: FoodCategoryReader
+    @Mock private lateinit var foodCategoryAssigner: FoodCategoryAssigner
 
     private lateinit var service: FoodJudgmentQueryService
 
@@ -54,10 +58,11 @@ class FoodJudgmentQueryServiceTest {
             judgmentSnapshotFactory = JudgmentSnapshotFactory(),
             judgmentCacheKeyFactory = JudgmentCacheKeyFactory(),
             judgmentCache = JudgmentCache(),
-            judgmentPromptBuilder = JudgmentPromptBuilder(JsonMapper.builder().findAndAddModules().build()),
+            judgmentPromptBuilder = JudgmentPromptBuilder(JsonMapper.builder().findAndAddModules().build(), foodCategoryReader),
             judgmentGeminiAdapter = judgmentGeminiAdapter,
             safetyOverrideRule = SafetyOverrideRule(),
             judgmentResponseAssembler = JudgmentResponseAssembler(),
+            foodCategoryAssigner = foodCategoryAssigner,
         )
     }
 
@@ -87,17 +92,49 @@ class FoodJudgmentQueryServiceTest {
     )
 
     @Nested
-    inner class `⓪ 출처 게이트` {
+    inner class `⓪ 출처 게이트 - 유저 음식은 텍스트 파이프라인으로 위임` {
 
         @Test
-        fun `유저 입력 음식은 LLM 호출 없이 UNKNOWN 폴백을 반환한다`() {
+        fun `유저 입력 음식도 이름 기반 LLM 판정과 캐싱을 거친다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(userFoodContext())
+            whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(
+                com.gerd.domain.judgment.dto.UserContext(
+                    userTriggers = emptyList(),
+                    userAllergens = emptyList(),
+                    medications = emptyList(),
+                    symptomCodes = emptyList(),
+                ),
+            )
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+
+            val (first, firstCached) = service.getJudgment(foodExternalId, userId)
+            val (second, secondCached) = service.getJudgment(foodExternalId, userId)
+
+            assertThat(first.grade).isEqualTo(JudgmentGrade.CAUTION)
+            assertThat(first.foodExternalId).isEqualTo(foodExternalId)
+            assertThat(firstCached).isFalse()
+            assertThat(secondCached).isTrue()
+            verify(judgmentGeminiAdapter, times(1)).generateJudgment(any(), any(), any())
+            verify(judgmentContextReader, never()).loadSubstituteCandidates(any())
+        }
+
+        @Test
+        fun `LLM 실패 시 UNKNOWN 폴백을 반환한다`() {
+            whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(userFoodContext())
+            whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(
+                com.gerd.domain.judgment.dto.UserContext(
+                    userTriggers = emptyList(),
+                    userAllergens = emptyList(),
+                    medications = emptyList(),
+                    symptomCodes = emptyList(),
+                ),
+            )
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(null)
 
             val (response, isCached) = service.getJudgment(foodExternalId, userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(isCached).isFalse()
-            verify(judgmentGeminiAdapter, never()).generateJudgment(any(), any(), any())
         }
     }
 
@@ -131,6 +168,55 @@ class FoodJudgmentQueryServiceTest {
             assertThat(secondCached).isFalse()
             // 실패가 캐시되지 않았으므로 재호출 시 LLM을 다시 시도한다
             verify(judgmentGeminiAdapter, times(2)).generateJudgment(any(), any(), any())
+        }
+    }
+
+    @Nested
+    inner class `카테고리 자동분류` {
+
+        @Test
+        fun `카테고리가 없는 음식이면 LLM 분류 결과를 등록한다`() {
+            val context = seedContext().copy(category = null)
+            whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(context)
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
+                .thenReturn(llmJudgment.copy(categoryCode = "soup_stew"))
+            whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
+
+            service.getJudgment(foodExternalId, userId)
+
+            verify(foodCategoryAssigner).assignIfPresent(context.food, "soup_stew")
+        }
+
+        @Test
+        fun `이미 카테고리가 있으면 분류 결과를 등록하지 않는다`() {
+            whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(seedContext())
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
+                .thenReturn(llmJudgment.copy(categoryCode = "soup_stew"))
+            whenever(judgmentContextReader.loadSubstituteCandidates(any())).thenReturn(emptyList())
+
+            service.getJudgment(foodExternalId, userId)
+
+            verify(foodCategoryAssigner, never()).assignIfPresent(any(), any())
+        }
+
+        @Test
+        fun `유저 음식 재판정도 LLM 분류 결과를 등록한다`() {
+            val context = userFoodContext()
+            whenever(judgmentContextReader.load(foodExternalId, userId)).thenReturn(context)
+            whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(
+                com.gerd.domain.judgment.dto.UserContext(
+                    userTriggers = emptyList(),
+                    userAllergens = emptyList(),
+                    medications = emptyList(),
+                    symptomCodes = emptyList(),
+                ),
+            )
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
+                .thenReturn(llmJudgment.copy(categoryCode = "soup_stew"))
+
+            service.getJudgment(foodExternalId, userId)
+
+            verify(foodCategoryAssigner).assignIfPresent(context.food, "soup_stew")
         }
     }
 

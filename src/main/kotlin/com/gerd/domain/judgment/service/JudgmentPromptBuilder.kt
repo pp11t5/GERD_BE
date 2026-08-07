@@ -1,7 +1,9 @@
 package com.gerd.domain.judgment.service
 
+import com.gerd.domain.food.dto.FoodCategoryDTO
 import com.gerd.domain.food.entity.enums.AllergenCode
 import com.gerd.domain.food.entity.enums.TriggerCode
+import com.gerd.domain.food.service.FoodCategoryReader
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
@@ -15,17 +17,49 @@ import tools.jackson.databind.ObjectMapper
 @Component
 class JudgmentPromptBuilder(
     private val objectMapper: ObjectMapper,
+    private val foodCategoryReader: FoodCategoryReader,
 ) {
 
-    fun buildSystemInstruction(): String = SYSTEM_INSTRUCTION
+    // 카테고리 13종은 시드로 고정 적재되는 마스터라 프로세스 생애주기 동안 한 번만 조회
+    private val categories by lazy { foodCategoryReader.getAll() }
+
+    fun buildSystemInstruction(): String = SYSTEM_INSTRUCTION_BODY + "\n\n" + buildCategorySection(categories)
 
     fun buildUserContent(snapshot: LlmInputSnapshotDTO): String =
         objectMapper.writeValueAsString(snapshot)
 
-    fun buildResponseSchema(): Map<String, Any> = RESPONSE_SCHEMA
+    fun buildResponseSchema(): Map<String, Any> = buildResponseSchema(categories.map { it.code })
+
+    private fun buildCategorySection(categories: List<FoodCategoryDTO>): String {
+        val header = """
+            [CATEGORY CLASSIFICATION]
+            - food.category tells you whether this food already has a category: null means it is NOT yet classified.
+            - If food.category is null, classify the food into exactly one of the categories below by its `code`,
+              and return that code as `categoryCode`. Choose based on general knowledge of the food name/attributes.
+              If genuinely unclassifiable, return null for `categoryCode`. Allowed categories:
+        """.trimIndent()
+        val categoryList = categories.joinToString("\n") { "  · ${it.code}: ${it.displayName}" }
+        val footer = """
+            - If food.category is already set (non-null), always return null for `categoryCode` — do not
+              reclassify a food that already has a category.
+        """.trimIndent()
+        return "$header\n$categoryList\n$footer"
+    }
+
+    private fun buildResponseSchema(categoryCodes: List<String>): Map<String, Any> =
+        RESPONSE_SCHEMA + mapOf(
+            "properties" to (RESPONSE_SCHEMA["properties"] as Map<*, *> + mapOf(
+                "categoryCode" to mapOf(
+                    "type" to "STRING",
+                    "nullable" to true,
+                    "enum" to categoryCodes,
+                ),
+            )),
+            "required" to (RESPONSE_SCHEMA["required"] as List<*> + "categoryCode"),
+        )
 
     companion object {
-        private val SYSTEM_INSTRUCTION = """
+        private val SYSTEM_INSTRUCTION_BODY = """
             You are a food-analysis assistant for a GERD (gastroesophageal reflux disease) management app.
             Using the input JSON's food info (food), user health context (user), and recent history (history),
             decide whether this user can safely eat this food, and produce a traffic-light grade with analysis items.

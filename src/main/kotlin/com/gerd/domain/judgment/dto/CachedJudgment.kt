@@ -13,4 +13,6 @@ data class CachedJudgment(
     val personalTitle: String,
     val items: List<JudgmentItemDTO>,
     val substitutes: List<SubstituteDTO>,
+    // 텍스트 판정에서 미분류 음식을 분류한 결과 — 이미 분류된 음식이거나 미분류 상태를 판단할 수 없으면 null
+    val categoryCode: String? = null,
 )
