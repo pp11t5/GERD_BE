@@ -98,7 +98,7 @@ class SymptomServiceTest {
             val saved = SymptomFixture.symptom()
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
-                .thenReturn(MealRecordFixture.mealRecord())
+                .thenReturn(MealRecordFixture.mealRecord(eatenAt = SymptomFixture.OCCURRED_AT))
             whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
             whenever(symptomRepository.save(any())).thenReturn(saved)
             stubLinkedMeal()
@@ -156,7 +156,7 @@ class SymptomServiceTest {
             val saved = SymptomFixture.symptom(symptomState = SymptomState.UNCOMFORTABLE)
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
-                .thenReturn(MealRecordFixture.mealRecord())
+                .thenReturn(MealRecordFixture.mealRecord(eatenAt = SymptomFixture.OCCURRED_AT))
             whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
             whenever(symptomRepository.save(any())).thenReturn(saved)
             stubLinkedMeal()
@@ -170,6 +170,20 @@ class SymptomServiceTest {
                 MealRecordFixture.MEAL_RECORD_ID,
                 SymptomState.UNCOMFORTABLE,
             )
+        }
+
+        @Test
+        fun `증상 발생 시각이 연결된 식사 시각보다 이전이면 SYMPTOM_BEFORE_MEAL`() {
+            val request = createRequest()
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
+            whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
+                .thenReturn(MealRecordFixture.mealRecord(eatenAt = SymptomFixture.OCCURRED_AT.plusHours(1)))
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
+
+            assertThatThrownBy { service.create(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode").isEqualTo(SymptomErrorCode.SYMPTOM_BEFORE_MEAL)
+            verify(symptomRepository, never()).save(any())
         }
 
         @Test
@@ -242,7 +256,7 @@ class SymptomServiceTest {
             val symptom = SymptomFixture.symptom(isAnalysisDirty = false, analysisVersion = 1L)
             whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
-                .thenReturn(MealRecordFixture.mealRecord())
+                .thenReturn(MealRecordFixture.mealRecord(eatenAt = SymptomFixture.OCCURRED_AT))
             whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
 
             service.update(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), updateRequest(), userId)
@@ -276,7 +290,8 @@ class SymptomServiceTest {
             val symptom = SymptomFixture.symptom(isAnalysisDirty = false)
             whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
             whenever(mealRecordRepository.findByExternalIdAndUser_Id(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID, userId))
-                .thenReturn(MealRecordFixture.mealRecord())
+                .thenReturn(MealRecordFixture.mealRecord(eatenAt = SymptomFixture.OCCURRED_AT))
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
 
             assertThatThrownBy {
                 service.update(

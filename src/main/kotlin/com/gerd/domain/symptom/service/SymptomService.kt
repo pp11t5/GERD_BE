@@ -23,6 +23,7 @@ import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.apiPayload.code.CommonErrorCode
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -53,12 +54,13 @@ class SymptomService(
     fun create(userId: Long, request: SymptomCreateRequestDTO): SymptomResponseDTO {
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
+        val occurredAt = symptomConverter.parseOccurredAt(request.occurredAt)
+        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId, occurredAt) }
         val symptom = Symptom(
             user = user,
             symptomState = request.symptomState ?: throw GeneralException(CommonErrorCode.INVALID_REQUEST),
             symptomTypes = request.symptomTypes,
-            occurredAt = symptomConverter.parseOccurredAt(request.occurredAt),
+            occurredAt = occurredAt,
             mealRecordId = mealRecordId,
             memo = request.memo,
         )
@@ -82,14 +84,15 @@ class SymptomService(
         val symptom = resolveSymptom(symptomId, userId)
         val previousStreakTarget = symptom.symptomState.isStreakTarget()
         val previousDate = symptom.occurredAt.toLocalDate()
-        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId) }
+        val occurredAt = symptomConverter.parseOccurredAt(request.occurredAt)
+        val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId, occurredAt) }
 
         symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
 
         symptom.update(
             symptomState = request.symptomState ?: throw GeneralException(CommonErrorCode.INVALID_REQUEST),
             symptomTypes = request.symptomTypes,
-            occurredAt = symptomConverter.parseOccurredAt(request.occurredAt),
+            occurredAt = occurredAt,
             mealRecordId = mealRecordId,
             memo = request.memo,
         )
@@ -126,12 +129,13 @@ class SymptomService(
         }
     }
 
-    // 연결된 식사 기록 ID를 UUID 문자열로 받아서 내부 Long ID로 변환
-    private fun resolveMealRecordId(rawMealRecordId: String, userId: Long): Long {
+    // 끼니 UUID를 Long ID로 변환, 식사 시각 이전 증상 거부
+    private fun resolveMealRecordId(rawMealRecordId: String, userId: Long, occurredAt: LocalDateTime): Long {
         val mealRecordExternalId = parseUuid(rawMealRecordId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         val mealRecord = mealRecordRepository.findByExternalIdAndUser_Id(mealRecordExternalId, userId)
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
+        if (occurredAt.isBefore(mealRecord.eatenAt)) throw GeneralException(SymptomErrorCode.SYMPTOM_BEFORE_MEAL)
         return mealRecord.id ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
     }
 
