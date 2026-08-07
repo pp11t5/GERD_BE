@@ -64,4 +64,9 @@ interface UserFoodDictionaryRepository : JpaRepository<UserFoodDictionary, Long>
     @Modifying
     @Query("DELETE FROM UserFoodDictionary d WHERE d.user.id = :userId AND d.food.id IN :foodIds AND d.dictionaryType = :type")
     fun deleteByUserIdAndFoodIdsAndType(userId: Long, foodIds: List<Long>, type: DictionaryType)
+
+    // RECOMMEND 재판정 시 기존 주의/위험 등재 제거
+    @Modifying
+    @Query("DELETE FROM UserFoodDictionary d WHERE d.user.id = :userId AND d.food.id = :foodId AND d.dictionaryType IN :types")
+    fun deleteByUserIdAndFoodIdAndTypeIn(userId: Long, foodId: Long, types: List<DictionaryType>)
 }
