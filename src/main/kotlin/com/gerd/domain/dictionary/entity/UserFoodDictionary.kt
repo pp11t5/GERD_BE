@@ -48,8 +48,8 @@ class UserFoodDictionary(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "dictionary_type", nullable = false, length = 10)
-    final var dictionaryType: DictionaryType = dictionaryType
-        private set
+    var dictionaryType: DictionaryType = dictionaryType
+        protected set
 
     fun changeType(type: DictionaryType) {
         dictionaryType = type
