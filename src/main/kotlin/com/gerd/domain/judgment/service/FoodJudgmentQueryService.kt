@@ -34,14 +34,14 @@ class FoodJudgmentQueryService(
     private val judgmentPromptBuilder: JudgmentPromptBuilder,
     private val judgmentGeminiAdapter: JudgmentGeminiAdapter,
     private val safetyOverrideRule: SafetyOverrideRule,
-    private val judgmentResponseAssembler: JudgmentResponseAssembler,
     private val foodCategoryAssigner: FoodCategoryAssigner,
 ) {
 
+    // 신호등 판정 응답과 캐시 히트 여부를 같이 반환
     fun getJudgment(foodExternalId: String, userId: Long): Pair<JudgmentResponseDTO, Boolean> {
         val context = judgmentContextReader.load(foodExternalId, userId)
 
-        // ⓪ 출처 게이트: 유저 입력 음식은 검수 라벨·grounding 없음(ADR-0003) → DB 태그 없이도 판정 가능한
+        // 출처 게이트: 유저 입력 음식은 검수 라벨  → DB 태그 없이도 판정 가능한
         // 텍스트 파이프라인(이름 기반 LLM 추출 + 캐싱)에 위임, 텍스트 최초 등록 시와 동일 방식이라 일관성도 유지
         if (context.food.source == FoodSource.USER) {
             return getJudgmentForUserFood(context, userId)
@@ -50,21 +50,41 @@ class FoodJudgmentQueryService(
         val snapshot = judgmentSnapshotFactory.create(context)
         val key = judgmentCacheKeyFactory.createKey(requireNotNull(context.food.id) { "영속 음식은 id를 가진다" }, snapshot)
 
-        // loader 실행 여부로 캐시 HIT를 판별한다 (실행됐다면 MISS)
+        return resolveJudgment(
+            context = context,
+            userId = userId,
+            key = key,
+            logSuffix = "",
+            judge = { judge(context, snapshot) },
+            assemble = { JudgmentResponseFactory.toResponse(it, context.stateRecords) },
+        )
+    }
+
+    // 캐시 조회 → 실패 시 폴백 → 카테고리 분류 응답 생성
+    private fun resolveJudgment(
+        context: JudgmentContext,
+        userId: Long,
+        key: String,
+        logSuffix: String,
+        judge: () -> CachedJudgment?,
+        assemble: (CachedJudgment) -> JudgmentResponseDTO,
+    ): Pair<JudgmentResponseDTO, Boolean> {
+        // loader 실행 여부로 캐시 HIT를 판별 (실행됐다면 MISS)
         var loaderRan = false
         val cached = judgmentCache.get(key) {
             loaderRan = true
-            log.info { "판정 캐시 MISS - LLM 호출: foodId=${context.food.id} userId=$userId" }
-            judge(context, snapshot)
+            log.info { "판정 캐시 MISS - LLM 호출$logSuffix: foodId=${context.food.id} userId=$userId" }
+            judge()
         } ?: run {
             log.warn { "판정 폴백(UNKNOWN) - LLM 실패: foodId=${context.food.id} userId=$userId" }
-            return judgmentResponseAssembler.assembleFallback(context) to false
+            return JudgmentResponseFactory.assembleFallback(context) to false
         }
 
-        if (!loaderRan) log.debug { "판정 캐시 HIT: foodId=${context.food.id} userId=$userId" }
-        return judgmentResponseAssembler.toResponse(cached, context.stateRecords) to !loaderRan
+        if (!loaderRan) log.debug { "판정 캐시 HIT$logSuffix: foodId=${context.food.id} userId=$userId" }
+        return assemble(cached) to !loaderRan
     }
 
+    // 텍스트로 음식 판정
     fun getJudgmentByText(foodText: String, userId: Long): Pair<TextJudgmentResponseDTO, Boolean> {
         val userContext = judgmentContextReader.loadUserContext(userId)
         val snapshot = judgmentSnapshotFactory.createForText(foodText, userContext)
@@ -74,9 +94,9 @@ class FoodJudgmentQueryService(
         val cached = judgmentCache.get(key) {
             loaderRan = true
             judgeText(foodText, snapshot, userContext)
-        } ?: return judgmentResponseAssembler.assembleTextFallback(foodText) to false
+        } ?: return JudgmentResponseFactory.assembleTextFallback(foodText) to false
 
-        return judgmentResponseAssembler.toTextResponse(cached) to !loaderRan
+        return JudgmentResponseFactory.toTextResponse(cached) to !loaderRan
     }
 
     // 유저 음식(ID) 재판정 — 텍스트 판정과 동일한 캐시 키(이름+유저 컨텍스트)로 최초 등록 때의 결과 재사용
@@ -85,18 +105,14 @@ class FoodJudgmentQueryService(
         val snapshot = judgmentSnapshotFactory.createForText(context.food.name, userContext)
         val key = judgmentCacheKeyFactory.createTextKey(snapshot)
 
-        var loaderRan = false
-        val cached = judgmentCache.get(key) {
-            loaderRan = true
-            log.info { "판정 캐시 MISS - LLM 호출(유저 음식): foodId=${context.food.id} userId=$userId" }
-            judgeUserFood(context, snapshot, userContext)
-        } ?: run {
-            log.warn { "판정 폴백(UNKNOWN) - LLM 실패: foodId=${context.food.id} userId=$userId" }
-            return judgmentResponseAssembler.assembleFallback(context) to false
-        }
-
-        if (!loaderRan) log.debug { "판정 캐시 HIT(유저 음식): foodId=${context.food.id} userId=$userId" }
-        return judgmentResponseAssembler.toResponseFromTextCache(cached, context) to !loaderRan
+        return resolveJudgment(
+            context = context,
+            userId = userId,
+            key = key,
+            logSuffix = "(유저 음식)",
+            judge = { judgeUserFood(context, snapshot, userContext) },
+            assemble = { JudgmentResponseFactory.toResponseFromTextCache(it, context) },
+        )
     }
 
     private fun callLlm(snapshot: LlmInputSnapshotDTO): LlmJudgmentDTO? =
@@ -120,7 +136,7 @@ class FoodJudgmentQueryService(
             userAllergens = userContext.userAllergens,
         )
 
-        return judgmentResponseAssembler.assembleTextCacheable(foodText, llmJudgment, override)
+        return JudgmentResponseFactory.assembleTextCacheable(foodText, llmJudgment, override)
     }
 
     // 유저 음식(ID) 재판정 전용 — judgeText와 동일한 LLM 판정에, 미분류 음식이면 카테고리 등재까지 함께 수행
@@ -136,7 +152,7 @@ class FoodJudgmentQueryService(
             userAllergens = userContext.userAllergens,
         )
 
-        return judgmentResponseAssembler.assembleTextCacheable(context.food.name, llmJudgment, override)
+        return JudgmentResponseFactory.assembleTextCacheable(context.food.name, llmJudgment, override)
     }
 
     // LLM, 안전 오버라이드, 조립하며 실패 시 캐시에 남기지 않음
@@ -165,7 +181,7 @@ class FoodJudgmentQueryService(
             emptyList()
         }
 
-        return judgmentResponseAssembler.assembleCacheable(context, llmJudgment, override, substitutes)
+        return JudgmentResponseFactory.assembleCacheable(context, llmJudgment, override, substitutes)
     }
 
     // LLM이 추출한 code를 안전 룰 입력 TagDTO로 변환 — 허용 code만 통과시키고 중복 제거

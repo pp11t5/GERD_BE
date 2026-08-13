@@ -119,6 +119,19 @@ class JudgmentPromptBuilder(
               medical assertions of certainty ("역류를 일으킵니다")
             - Do not state uncertain claims as fact.
 
+            [EVIDENCE RULES]
+            - Purpose: every sentence you write must be something the app could point to a real source for. Do not
+              generate claims that no citation could support.
+            - Forbidden: describing physiological mechanisms (e.g. lower esophageal sphincter pressure, gastric acid
+              secretion, peristalsis), citing specific numbers/percentages/statistics, or asserting definitive
+              causal verbs such as "위험해요" (is dangerous) / "악화돼요" (worsens) / "유발해요" (causes) as fact.
+              Example of a forbidden claim: "카페인이 위산 분비를 촉진해 역류를 악화시켜요" — clinical literature
+              explicitly found little to no effect on LES pressure from coffee/caffeine/citrus/spicy food, so do
+              not assert a mechanism the evidence does not support.
+            - Allowed: referring to the predefined trigger labels by name, summarizing the user's own symptom
+              history/records (history/similarFoodRecords), and giving practical advice about amount, pace, or
+              timing of eating.
+
             [REFERRING TO THE USER]
             - Never invent or guess the user's name or nickname.
             - Phrase sentences without a subject, e.g. "등록하신 트리거에 해당해요".

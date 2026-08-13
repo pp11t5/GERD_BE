@@ -11,7 +11,7 @@ data class JudgmentResponseDTO(
     @field:Schema(description = "음식 이름", example = "아메리카노")
     val foodName: String,
 
-    // 데이터상 다중 분류가 가능하지만 화면 노출은 대표 분류 1개 — code만 내리고 표시명은 클라이언트가 매핑(D6). 분류 없으면 null
+    // 데이터상 다중 분류가 가능하지만 화면 노출은 대표 분류 1개 분류 없으면 null
     @field:Schema(description = "대표 음식 분류 code", example = "beverage", nullable = true)
     val category: String?,
 
@@ -29,6 +29,12 @@ data class JudgmentResponseDTO(
 
     @field:Schema(description = "안심되는 대체 식단 — CAUTION/RISK일 때만, 아니면 빈 배열")
     val substitutes: List<SubstituteDTO>,
+
+    @field:Schema(description = "면책 고지")
+    val disclaimer: String = DEFAULT_DISCLAIMER,
+
+    @field:Schema(description = "판정에 사용된 근거 자료")
+    val references: List<ReferenceDTO> = DEFAULT_REFERENCES,
 ) {
 
     data class JudgmentItemDTO(
@@ -65,4 +71,24 @@ data class JudgmentResponseDTO(
         @field:Schema(description = "대체 음식 이름", example = "디카페인 아메리카노")
         val name: String,
     )
+
+    data class ReferenceDTO(
+        @field:Schema(description = "출처 표기명", example = "미국소화기학회(ACG) 위식도역류질환 진료지침 2022")
+        val label: String,
+
+        @field:Schema(description = "출처 링크(PubMed 무료 초록 — ACG 원문은 페이월)", example = "https://pubmed.ncbi.nlm.nih.gov/34807007/")
+        val url: String,
+    )
+
+    companion object {
+        // TODO: 최종 면책 고지 문구는 제품·법무 확정 필요 — 지금은 placeholder
+        const val DEFAULT_DISCLAIMER = "이 정보는 의학적 진단·치료를 대신하지 않아요. 증상이 계속되면 전문의와 상담해 주세요."
+
+        val DEFAULT_REFERENCES = listOf(
+            ReferenceDTO(
+                label = "미국소화기학회(ACG) 위식도역류질환 진료지침 2022",
+                url = "https://pubmed.ncbi.nlm.nih.gov/34807007/",
+            ),
+        )
+    }
 }
