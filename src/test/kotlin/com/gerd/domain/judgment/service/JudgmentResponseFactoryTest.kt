@@ -13,9 +13,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
-class JudgmentResponseAssemblerTest {
+class JudgmentResponseFactoryTest {
 
-    private val assembler = JudgmentResponseAssembler()
+    private val assembler = JudgmentResponseFactory
 
     private val context = JudgmentContext(
         food = FoodFixture.food(name = "아메리카노"),
@@ -80,7 +80,7 @@ class JudgmentResponseAssemblerTest {
                 substitutes = emptyList(),
             )
 
-            assertThat(cached.personalTitle).isEqualTo("오늘은 다른 메뉴가 더 편할 거예요")
+            assertThat(cached.personalTitle).isEqualTo("오늘은 피하시는 게 편할 수 있어요")
         }
 
         @Test

@@ -61,7 +61,6 @@ class FoodJudgmentQueryServiceTest {
             judgmentPromptBuilder = JudgmentPromptBuilder(JsonMapper.builder().findAndAddModules().build(), foodCategoryReader),
             judgmentGeminiAdapter = judgmentGeminiAdapter,
             safetyOverrideRule = SafetyOverrideRule(),
-            judgmentResponseAssembler = JudgmentResponseAssembler(),
             foodCategoryAssigner = foodCategoryAssigner,
         )
     }

@@ -11,16 +11,13 @@ import com.gerd.domain.judgment.dto.JudgmentResponseDTO.SubstituteDTO
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.domain.judgment.service.SafetyOverrideRule.OverrideResult
-import org.springframework.stereotype.Component
 
-// 판정 응답 조립 — LLM 제목 채택/폴백 판단과 고정 폴백 카피를 담당
 /**
- *
+ * 판정 응답 조립 — LLM 제목 채택/폴백 판단과 고정 폴백 카피를 담당
  */
-@Component
-class JudgmentResponseAssembler {
+object JudgmentResponseFactory {
 
-    // ② 오버라이드까지 끝난 최종 등급으로 캐시 value를 조립한다
+    // 오버라이드까지 끝난 최종 등급으로 캐시 value 조립
     fun assembleCacheable(
         context: JudgmentContext,
         llmJudgment: LlmJudgmentDTO,
@@ -28,18 +25,6 @@ class JudgmentResponseAssembler {
         substitutes: List<SubstituteDTO>,
     ): CachedJudgment {
         val baseItems = llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
-        // 알레르겐 매치는 LLM이 언급을 놓쳐도 슬롯 [1](알레르기·복용약)을 결정적 카피로 보장한다
-        val items = if (override.allergenMatches.isNotEmpty()) {
-            val labels = override.allergenMatches.joinToString(", ") { it.label }
-            baseItems.toMutableList().apply {
-                this[ALLERGY_SLOT] = JudgmentItemDTO(
-                    emphasis = "알레르기 성분이 들어 있어요",
-                    body = "등록하신 알레르기($labels)에 해당하는 성분이 포함돼 있어요. 권하지 않아요.",
-                )
-            }
-        } else {
-            baseItems
-        }
 
         return CachedJudgment(
             foodExternalId = context.foodExternalId,
@@ -47,12 +32,24 @@ class JudgmentResponseAssembler {
             category = context.category,
             grade = override.grade,
             personalTitle = resolveTitle(llmJudgment, override),
-            items = items,
+            items = applyAllergyOverride(baseItems, override),
             substitutes = substitutes,
         )
     }
 
-    // LLM 제목은 LLM이 판정한 등급의 톤으로 쓰였다 — 오버라이드로 등급이 바뀌면 톤이 어긋나므로 고정 제목으로 폴백.
+    // 알레르겐 매치는 LLM이 언급을 놓쳐도 슬롯 [1](알레르기·복용약)을 결정적 카피로 보장 — 등급을 RISK로 무조건 덮어쓰는 것과 짝을 이루는 문구 보장
+    private fun applyAllergyOverride(baseItems: List<JudgmentItemDTO>, override: OverrideResult): List<JudgmentItemDTO> {
+        if (override.allergenMatches.isEmpty()) return baseItems
+        val labels = override.allergenMatches.joinToString(", ") { it.label }
+        return baseItems.toMutableList().apply {
+            this[ALLERGY_SLOT] = JudgmentItemDTO(
+                emphasis = "알레르기 성분이 들어 있어요",
+                body = "등록하신 알레르기($labels)에 해당하는 성분이 포함돼 있어요. 권하지 않아요.",
+            )
+        }
+    }
+
+    // LLM 제목은 LLM이 판정한 등급의 톤으로 쓰임 — 오버라이드로 등급이 바뀌면 톤이 어긋나므로 고정 제목으로 폴백
     private fun resolveTitle(llmJudgment: LlmJudgmentDTO, override: OverrideResult): String =
         llmJudgment.personalTitle
             ?.takeIf { it.isNotBlank() && override.grade == llmJudgment.grade }
@@ -71,12 +68,13 @@ class JudgmentResponseAssembler {
             substitutes = cached.substitutes,
         )
 
-    // 유저 음식(ID)이 텍스트 판정 파이프라인 캐시를 재사용할 때 조립 — 캐시는 이름 기준 공용이라 foodExternalId·category는 컨텍스트에서 보충
+    // 유저 음식이 텍스트 판정 파이프라인 캐시 재사용할 경우에 사용
+    // category는 이 요청에서 최초 분류돼 아직 context에 반영되지 않은 경우를 위해 cached.categoryCode로 보완함
     fun toResponseFromTextCache(cached: CachedJudgment, context: JudgmentContext): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = context.foodExternalId,
             foodName = cached.foodName,
-            category = context.category,
+            category = context.category ?: cached.categoryCode,
             grade = cached.grade,
             personalTitle = cached.personalTitle,
             items = cached.items,
@@ -84,7 +82,7 @@ class JudgmentResponseAssembler {
             substitutes = emptyList(),
         )
 
-    // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 UNKNOWN(판단 불가)으로 안내, 캐시하지 않는다
+    // ⓪  게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 UNKNOWN(판단 불가)으로 안내, 캐시하지 않음
     fun assembleFallback(context: JudgmentContext): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = context.foodExternalId,
@@ -111,7 +109,7 @@ class JudgmentResponseAssembler {
             category = null,
             grade = override.grade,
             personalTitle = resolveTitle(llmJudgment, override),
-            items = baseItems,
+            items = applyAllergyOverride(baseItems, override),
             substitutes = emptyList(),
             categoryCode = llmJudgment.categoryCode,
         )
@@ -139,30 +137,28 @@ class JudgmentResponseAssembler {
         )
 
     // 고정 응답 모음
-    companion object {
-        // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약
-        private const val ALLERGY_SLOT = 1
+    // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약
+    private const val ALLERGY_SLOT = 1
 
-        // LLM 제목을 쓸 수 없는 경우(누락·공백·등급 강등)의 등급별 고정 제목
-        private val FALLBACK_TITLES = mapOf(
-            JudgmentGrade.RECOMMEND to "좋은 선택이에요!",
-            JudgmentGrade.CAUTION to "속이 편안할 수 있도록 천천히 드세요!",
-            JudgmentGrade.RISK to "오늘은 다른 메뉴가 더 편할 거예요",
-        )
+    // LLM 제목을 쓸 수 없는 경우(누락·공백·등급 강등)의 등급별 고정 제목
+    private val FALLBACK_TITLES = mapOf(
+        JudgmentGrade.RECOMMEND to "좋은 선택이에요!",
+        JudgmentGrade.CAUTION to "속이 편안할 수 있도록 천천히 드세요!",
+        JudgmentGrade.RISK to "오늘은 피하시는 게 편할 수 있어요",
+    )
 
-        // 분석 근거가 없는 폴백(⓪게이트·LLM 실패)의 고정 제목 — 정보 부족을 솔직히 안내
-        private const val FALLBACK_TITLE = "이 음식은 정보가 충분하지 않아요"
+    // 분석 근거가 없는 폴백(⓪게이트·LLM 실패)의 고정 제목 — 정보 부족을 솔직히 안내
+    private const val FALLBACK_TITLE = "이 음식은 정보가 충분하지 않아요"
 
-        // 분석 근거가 없는 폴백의 items는 LLM 생성 없이 고정 카피 — 두 발생 경로(⓪게이트·LLM 실패) 공용 (spec §4)
-        private val FALLBACK_ITEMS = listOf(
-            JudgmentItemDTO(
-                emphasis = "정보가 부족해요",
-                body = "이 음식은 아직 분석할 수 있는 정보가 충분하지 않아요. 처음이라면 소량부터 천천히 드셔보는 게 좋아요.",
-            ),
-            JudgmentItemDTO(
-                emphasis = "알레르기 확인이 어려워요",
-                body = "등록하신 알레르기 성분이 포함됐는지 확인할 수 없어요. 성분표를 한 번 확인해 보세요.",
-            ),
-        )
-    }
+    // 분석 근거가 없는 폴백의 items는 LLM 생성 없이 고정 카피 — 두 발생 경로(⓪게이트·LLM 실패) 공용 (spec §4)
+    private val FALLBACK_ITEMS = listOf(
+        JudgmentItemDTO(
+            emphasis = "정보가 부족해요",
+            body = "이 음식은 아직 분석할 수 있는 정보가 충분하지 않아요. 처음이라면 소량부터 천천히 드셔보는 게 좋아요.",
+        ),
+        JudgmentItemDTO(
+            emphasis = "알레르기 확인이 어려워요",
+            body = "등록하신 알레르기 성분이 포함됐는지 확인할 수 없어요. 성분표를 한 번 확인해 보세요.",
+        ),
+    )
 }
