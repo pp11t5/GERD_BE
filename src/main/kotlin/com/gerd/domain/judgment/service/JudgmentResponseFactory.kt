@@ -143,7 +143,7 @@ object JudgmentResponseFactory {
     private val FALLBACK_TITLES = mapOf(
         JudgmentGrade.RECOMMEND to "좋은 선택이에요!",
         JudgmentGrade.CAUTION to "속이 편안할 수 있도록 천천히 드세요!",
-        JudgmentGrade.RISK to "오늘은 다른 메뉴가 더 편할 거예요",
+        JudgmentGrade.RISK to "오늘은 피하시는 게 편할 수 있어요",
     )
 
     // 분석 근거가 없는 폴백(⓪게이트·LLM 실패)의 고정 제목 — 정보 부족을 솔직히 안내

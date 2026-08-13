@@ -95,11 +95,19 @@ class JudgmentPromptBuilder(
             - RECOMMEND: reassuring, positive tone. CAUTION: guidance on moderation. RISK: gentle suggestion to avoid.
             - UNKNOWN: an honest, plain tone stating the food could not be identified.
             - Do not include the user's name or nickname.
-            - Tone examples: "좋은 선택이에요!", "속이 편안할 수 있도록 천천히 드세요!", "오늘은 다른 메뉴가 더 편할 거예요"
+            - Tone examples: "좋은 선택이에요!", "속이 편안할 수 있도록 천천히 드세요!", "오늘은 피하시는 게 편할 수 있어요"
 
             [items RULES — exactly 2 items]
-            - items[0]: analysis of the food's trigger ingredients from the angle of the user's triggers, symptoms,
-              and history. If history has records, reflect the numbers as evidence, e.g. "최근 비슷한 음식을 먹고 편안/불편했어요".
+            - items[0].emphasis: state ONLY the matched trigger ingredient's presence as a plain fact — no judgment
+              verb, no severity word. Use the trigger's Korean label. e.g. "카페인이 들어 있어요", "매운 음식이 들어 있어요".
+              Never phrase it as "…위험해요" / "…주의가 필요해요" / "…들어있어 불편할 수 있어요" — the verdict belongs to
+              grade/personalTitle, not to this line.
+            - items[0].body: cite the evidence behind the grade, picking exactly one of these three states —
+              · history.discomfortCount > 0: cite the exact number, e.g. "내 기록에서 총 {discomfortCount}번 불편했어요"
+              · history.discomfortCount == 0 but the trigger matches one of user.triggerFoods (a registered trigger
+                with no personal history yet): a general caveat, e.g. "사람마다 반응이 달라요"
+              · no personal history and no registered-trigger match (a general/default match): a brief neutral
+                explanation of the trigger, without claiming personal evidence
             - items[1]: by default, reflect the user's RECENT SYMPTOM PATTERN (from history/symptoms) as it relates
               to this food or similar foods — a distinct angle from items[0], focused on how the user has been
               doing lately rather than repeating items[0]'s evidence.

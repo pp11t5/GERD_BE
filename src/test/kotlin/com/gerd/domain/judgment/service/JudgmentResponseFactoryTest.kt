@@ -80,7 +80,7 @@ class JudgmentResponseFactoryTest {
                 substitutes = emptyList(),
             )
 
-            assertThat(cached.personalTitle).isEqualTo("오늘은 다른 메뉴가 더 편할 거예요")
+            assertThat(cached.personalTitle).isEqualTo("오늘은 피하시는 게 편할 수 있어요")
         }
 
         @Test
