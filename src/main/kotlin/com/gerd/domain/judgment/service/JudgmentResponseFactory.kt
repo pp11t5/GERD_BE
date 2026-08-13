@@ -17,7 +17,7 @@ import com.gerd.domain.judgment.service.SafetyOverrideRule.OverrideResult
  */
 object JudgmentResponseFactory {
 
-    // ② 오버라이드까지 끝난 최종 등급으로 캐시 value 조립
+    // 오버라이드까지 끝난 최종 등급으로 캐시 value 조립
     fun assembleCacheable(
         context: JudgmentContext,
         llmJudgment: LlmJudgmentDTO,
@@ -25,18 +25,6 @@ object JudgmentResponseFactory {
         substitutes: List<SubstituteDTO>,
     ): CachedJudgment {
         val baseItems = llmJudgment.items.map { JudgmentItemDTO(it.emphasis, it.body) }
-        // 알레르겐 매치는 LLM이 언급을 놓쳐도 슬롯 [1](알레르기·복용약)을 결정적 카피로 보장
-        val items = if (override.allergenMatches.isNotEmpty()) {
-            val labels = override.allergenMatches.joinToString(", ") { it.label }
-            baseItems.toMutableList().apply {
-                this[ALLERGY_SLOT] = JudgmentItemDTO(
-                    emphasis = "알레르기 성분이 들어 있어요",
-                    body = "등록하신 알레르기($labels)에 해당하는 성분이 포함돼 있어요. 권하지 않아요.",
-                )
-            }
-        } else {
-            baseItems
-        }
 
         return CachedJudgment(
             foodExternalId = context.foodExternalId,
@@ -44,9 +32,21 @@ object JudgmentResponseFactory {
             category = context.category,
             grade = override.grade,
             personalTitle = resolveTitle(llmJudgment, override),
-            items = items,
+            items = applyAllergyOverride(baseItems, override),
             substitutes = substitutes,
         )
+    }
+
+    // 알레르겐 매치는 LLM이 언급을 놓쳐도 슬롯 [1](알레르기·복용약)을 결정적 카피로 보장 — 등급을 RISK로 무조건 덮어쓰는 것과 짝을 이루는 문구 보장
+    private fun applyAllergyOverride(baseItems: List<JudgmentItemDTO>, override: OverrideResult): List<JudgmentItemDTO> {
+        if (override.allergenMatches.isEmpty()) return baseItems
+        val labels = override.allergenMatches.joinToString(", ") { it.label }
+        return baseItems.toMutableList().apply {
+            this[ALLERGY_SLOT] = JudgmentItemDTO(
+                emphasis = "알레르기 성분이 들어 있어요",
+                body = "등록하신 알레르기($labels)에 해당하는 성분이 포함돼 있어요. 권하지 않아요.",
+            )
+        }
     }
 
     // LLM 제목은 LLM이 판정한 등급의 톤으로 쓰임 — 오버라이드로 등급이 바뀌면 톤이 어긋나므로 고정 제목으로 폴백
@@ -68,12 +68,13 @@ object JudgmentResponseFactory {
             substitutes = cached.substitutes,
         )
 
-    // 유저 음식(ID)이 텍스트 판정 파이프라인 캐시를 재사용할 때 조립 — 캐시는 이름 기준 공용이라 foodExternalId·category는 컨텍스트에서 보충
+    // 유저 음식이 텍스트 판정 파이프라인 캐시 재사용할 경우에 사용
+    // category는 이 요청에서 최초 분류돼 아직 context에 반영되지 않은 경우를 위해 cached.categoryCode로 보완함
     fun toResponseFromTextCache(cached: CachedJudgment, context: JudgmentContext): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = context.foodExternalId,
             foodName = cached.foodName,
-            category = context.category,
+            category = context.category ?: cached.categoryCode,
             grade = cached.grade,
             personalTitle = cached.personalTitle,
             items = cached.items,
@@ -81,7 +82,7 @@ object JudgmentResponseFactory {
             substitutes = emptyList(),
         )
 
-    // ⓪ 출처 게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 UNKNOWN(판단 불가)으로 안내, 캐시하지 않음
+    // ⓪  게이트(유저 입력 음식)와 LLM 호출 실패가 공유하는 폴백 — 분석 근거가 없어 UNKNOWN(판단 불가)으로 안내, 캐시하지 않음
     fun assembleFallback(context: JudgmentContext): JudgmentResponseDTO =
         JudgmentResponseDTO(
             foodExternalId = context.foodExternalId,
@@ -108,7 +109,7 @@ object JudgmentResponseFactory {
             category = null,
             grade = override.grade,
             personalTitle = resolveTitle(llmJudgment, override),
-            items = baseItems,
+            items = applyAllergyOverride(baseItems, override),
             substitutes = emptyList(),
             categoryCode = llmJudgment.categoryCode,
         )
