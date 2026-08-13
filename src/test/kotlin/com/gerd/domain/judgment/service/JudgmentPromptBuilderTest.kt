@@ -56,4 +56,38 @@ class JudgmentPromptBuilderTest {
 
         org.mockito.kotlin.verify(foodCategoryReader, org.mockito.kotlin.times(1)).getAll()
     }
+
+    @Test
+    fun `EVIDENCE RULES에 생리 기전 서술·단정적 인과 표현 금지 규칙을 포함한다`() {
+        whenever(foodCategoryReader.getAll()).thenReturn(emptyList())
+
+        val instruction = builder.buildSystemInstruction()
+
+        assertThat(instruction).contains("[EVIDENCE RULES]")
+        assertThat(instruction).contains("lower esophageal sphincter pressure")
+        assertThat(instruction).contains("위험해요")
+        assertThat(instruction).contains("악화돼요")
+        assertThat(instruction).contains("유발해요")
+    }
+
+    @Test
+    fun `EVIDENCE RULES에 허용되는 근거 범주(트리거 라벨·기록·실행 조언)를 포함한다`() {
+        whenever(foodCategoryReader.getAll()).thenReturn(emptyList())
+
+        val instruction = builder.buildSystemInstruction()
+
+        assertThat(instruction).contains("predefined trigger labels")
+        assertThat(instruction).contains("history/records (history/similarFoodRecords)")
+        assertThat(instruction).contains("amount, pace, or")
+    }
+
+    @Test
+    fun `items 근거 규칙에 개인 기록 횟수·등록 트리거·일반 매칭 3단계를 포함한다`() {
+        whenever(foodCategoryReader.getAll()).thenReturn(emptyList())
+
+        val instruction = builder.buildSystemInstruction()
+
+        assertThat(instruction).contains("discomfortCount > 0")
+        assertThat(instruction).contains("사람마다 반응이 달라요")
+    }
 }
