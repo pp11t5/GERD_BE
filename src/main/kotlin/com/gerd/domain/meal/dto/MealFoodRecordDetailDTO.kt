@@ -23,7 +23,7 @@ data class MealFoodRecordDetailDTO(
     @field:Schema(description = "연결된 상태 기록 (없으면 null)", nullable = true)
     val stateRecord: MealStateRecordDTO?,
 
-    // 분석은 기록 시점에 얼려 저장되지만(append-only) 면책·출처는 항상 최신값을 매 요청마다 붙인다
+    // 분석은 기록 시점에 얼려 저장되지만(append-only) 면책·출처는 항상 최신값을 매 요청마다 부착
     @field:Schema(description = "면책 고지")
     val disclaimer: String = JudgmentResponseDTO.DEFAULT_DISCLAIMER,
 
