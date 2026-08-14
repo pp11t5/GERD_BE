@@ -4,7 +4,9 @@ import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
+import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.meal.entity.MealRecord
+import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.UserNotificationSetting
@@ -27,6 +29,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
@@ -38,6 +41,8 @@ class PostMealPendingSenderTest {
     @Mock private lateinit var userFcmTokenRepository: UserFcmTokenRepository
     @Mock private lateinit var fcmPushSender: FcmPushSender
     @Mock private lateinit var mealRecordRepository: MealRecordRepository
+    @Mock private lateinit var mealFoodRepository: MealFoodRepository
+    @Mock private lateinit var foodRepository: FoodRepository
 
     @InjectMocks private lateinit var sender: PostMealPendingSender
 
@@ -120,6 +125,12 @@ class PostMealPendingSenderTest {
             whenever(userFcmTokenRepository.findById(userId)).thenReturn(Optional.of(token))
         }
 
+        private fun mockMealRecord(externalId: UUID = UUID.randomUUID()) = mock<MealRecord>().also {
+            whenever(it.id).thenReturn(10L)
+            whenever(it.eatenAt).thenReturn(LocalDateTime.now().minusHours(6))
+            whenever(it.externalId).thenReturn(externalId)
+        }
+
         @Test
         fun `즉시 단건이면 POST_MEAL로 발송하고 SENT 처리한다`() {
             val pending = mock<NotificationPending>().also {
@@ -127,6 +138,8 @@ class PostMealPendingSenderTest {
                 whenever(it.mealRecordId).thenReturn(10L)
             }
             stubReady(listOf(pending))
+            val mealRecord = mockMealRecord()
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
 
             sender.sendForUser(userId, pendingIds)
 
@@ -139,9 +152,7 @@ class PostMealPendingSenderTest {
         @Test
         fun `targetId는 끼니의 내부 PK가 아니라 externalId(UUID)로 내려간다`() {
             val externalId = UUID.randomUUID()
-            val mealRecord = mock<MealRecord>().also {
-                whenever(it.externalId).thenReturn(externalId)
-            }
+            val mealRecord = mockMealRecord(externalId)
             val pending = mock<NotificationPending>().also {
                 whenever(it.delayed).thenReturn(false)
                 whenever(it.mealRecordId).thenReturn(10L)
