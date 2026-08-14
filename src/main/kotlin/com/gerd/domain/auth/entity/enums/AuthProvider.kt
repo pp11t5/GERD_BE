@@ -4,4 +4,5 @@ enum class AuthProvider {
     LOCAL,
     KAKAO,
     APPLE,
+    GOOGLE,
 }

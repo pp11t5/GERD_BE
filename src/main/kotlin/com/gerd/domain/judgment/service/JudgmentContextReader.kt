@@ -102,6 +102,10 @@ class JudgmentContextReader(
         symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
     )
 
+    // 텍스트 판정은 LLM이 분류하기 전이라 category가 없다 — 음식명 완전일치로만 매칭한다
+    fun loadHistoryForText(userId: Long, foodName: String): LlmInputSnapshotDTO.HistorySnapshotDTO =
+        loadHistory(userId, foodName, category = null)
+
     // LLM 호출 이후 별도 짧은 트랜잭션으로 조회 — 캐시 loader 안의 커넥션 점유 시간을 최소화.
     // 후보의 트리거·알레르겐 코드를 함께 실어 서비스가 사용자별 안전 필터를 적용할 수 있게 한다
     fun loadSubstituteCandidates(foodId: Long): List<SubstituteCandidateDTO> {
