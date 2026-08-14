@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -135,6 +136,77 @@ class FoodJudgmentQueryServiceTest {
             whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(null)
 
             val (response, isCached) = service.getJudgment(foodExternalId, userId)
+
+            assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
+            assertThat(isCached).isFalse()
+        }
+    }
+
+    @Nested
+    inner class `텍스트 판정` {
+
+        @Test
+        fun `음식명으로 판정하고 근거 기록을 LLM 입력에 반영한다`() {
+            val userContext = com.gerd.domain.judgment.dto.UserContext(
+                userTriggers = emptyList(),
+                userAllergens = emptyList(),
+                medications = emptyList(),
+                symptomCodes = emptyList(),
+            )
+            whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(userContext)
+            whenever(judgmentContextReader.loadHistoryForText(userId, "아메리카노")).thenReturn(
+                com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO(discomfortCount = 2),
+            )
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+
+            val (response, isCached) = service.getJudgmentByText("아메리카노", userId)
+
+            assertThat(response.foodName).isEqualTo("아메리카노")
+            assertThat(response.grade).isEqualTo(JudgmentGrade.CAUTION)
+            assertThat(isCached).isFalse()
+
+            val userContentCaptor = argumentCaptor<String>()
+            verify(judgmentGeminiAdapter).generateJudgment(any(), userContentCaptor.capture(), any())
+            assertThat(userContentCaptor.firstValue).contains("\"discomfortCount\":2")
+        }
+
+        @Test
+        fun `동일 음식명 재조회는 LLM 없이 캐시로 응답한다`() {
+            whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(
+                com.gerd.domain.judgment.dto.UserContext(
+                    userTriggers = emptyList(),
+                    userAllergens = emptyList(),
+                    medications = emptyList(),
+                    symptomCodes = emptyList(),
+                ),
+            )
+            whenever(judgmentContextReader.loadHistoryForText(any(), any()))
+                .thenReturn(com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO())
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+
+            val (_, firstCached) = service.getJudgmentByText("아메리카노", userId)
+            val (_, secondCached) = service.getJudgmentByText("아메리카노", userId)
+
+            assertThat(firstCached).isFalse()
+            assertThat(secondCached).isTrue()
+            verify(judgmentGeminiAdapter, times(1)).generateJudgment(any(), any(), any())
+        }
+
+        @Test
+        fun `LLM 실패 시 UNKNOWN 폴백을 반환한다`() {
+            whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(
+                com.gerd.domain.judgment.dto.UserContext(
+                    userTriggers = emptyList(),
+                    userAllergens = emptyList(),
+                    medications = emptyList(),
+                    symptomCodes = emptyList(),
+                ),
+            )
+            whenever(judgmentContextReader.loadHistoryForText(any(), any()))
+                .thenReturn(com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO())
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(null)
+
+            val (response, isCached) = service.getJudgmentByText("아메리카노", userId)
 
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(isCached).isFalse()
