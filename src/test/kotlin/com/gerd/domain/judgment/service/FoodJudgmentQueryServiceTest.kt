@@ -104,6 +104,8 @@ class FoodJudgmentQueryServiceTest {
                     symptomCodes = emptyList(),
                 ),
             )
+            whenever(judgmentContextReader.loadHistoryForText(any(), any()))
+                .thenReturn(com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO())
             whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
 
             val (first, firstCached) = service.getJudgment(foodExternalId, userId)
@@ -128,6 +130,8 @@ class FoodJudgmentQueryServiceTest {
                     symptomCodes = emptyList(),
                 ),
             )
+            whenever(judgmentContextReader.loadHistoryForText(any(), any()))
+                .thenReturn(com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO())
             whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(null)
 
             val (response, isCached) = service.getJudgment(foodExternalId, userId)
@@ -210,6 +214,8 @@ class FoodJudgmentQueryServiceTest {
                     symptomCodes = emptyList(),
                 ),
             )
+            whenever(judgmentContextReader.loadHistoryForText(any(), any()))
+                .thenReturn(com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO())
             whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
                 .thenReturn(llmJudgment.copy(categoryCode = "soup_stew"))
 

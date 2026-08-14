@@ -103,7 +103,7 @@ class JudgmentPromptBuilder(
               Never phrase it as "…위험해요" / "…주의가 필요해요" / "…들어있어 불편할 수 있어요" — the verdict belongs to
               grade/personalTitle, not to this line.
             - items[0].body: cite the evidence behind the grade, picking exactly one of these three states —
-              · history.discomfortCount > 0: cite the exact number, e.g. "내 기록에서 총 {discomfortCount}번 불편했어요"
+              · history.discomfortCount > 0: cite the exact number with "최근" (recent), e.g. "최근 {discomfortCount}개의 기록에서 불편했어요"
               · history.discomfortCount == 0 but the trigger matches one of user.triggerFoods (a registered trigger
                 with no personal history yet): a general caveat, e.g. "사람마다 반응이 달라요"
               · no personal history and no registered-trigger match (a general/default match): a brief neutral

@@ -87,7 +87,8 @@ class FoodJudgmentQueryService(
     // 텍스트로 음식 판정
     fun getJudgmentByText(foodText: String, userId: Long): Pair<TextJudgmentResponseDTO, Boolean> {
         val userContext = judgmentContextReader.loadUserContext(userId)
-        val snapshot = judgmentSnapshotFactory.createForText(foodText, userContext)
+        val history = judgmentContextReader.loadHistoryForText(userId, foodText)
+        val snapshot = judgmentSnapshotFactory.createForText(foodText, userContext, history)
         val key = judgmentCacheKeyFactory.createTextKey(snapshot)
 
         var loaderRan = false
@@ -99,10 +100,11 @@ class FoodJudgmentQueryService(
         return JudgmentResponseFactory.toTextResponse(cached) to !loaderRan
     }
 
-    // 유저 음식(ID) 재판정 — 텍스트 판정과 동일한 캐시 키(이름+유저 컨텍스트)로 최초 등록 때의 결과 재사용
+    // 유저 음식(ID) 재판정 — 텍스트 판정과 동일한 캐시 키(이름+유저 컨텍스트+최근 증상 기록)로 최초 등록 때의 결과 재사용
     private fun getJudgmentForUserFood(context: JudgmentContext, userId: Long): Pair<JudgmentResponseDTO, Boolean> {
         val userContext = judgmentContextReader.loadUserContext(userId)
-        val snapshot = judgmentSnapshotFactory.createForText(context.food.name, userContext)
+        val history = judgmentContextReader.loadHistoryForText(userId, context.food.name)
+        val snapshot = judgmentSnapshotFactory.createForText(context.food.name, userContext, history)
         val key = judgmentCacheKeyFactory.createTextKey(snapshot)
 
         return resolveJudgment(
