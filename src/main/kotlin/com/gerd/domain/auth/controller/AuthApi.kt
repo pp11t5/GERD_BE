@@ -38,7 +38,7 @@ interface AuthApi {
         summary = "소셜 로그인",
         description = """
             소셜 SDK에서 발급받은 ID Token으로 로그인합니다.
-            - provider: kakao
+            - provider: kakao, google
             - 기존 가입자: 바로 토큰 발급
             - 신규 사용자: 자동 가입 후 토큰 발급
             - 이메일·닉네임 제공 동의가 필요합니다.
@@ -130,7 +130,7 @@ interface AuthApi {
         description = """
             탈퇴 유예기간(14일) 중인 계정을 복구합니다.
             - id_token: 로그인 시도 시 받은 idToken을 그대로 전달합니다.
-            - provider : 현재 `kakao` 고정, 확장성을 위해 path variable로 받습니다.
+            - provider: kakao, google
             - 복구 성공 시 토큰을 발급합니다.
         """,
     )
