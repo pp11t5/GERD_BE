@@ -20,7 +20,7 @@ abstract class AbstractOidcVerifier(
 
     protected abstract val jwksUrl: String
     protected abstract val iss: String
-    protected abstract val aud: String
+    protected abstract val validAudiences: Set<String>
 
     override fun verify(
         idToken: String,
@@ -79,7 +79,6 @@ abstract class AbstractOidcVerifier(
             val parserBuilder = Jwts.parserBuilder()
                 .setSigningKey(publicKey)
                 .requireIssuer(iss)
-                .requireAudience(aud)
 
             if (nonce != null) {
                 parserBuilder.require("nonce", nonce)
@@ -89,6 +88,11 @@ abstract class AbstractOidcVerifier(
                 .build()
                 .parseClaimsJws(idToken)
                 .body
+
+            if (claims.audience !in validAudiences) {
+                log.warn { "OIDC 토큰 audience 불일치: provider=$provider" }
+                throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+            }
 
             log.info { "OIDC 토큰 검증 성공: provider=$provider" }
 
@@ -102,6 +106,8 @@ abstract class AbstractOidcVerifier(
         } catch (e: JwtException) {
             log.warn(e) { "OIDC 토큰 검증 실패: provider=$provider" }
             throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+        } catch (e: GeneralException) {
+            throw e
         } catch (e: Exception) {
             log.warn(e) { "OIDC 토큰 검증 중 예상치 못한 오류: provider=$provider" }
             throw GeneralException(AuthErrorCode.INVALID_TOKEN)

@@ -18,5 +18,5 @@ class KakaoOidcVerifier(
     override val provider = AuthProvider.KAKAO
     override val jwksUrl get() = kakaoProperties.jwksUrl
     override val iss get() = kakaoProperties.iss
-    override val aud get() = kakaoProperties.nativeAppKey
+    override val validAudiences get() = setOf(kakaoProperties.nativeAppKey)
 }

@@ -65,6 +65,12 @@ apple:
   token-url: ${APPLE_TOKEN_URL:https://appleid.apple.com/auth/token}
   revoke-url: ${APPLE_REVOKE_URL:https://appleid.apple.com/auth/revoke}
 
+google:
+  iss: ${GOOGLE_ISS:https://accounts.google.com}
+  jwks-url: ${GOOGLE_JWKS_URL:https://www.googleapis.com/oauth2/v3/certs}
+  android-client-id: ${GOOGLE_ANDROID_CLIENT_ID:}
+  ios-client-id: ${GOOGLE_IOS_CLIENT_ID:}
+
 gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
