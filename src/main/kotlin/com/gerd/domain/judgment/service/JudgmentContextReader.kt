@@ -102,7 +102,6 @@ class JudgmentContextReader(
         symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
     )
 
-    // 텍스트 판정은 LLM이 분류하기 전이라 category가 없음 — 음식명 완전일치로만 매칭
     fun loadHistoryForText(userId: Long, foodName: String): LlmInputSnapshotDTO.HistorySnapshotDTO =
         loadHistory(userId, foodName, category = null)
 
