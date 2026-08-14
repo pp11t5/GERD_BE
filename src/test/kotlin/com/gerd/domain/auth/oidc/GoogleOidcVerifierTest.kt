@@ -81,7 +81,7 @@ class GoogleOidcVerifierTest {
 
         @Test
         fun `등록되지 않은 audience면 INVALID_TOKEN을 던진다`() {
-            val token = createIdToken("unregistered-client-id")
+            val token = createIdToken(audience = "unregistered-client-id")
 
             assertThatThrownBy { verifier.verify(token, nonce = null) }
                 .isInstanceOf(GeneralException::class.java)
@@ -90,11 +90,46 @@ class GoogleOidcVerifierTest {
         }
     }
 
-    private fun createIdToken(audience: String): String {
+    @Nested
+    inner class `레거시 issuer 허용` {
+
+        @Test
+        fun `https 스킴 issuer면 검증한다`() {
+            val token = createIdToken(issuer = "https://accounts.google.com")
+
+            val claims = verifier.verify(token, nonce = null)
+
+            assertThat(claims.sub).isEqualTo("google-user-id")
+        }
+
+        @Test
+        fun `스킴 없는 레거시 issuer도 검증한다`() {
+            val token = createIdToken(issuer = "accounts.google.com")
+
+            val claims = verifier.verify(token, nonce = null)
+
+            assertThat(claims.sub).isEqualTo("google-user-id")
+        }
+
+        @Test
+        fun `등록되지 않은 issuer면 INVALID_TOKEN을 던진다`() {
+            val token = createIdToken(issuer = "https://evil.example.com")
+
+            assertThatThrownBy { verifier.verify(token, nonce = null) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.INVALID_TOKEN)
+        }
+    }
+
+    private fun createIdToken(
+        audience: String = properties.androidClientId,
+        issuer: String = properties.iss,
+    ): String {
         val now = Instant.now()
         return Jwts.builder()
             .setHeaderParam("kid", "google-key-id")
-            .setIssuer(properties.iss)
+            .setIssuer(issuer)
             .setAudience(audience)
             .setSubject("google-user-id")
             .claim("email", "google@test.com")
