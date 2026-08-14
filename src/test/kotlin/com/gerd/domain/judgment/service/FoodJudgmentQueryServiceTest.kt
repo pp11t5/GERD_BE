@@ -211,6 +211,30 @@ class FoodJudgmentQueryServiceTest {
             assertThat(response.grade).isEqualTo(JudgmentGrade.UNKNOWN)
             assertThat(isCached).isFalse()
         }
+
+        @Test
+        fun `두 호출 사이 근거 기록이 바뀌면 캐시 미스로 LLM을 다시 호출한다`() {
+            whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(
+                com.gerd.domain.judgment.dto.UserContext(
+                    userTriggers = emptyList(),
+                    userAllergens = emptyList(),
+                    medications = emptyList(),
+                    symptomCodes = emptyList(),
+                ),
+            )
+            whenever(judgmentContextReader.loadHistoryForText(userId, "아메리카노")).thenReturn(
+                com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO(discomfortCount = 1),
+                com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.HistorySnapshotDTO(discomfortCount = 2),
+            )
+            whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)
+
+            val (_, firstCached) = service.getJudgmentByText("아메리카노", userId)
+            val (_, secondCached) = service.getJudgmentByText("아메리카노", userId)
+
+            assertThat(firstCached).isFalse()
+            assertThat(secondCached).isFalse()
+            verify(judgmentGeminiAdapter, times(2)).generateJudgment(any(), any(), any())
+        }
     }
 
     @Nested
