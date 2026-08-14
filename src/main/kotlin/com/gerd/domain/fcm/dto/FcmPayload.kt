@@ -10,6 +10,8 @@ data class FcmPayload(
 ) {
     fun toDataMap(): Map<String, String> = buildMap {
         put("type", type.code)
+        put("title", title)
+        put("body", body)
         targetId?.let { put("targetId", it) }
     }
 }

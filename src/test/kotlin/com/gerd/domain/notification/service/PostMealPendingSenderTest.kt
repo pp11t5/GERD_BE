@@ -120,6 +120,10 @@ class PostMealPendingSenderTest {
             whenever(userFcmTokenRepository.findById(userId)).thenReturn(Optional.of(token))
         }
 
+        private fun mockMealRecord(externalId: UUID = UUID.randomUUID()) = mock<MealRecord>().also {
+            whenever(it.externalId).thenReturn(externalId)
+        }
+
         @Test
         fun `즉시 단건이면 POST_MEAL로 발송하고 SENT 처리한다`() {
             val pending = mock<NotificationPending>().also {
@@ -127,6 +131,8 @@ class PostMealPendingSenderTest {
                 whenever(it.mealRecordId).thenReturn(10L)
             }
             stubReady(listOf(pending))
+            val mealRecord = mockMealRecord()
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
 
             sender.sendForUser(userId, pendingIds)
 
@@ -139,9 +145,7 @@ class PostMealPendingSenderTest {
         @Test
         fun `targetId는 끼니의 내부 PK가 아니라 externalId(UUID)로 내려간다`() {
             val externalId = UUID.randomUUID()
-            val mealRecord = mock<MealRecord>().also {
-                whenever(it.externalId).thenReturn(externalId)
-            }
+            val mealRecord = mockMealRecord(externalId)
             val pending = mock<NotificationPending>().also {
                 whenever(it.delayed).thenReturn(false)
                 whenever(it.mealRecordId).thenReturn(10L)
