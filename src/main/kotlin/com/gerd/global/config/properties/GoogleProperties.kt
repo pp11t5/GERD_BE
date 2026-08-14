@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component
 data class GoogleProperties(
     var iss: String = "https://accounts.google.com",
     var jwksUrl: String = "https://www.googleapis.com/oauth2/v3/certs",
+    var webClientId: String = "",
     var androidClientId: String = "",
     var iosClientId: String = "",
 )

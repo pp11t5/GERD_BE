@@ -32,6 +32,7 @@ class GoogleOidcVerifierTest {
     private val properties = GoogleProperties(
         iss = "https://accounts.google.com",
         jwksUrl = "https://www.googleapis.com/oauth2/v3/certs",
+        webClientId = "web-client-id",
         androidClientId = "android-client-id",
         iosClientId = "ios-client-id",
     )
@@ -59,6 +60,16 @@ class GoogleOidcVerifierTest {
 
     @Nested
     inner class `플랫폼별 audience 허용` {
+
+        @Test
+        fun `Web Client ID를 audience로 발급된 토큰을 검증한다`() {
+            val token = createIdToken(properties.webClientId)
+
+            val claims = verifier.verify(token, nonce = null)
+
+            assertThat(claims.sub).isEqualTo("google-user-id")
+            assertThat(claims.email).isEqualTo("google@test.com")
+        }
 
         @Test
         fun `Android Client ID를 audience로 발급된 토큰을 검증한다`() {

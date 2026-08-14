@@ -14,5 +14,9 @@ class GoogleOidcVerifier(
     override val jwksUrl get() = googleProperties.jwksUrl
 
     override val validIssuers get() = setOf(googleProperties.iss, googleProperties.iss.removePrefix("https://"))
-    override val validAudiences get() = setOf(googleProperties.androidClientId, googleProperties.iosClientId)
+    override val validAudiences get() = setOf(
+        googleProperties.webClientId,
+        googleProperties.androidClientId,
+        googleProperties.iosClientId,
+    )
 }
