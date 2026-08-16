@@ -1,5 +1,6 @@
 package com.gerd.domain.mypage.dto
 
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.OffsetTime
 
@@ -16,6 +17,10 @@ data class WeeklyReportResponseDTO(
     val mealCount: MealCount,
     @field:Schema(description = "증상 통계")
     val recordedSymptom: RecordedSymptom,
+    @field:Schema(description = "면책 고지")
+    val disclaimer: String = JudgmentResponseDTO.DEFAULT_DISCLAIMER,
+    @field:Schema(description = "판정 결과 화면에 함께 노출하는 일반 참고 자료 — 등급·트리거별로 달라지지 않는 공통 출처")
+    val references: List<JudgmentResponseDTO.ReferenceDTO> = JudgmentResponseDTO.DEFAULT_REFERENCES,
 ) {
     data class ComfortableState(
         @field:Schema(description = "현재 연속 기록 스트릭 일수", example = "3")

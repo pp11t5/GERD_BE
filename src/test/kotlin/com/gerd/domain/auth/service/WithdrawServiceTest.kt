@@ -98,6 +98,24 @@ class WithdrawServiceTest {
         }
 
         @Test
+        fun `Google 계정이면 별도 revoke 없이 물리 삭제한다`() {
+            val userId = 4L
+            val authAccount = AuthAccount(
+                userId = userId,
+                user = UserFixture.user(),
+                provider = AuthProvider.GOOGLE,
+                providerAccountId = "google-123",
+            )
+            whenever(authAccountRepository.findById(userId)).thenReturn(Optional.of(authAccount))
+
+            withdrawService.withdrawHardDelete(userId)
+
+            verify(kakaoApiClient, never()).unlink(org.mockito.kotlin.any())
+            verify(appleApiClient, never()).revoke(org.mockito.kotlin.any())
+            verify(userRepository).hardDelete(userId)
+        }
+
+        @Test
         fun `Apple revoke에 실패하면 물리 삭제하지 않아 다음 배치에서 재시도할 수 있다`() {
             val userId = 3L
             val authAccount = AuthAccount(

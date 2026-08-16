@@ -100,6 +100,9 @@ class WithdrawService(
                 // revoke 실패 시 토큰을 보존해 다음 배치에서 재시도
                 appleApiClient.revoke(providerTokenUtil.decrypt(encryptedRefreshToken))
             }
+
+            // ID Token 검증만 하는 로그인 방식이라 서버에 revoke 가능한 토큰이 없음
+            AuthProvider.GOOGLE -> Unit
         }
     }
 }

@@ -52,7 +52,6 @@ class DictionaryCommandService(
 
         dictionaryRepository.deleteByUserIdAndFoodIdsAndType(userId, toRemove, DictionaryType.SAFE)
     }
-
     /**
      * 판정 결과에 따른 도감 항목 생성·타입 변경
      * RECOMMEND 재판정 시 기존 주의/위험 등재 제거, UNKNOWN(판정 실패)은 기존 등재 유지

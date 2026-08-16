@@ -14,7 +14,11 @@ import org.springframework.stereotype.Component
 @Component
 class JudgmentSnapshotFactory {
 
-    fun createForText(foodText: String, userContext: UserContext): LlmInputSnapshotDTO =
+    fun createForText(
+        foodText: String,
+        userContext: UserContext,
+        history: LlmInputSnapshotDTO.HistorySnapshotDTO = LlmInputSnapshotDTO.HistorySnapshotDTO(),
+    ): LlmInputSnapshotDTO =
         LlmInputSnapshotDTO(
             food = LlmInputSnapshotDTO.FoodSnapshotDTO(
                 name = foodText,
@@ -29,6 +33,7 @@ class JudgmentSnapshotFactory {
                 allergies = userContext.userAllergens.sortedBy { it.code },
                 meds = userContext.medications.sorted(),
             ),
+            history = history,
         )
 
     fun create(context: JudgmentContext): LlmInputSnapshotDTO =

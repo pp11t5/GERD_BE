@@ -95,11 +95,19 @@ class JudgmentPromptBuilder(
             - RECOMMEND: reassuring, positive tone. CAUTION: guidance on moderation. RISK: gentle suggestion to avoid.
             - UNKNOWN: an honest, plain tone stating the food could not be identified.
             - Do not include the user's name or nickname.
-            - Tone examples: "좋은 선택이에요!", "속이 편안할 수 있도록 천천히 드세요!", "오늘은 다른 메뉴가 더 편할 거예요"
+            - Tone examples: "좋은 선택이에요!", "속이 편안할 수 있도록 천천히 드세요!", "오늘은 피하시는 게 편할 수 있어요"
 
             [items RULES — exactly 2 items]
-            - items[0]: analysis of the food's trigger ingredients from the angle of the user's triggers, symptoms,
-              and history. If history has records, reflect the numbers as evidence, e.g. "최근 비슷한 음식을 먹고 편안/불편했어요".
+            - items[0].emphasis: state ONLY the matched trigger ingredient's presence as a plain fact — no judgment
+              verb, no severity word. Use the trigger's Korean label. e.g. "카페인이 들어 있어요", "매운 음식이 들어 있어요".
+              Never phrase it as "…위험해요" / "…주의가 필요해요" / "…들어있어 불편할 수 있어요" — the verdict belongs to
+              grade/personalTitle, not to this line.
+            - items[0].body: cite the evidence behind the grade, picking exactly one of these three states —
+              · history.discomfortCount > 0: cite the exact number with "최근" (recent), e.g. "최근 {discomfortCount}개의 기록에서 불편했어요"
+              · history.discomfortCount == 0 but the trigger matches one of user.triggerFoods (a registered trigger
+                with no personal history yet): a general caveat, e.g. "사람마다 반응이 달라요"
+              · no personal history and no registered-trigger match (a general/default match): a brief neutral
+                explanation of the trigger, without claiming personal evidence
             - items[1]: by default, reflect the user's RECENT SYMPTOM PATTERN (from history/symptoms) as it relates
               to this food or similar foods — a distinct angle from items[0], focused on how the user has been
               doing lately rather than repeating items[0]'s evidence.
@@ -119,6 +127,19 @@ class JudgmentPromptBuilder(
               medical assertions of certainty ("역류를 일으킵니다")
             - Do not state uncertain claims as fact.
 
+            [EVIDENCE RULES]
+            - Purpose: every sentence you write must be something the app could point to a real source for. Do not
+              generate claims that no citation could support.
+            - Forbidden: describing physiological mechanisms (e.g. lower esophageal sphincter pressure, gastric acid
+              secretion, peristalsis), citing specific numbers/percentages/statistics, or asserting definitive
+              causal verbs such as "위험해요" (is dangerous) / "악화돼요" (worsens) / "유발해요" (causes) as fact.
+              Example of a forbidden claim: "카페인이 위산 분비를 촉진해 역류를 악화시켜요" — clinical literature
+              explicitly found little to no effect on LES pressure from coffee/caffeine/citrus/spicy food, so do
+              not assert a mechanism the evidence does not support.
+            - Allowed: referring to the predefined trigger labels by name, summarizing the user's own symptom
+              history/records (history/similarFoodRecords), and giving practical advice about amount, pace, or
+              timing of eating.
+
             [REFERRING TO THE USER]
             - Never invent or guess the user's name or nickname.
             - Phrase sentences without a subject, e.g. "등록하신 트리거에 해당해요".
@@ -130,6 +151,10 @@ class JudgmentPromptBuilder(
               · Allowed allergenTags: ${AllergenCode.entries.joinToString { it.code }}
             - Only include ingredients generally known to be present based on the food name/attributes. If evidence is
               uncertain, leave it out and keep the array empty.
+            - allergenTags need a HIGHER confidence bar than triggerTags: a single allergen match forces the grade to
+              RISK unconditionally on the server, regardless of anything else. Only tag an allergen when the food's
+              name/attributes make its presence near-certain (e.g. "milk" for "우유라떼"). Do not tag an allergen from
+              loose association, a food category's typical recipe, or a "some versions might contain this" guess.
             - These values feed the server's safety override — do not fill them by guessing.
             - If food.triggerTags / food.allergenTags are already provided in the input (a vetted food), reflect those
               values as-is.

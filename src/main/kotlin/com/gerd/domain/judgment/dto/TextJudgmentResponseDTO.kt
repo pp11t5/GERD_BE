@@ -27,6 +27,12 @@ data class TextJudgmentResponseDTO(
     @field:Schema(description = "대체 식단 — 텍스트 판정에서는 항상 빈 배열")
     val substitutes: List<SubstituteDTO>,
 
+    @field:Schema(description = "면책 고지")
+    val disclaimer: String = JudgmentResponseDTO.DEFAULT_DISCLAIMER,
+
+    @field:Schema(description = "판정 결과 화면에 함께 노출하는 일반 참고 자료 — 등급·트리거별로 달라지지 않는 공통 출처")
+    val references: List<JudgmentResponseDTO.ReferenceDTO> = JudgmentResponseDTO.DEFAULT_REFERENCES,
+
     @field:Schema(description = "LLM이 분류한 카테고리 code — 이미 분류된 음식이거나 분류 불가 시 null", example = "soup_stew")
     val categoryCode: String? = null,
 )
