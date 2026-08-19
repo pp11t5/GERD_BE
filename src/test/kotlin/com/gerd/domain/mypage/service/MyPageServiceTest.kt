@@ -194,6 +194,20 @@ class MyPageServiceTest {
         }
 
         @Test
+        fun `알레르기를 빈 목록으로 보내면 기존 알레르기를 전부 지운다`() {
+            val profile = userProfile()
+            whenever(userProfileRepository.existsById(userId)).thenReturn(true)
+            whenever(userProfileRepository.getReferenceById(userId)).thenReturn(profile)
+            val request = MedicalInfoUpdateRequestDTO(allergens = emptyList())
+
+            val result = service.updateHealthInfo(userId, request)
+
+            assertThat(result.allergies).isEmpty()
+            verify(userAllergenRepository).deleteAllByUserProfileUserId(userId)
+            verify(allergenRepository, never()).findByCodeIn(any())
+        }
+
+        @Test
         fun `존재하지 않는 알레르기가 있으면 기존 건강 정보를 삭제하지 않는다`() {
             whenever(userProfileRepository.existsById(userId)).thenReturn(true)
             whenever(allergenRepository.findByCodeIn(listOf("milk", "peanut"))).thenReturn(
