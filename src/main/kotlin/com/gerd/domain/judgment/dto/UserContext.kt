@@ -6,6 +6,5 @@ import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 data class UserContext(
     val userTriggers: List<TagDTO>,
     val userAllergens: List<TagDTO>,
-    val medications: List<String>,
     val symptomCodes: List<String>,
 )

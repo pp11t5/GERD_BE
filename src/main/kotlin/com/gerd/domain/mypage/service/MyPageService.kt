@@ -18,11 +18,9 @@ import com.gerd.domain.mypage.dto.MyPageSummaryResponseDTO
 import com.gerd.domain.mypage.dto.NicknameUpdateRequestDTO
 import com.gerd.domain.mypage.dto.ProfileDetailResponseDTO
 import com.gerd.domain.onboarding.entity.UserAllergen
-import com.gerd.domain.onboarding.entity.UserMedication
 import com.gerd.domain.onboarding.entity.UserProfile
 import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
-import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.report.service.ReportService
 import com.gerd.global.apiPayload.GeneralException
@@ -37,7 +35,6 @@ class MyPageService(
     private val authAccountRepository: AuthAccountRepository,
     private val allergenRepository: AllergenRepository,
     private val userAllergenRepository: UserAllergenRepository,
-    private val userMedicationRepository: UserMedicationRepository,
     private val userFoodDictionaryRepository: UserFoodDictionaryRepository,
     private val reportService: ReportService,
     private val nicknameService: NicknameService,
@@ -81,13 +78,11 @@ class MyPageService(
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val authAccount: AuthAccount = authAccountRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-        // 알레르기, 복용약 조회해서 있는걸 알레르기->복용약 내림차순으로 조회해서 있는걸 먼저 반환, count도
+        // 알레르기 대표 1건 + 나머지 count
         val allergens = userAllergenRepository.findAllergensByUserId(userId)
-        val medications = userMedicationRepository.findByUserProfileUserId(userId)
-        // 알레르기 -> 복용약 순 대표 1건 + 나머지 count
-        val allItems: List<String> = allergens.map { it.displayName } + medications.map { it.name }
-        val representativeInfo = allItems.firstOrNull()
-        val etcCount = maxOf(0, allItems.size - 1)
+        val allergenNames = allergens.map { it.displayName }
+        val representativeInfo = allergenNames.firstOrNull()
+        val etcCount = maxOf(0, allergenNames.size - 1)
         return ProfileDetailResponseDTO(
             nickName = user.nickname,
             provider = authAccount.provider,
@@ -104,10 +99,8 @@ class MyPageService(
 
     fun getHealthInfo(userId: Long): MedicalInfoResponseDTO {
         val allergens = userAllergenRepository.findAllergensByUserId(userId)
-        val medications = userMedicationRepository.findByUserProfileUserId(userId)
         return MedicalInfoResponseDTO(
             allergies = allergens.map { it.displayName },
-            medications = medications.map { it.name },
         )
     }
 
@@ -124,14 +117,8 @@ class MyPageService(
         userAllergenRepository.deleteAllByUserProfileUserId(userId)
         userAllergenRepository.saveAll(newAllergens.map { UserAllergen(userProfile = userProfile, allergen = it) })
 
-        // 복용약 전체 교체
-        userMedicationRepository.deleteAllByUserProfileUserId(userId)
-        val newMedications = request.medications.map { UserMedication(userProfile = userProfile, name = it) }
-        userMedicationRepository.saveAll(newMedications)
-
         return MedicalInfoResponseDTO(
             allergies = newAllergens.map { it.displayName },
-            medications = request.medications,
         )
     }
 

@@ -26,7 +26,7 @@ interface JudgmentApi {
     @Operation(
         summary = "음식 ID로 음식 신호등 판정",
         description = """
-            사용자 건강 컨텍스트(트리거·알레르기·복용약·증상)를 반영해 음식의 신호등 등급과 개인화 분석을 반환합니다.
+            사용자 건강 컨텍스트(트리거·알레르기·증상)를 반영해 음식의 신호등 등급과 개인화 분석을 반환합니다.
             - grade: RECOMMEND(🟢) | CAUTION(🟡) | RISK(🔴) | UNKNOWN(⚪, 검색으로 새로 등록된 음식이거나 LLM 판정 실패 시)
             - items: 항상 2슬롯 — [0]=트리거·증상 분석, [1]=최근 증상 기반 상세 분석
             - substitutes: CAUTION/RISK일 때만 대체 식단 노출(없으면 빈 배열). 사용자가 등록한 트리거·알레르기 성분을 가진 음식은 제외됩니다.

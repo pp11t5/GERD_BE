@@ -80,12 +80,10 @@ class MyPageControllerTest @Autowired constructor(
             whenever(myPageService.updateHealthInfo(any(), any())).thenReturn(
                 MedicalInfoResponseDTO(
                     allergies = listOf("우유"),
-                    medications = listOf("PPI"),
                 ),
             )
             val request = MedicalInfoUpdateRequestDTO(
                 allergens = listOf(AllergenCode.MILK),
-                medications = listOf("PPI"),
             )
 
             mockMvc.patch("/api/v1/my-page/health-info") {
@@ -99,24 +97,6 @@ class MyPageControllerTest @Autowired constructor(
 
             verify(myPageService).updateHealthInfo(1L, request)
         }
-
-        @Test
-        @WithCustomUser(userId = 1L)
-        fun `복용약 이름이 공백이면 400 응답을 반환한다`() {
-            val request = MedicalInfoUpdateRequestDTO(
-                allergens = emptyList(),
-                medications = listOf("   "),
-            )
-
-            mockMvc.patch("/api/v1/my-page/health-info") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(request)
-            }.andExpect {
-                status { isBadRequest() }
-                jsonPath("$.isSuccess") { value(false) }
-            }
-        }
-
     }
 
     @Nested

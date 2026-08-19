@@ -24,7 +24,6 @@ class JudgmentResponseFactoryTest {
         foodAllergens = emptyList(),
         userTriggers = listOf(TagDTO("caffeine", "카페인")),
         userAllergens = emptyList(),
-        medications = emptyList(),
         symptomCodes = emptyList(),
     )
 

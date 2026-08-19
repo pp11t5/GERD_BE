@@ -8,14 +8,12 @@ import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.food.repository.AllergenRepository
 import com.gerd.domain.food.repository.TriggerLabelRepository
 import com.gerd.domain.onboarding.dto.OnboardingRequestDTO
-import com.gerd.domain.onboarding.entity.UserMedication
 import com.gerd.domain.onboarding.entity.UserProfile
 import com.gerd.domain.onboarding.entity.UserSymptom
 import com.gerd.domain.onboarding.entity.UserTrigger
 import com.gerd.domain.onboarding.entity.enums.SymptomCode
 import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
-import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
 import com.gerd.domain.onboarding.repository.UserTriggerRepository
@@ -50,9 +48,6 @@ class OnboardingServiceTest {
 
     @Mock
     private lateinit var userAllergenRepository: UserAllergenRepository
-
-    @Mock
-    private lateinit var userMedicationRepository: UserMedicationRepository
 
     @Mock
     private lateinit var triggerLabelRepository: TriggerLabelRepository
@@ -100,7 +95,6 @@ class OnboardingServiceTest {
                     symptoms = setOf(SymptomCode.HEARTBURN_REFLUX),
                     triggers = listOf(TriggerCode.CAFFEINE),
                     allergens = listOf(AllergenCode.MILK),
-                    medications = listOf("PPI"),
                     customTriggerText = "오렌지주스",
                 )
 
@@ -115,7 +109,6 @@ class OnboardingServiceTest {
                 verify(userSymptomRepository).saveAll(any<List<UserSymptom>>())
                 verify(userTriggerRepository).saveAll(any<List<UserTrigger>>())
                 verify(userAllergenRepository).saveAll(any<List<com.gerd.domain.onboarding.entity.UserAllergen>>())
-                verify(userMedicationRepository).saveAll(any<List<UserMedication>>())
             }
         }
 

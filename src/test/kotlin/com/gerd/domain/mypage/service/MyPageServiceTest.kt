@@ -16,12 +16,10 @@ import com.gerd.domain.mypage.dto.MealCount
 import com.gerd.domain.mypage.dto.MedicalInfoUpdateRequestDTO
 import com.gerd.domain.mypage.dto.NicknameUpdateRequestDTO
 import com.gerd.domain.mypage.dto.WeeklySummaryResponseDTO
-import com.gerd.domain.onboarding.entity.UserMedication
 import com.gerd.domain.onboarding.entity.UserProfile
 import com.gerd.domain.onboarding.entity.enums.DiseaseType
 import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
-import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.report.service.ReportService
 import com.gerd.global.apiPayload.GeneralException
@@ -58,9 +56,6 @@ class MyPageServiceTest {
     private lateinit var userAllergenRepository: UserAllergenRepository
 
     @Mock
-    private lateinit var userMedicationRepository: UserMedicationRepository
-
-    @Mock
     private lateinit var userFoodDictionaryRepository: UserFoodDictionaryRepository
 
     @Mock
@@ -76,7 +71,6 @@ class MyPageServiceTest {
             authAccountRepository,
             allergenRepository,
             userAllergenRepository,
-            userMedicationRepository,
             userFoodDictionaryRepository,
             reportService,
             nicknameService,
@@ -138,16 +132,13 @@ class MyPageServiceTest {
     inner class `프로필 상세 조회` {
 
         @Test
-        fun `알레르기를 복용약보다 우선 대표 건강 정보로 반환한다`() {
+        fun `알레르기가 여러 개면 대표 1건과 나머지 count를 반환한다`() {
             val profile = userProfile()
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(user(email = "user@test.com")))
             whenever(userProfileRepository.findById(userId)).thenReturn(Optional.of(profile))
             whenever(authAccountRepository.findById(userId)).thenReturn(Optional.of(authAccount()))
             whenever(userAllergenRepository.findAllergensByUserId(userId)).thenReturn(
-                listOf(Allergen(code = "milk", displayName = "우유")),
-            )
-            whenever(userMedicationRepository.findByUserProfileUserId(userId)).thenReturn(
-                listOf(UserMedication(userProfile = profile, name = "PPI")),
+                listOf(Allergen(code = "milk", displayName = "우유"), Allergen(code = "peanut", displayName = "땅콩")),
             )
 
             val result = service.getProfile(userId)
@@ -187,25 +178,19 @@ class MyPageServiceTest {
     inner class `건강 정보 수정` {
 
         @Test
-        fun `알레르기와 복용약을 전체 교체한다`() {
+        fun `알레르기를 전체 교체한다`() {
             val profile = userProfile()
             val milk = Allergen(code = "milk", displayName = "우유")
             whenever(userProfileRepository.existsById(userId)).thenReturn(true)
             whenever(userProfileRepository.getReferenceById(userId)).thenReturn(profile)
             whenever(allergenRepository.findByCodeIn(listOf("milk"))).thenReturn(listOf(milk))
-            val request = MedicalInfoUpdateRequestDTO(
-                allergens = listOf(AllergenCode.MILK),
-                medications = listOf("PPI", "제산제"),
-            )
+            val request = MedicalInfoUpdateRequestDTO(allergens = listOf(AllergenCode.MILK))
 
             val result = service.updateHealthInfo(userId, request)
 
             assertThat(result.allergies).containsExactly("우유")
-            assertThat(result.medications).containsExactly("PPI", "제산제")
             verify(userAllergenRepository).deleteAllByUserProfileUserId(userId)
-            verify(userMedicationRepository).deleteAllByUserProfileUserId(userId)
             verify(userAllergenRepository).saveAll(any<Iterable<com.gerd.domain.onboarding.entity.UserAllergen>>())
-            verify(userMedicationRepository).saveAll(any<Iterable<UserMedication>>())
         }
 
         @Test
@@ -214,10 +199,7 @@ class MyPageServiceTest {
             whenever(allergenRepository.findByCodeIn(listOf("milk", "peanut"))).thenReturn(
                 listOf(Allergen(code = "milk", displayName = "우유")),
             )
-            val request = MedicalInfoUpdateRequestDTO(
-                allergens = listOf(AllergenCode.MILK, AllergenCode.PEANUT),
-                medications = listOf("PPI"),
-            )
+            val request = MedicalInfoUpdateRequestDTO(allergens = listOf(AllergenCode.MILK, AllergenCode.PEANUT))
 
             assertThatThrownBy { service.updateHealthInfo(userId, request) }
                 .isInstanceOf(GeneralException::class.java)
@@ -225,15 +207,13 @@ class MyPageServiceTest {
                 .isEqualTo(OnboardingErrorCode.INVALID_ALLERGEN)
 
             verify(userAllergenRepository, never()).deleteAllByUserProfileUserId(any())
-            verify(userMedicationRepository, never()).deleteAllByUserProfileUserId(any())
             verify(userAllergenRepository, never()).saveAll(any<Iterable<com.gerd.domain.onboarding.entity.UserAllergen>>())
-            verify(userMedicationRepository, never()).saveAll(any<Iterable<UserMedication>>())
         }
 
         @Test
         fun `유저가 존재하지 않으면 USER_NOT_FOUND`() {
             whenever(userProfileRepository.existsById(userId)).thenReturn(false)
-            val request = MedicalInfoUpdateRequestDTO(allergens = emptyList(), medications = emptyList())
+            val request = MedicalInfoUpdateRequestDTO(allergens = emptyList())
 
             assertThatThrownBy { service.updateHealthInfo(userId, request) }
                 .isInstanceOf(GeneralException::class.java)
@@ -241,7 +221,6 @@ class MyPageServiceTest {
                 .isEqualTo(AuthErrorCode.USER_NOT_FOUND)
 
             verify(userAllergenRepository, never()).deleteAllByUserProfileUserId(any())
-            verify(userMedicationRepository, never()).deleteAllByUserProfileUserId(any())
         }
 
     }
@@ -250,25 +229,17 @@ class MyPageServiceTest {
     inner class `건강 정보 조회` {
 
         @Test
-        fun `알레르기는 표시 이름 목록으로 복용약은 이름 목록으로 반환한다`() {
-            val profile = userProfile()
+        fun `알레르기를 표시 이름 목록으로 반환한다`() {
             whenever(userAllergenRepository.findAllergensByUserId(userId)).thenReturn(
                 listOf(
                     Allergen(code = "milk", displayName = "우유"),
                     Allergen(code = "peanut", displayName = "땅콩"),
                 ),
             )
-            whenever(userMedicationRepository.findByUserProfileUserId(userId)).thenReturn(
-                listOf(
-                    UserMedication(userProfile = profile, name = "PPI"),
-                    UserMedication(userProfile = profile, name = "제산제"),
-                ),
-            )
 
             val result = service.getHealthInfo(userId)
 
             assertThat(result.allergies).containsExactly("우유", "땅콩")
-            assertThat(result.medications).containsExactly("PPI", "제산제")
         }
     }
 

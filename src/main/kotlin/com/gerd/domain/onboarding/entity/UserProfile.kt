@@ -21,7 +21,7 @@ import java.time.LocalDateTime
  * 온보딩 프로필 (계정당 1 row, users와 1:1 공유 PK)
  *
  * - row 존재 자체가 온보딩 완료 신호 (ADR-0007, 별도 플래그 없음)
- * - 온보딩 일괄제출 시 INSERT, 자식(증상/트리거/알레르기/복용약)의 부모
+ * - 온보딩 일괄제출 시 INSERT, 자식(증상/트리거/알레르기)의 부모
  * - user_id를 @MapsId로 PK이자 users FK로 매핑 — User 하드삭제 시 DB 캐스케이드로 프로필·자식까지 함께 정리
  */
 @Entity
