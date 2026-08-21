@@ -17,6 +17,8 @@ spring:
     baseline-version: "0"
     # CREATE INDEX CONCURRENTLY(V1)처럼 트랜잭션 밖에서 실행돼야 하는 구문을 한 마이그레이션에 섞어 쓰기 위함
     mixed: true
+    # 배포 중 이전 인스턴스가 advisory lock을 잠깐 보유해도 실패하지 않도록 재시도 횟수를 늘림
+    lock-retry-count: 50
 
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long}
