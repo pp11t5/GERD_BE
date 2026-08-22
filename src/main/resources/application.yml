@@ -18,7 +18,7 @@ spring:
     # CREATE INDEX CONCURRENTLY(V1)처럼 트랜잭션 밖에서 실행돼야 하는 구문을 한 마이그레이션에 섞어 쓰기 위함
     mixed: true
     # 겹치는 배포에서 이전 인스턴스가 잡은 PostgreSQL advisory lock 해제를 기다린다.
-    lock-retry-count: 50
+    lock-retry-count: 300
 
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long}
