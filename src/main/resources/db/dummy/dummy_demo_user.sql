@@ -1,6 +1,6 @@
 -- ============================================================================
 -- 더미데이터: 데모 유저 (카카오 로그인으로 생성된 "첫 번째 유저"에 바인딩)
---   프로필 + 온보딩(증상·트리거·알레르기·복용약) + 식사/음식 + 증상 + 스트릭
+--   프로필 + 온보딩(증상·트리거·알레르기) + 식사/음식 + 증상 + 스트릭
 --
 -- 전제:
 --   1) Hibernate(ddl-auto)로 테이블 생성 완료
@@ -11,7 +11,7 @@
 -- 안전장치:
 --   - 시드 음식은 이름을 가정하지 않고 food_id 순서로 5개 선택 → 어떤 시드에도 동작
 --   - 프로필/온보딩/스트릭은 ON CONFLICT로 재실행 안전
---   - 식사·증상·복용약은 meal_records 존재 여부로 가드 → 재실행해도 중복 안 됨
+--   - 식사·증상은 meal_records 존재 여부로 가드 → 재실행해도 중복 안 됨
 --   - enum 저장형식: grade/judged_grade/symptom_state/symptom_type/disease_type 는 "이름"
 --     (RECOMMEND·CAUTION·RISK / COMFORTABLE·NORMAL·UNCOMFORTABLE / GERD ...),
 --     user_symptoms.symptom_code 는 소문자 "코드"(heartburn_reflux ...)
@@ -78,14 +78,8 @@ BEGIN
     WHERE a.code IN ('milk')
     ON CONFLICT DO NOTHING;
 
-    -- 5)~7) 식사·증상·복용약: meal_records가 없을 때만 (재실행 중복 방지) ----
+    -- 5)~7) 식사·증상: meal_records가 없을 때만 (재실행 중복 방지) ----
     IF NOT EXISTS (SELECT 1 FROM meal_records WHERE user_id = v_user_id) THEN
-
-        -- 복용약 (자유 텍스트, 1건 1행)
-        INSERT INTO user_medications (user_id, name, external_id, created_at, modified_at)
-        VALUES
-            (v_user_id, '넥시움(에소메프라졸)', gen_random_uuid(), now(), now()),
-            (v_user_id, '겔포스',               gen_random_uuid(), now(), now());
 
         -- 끼니1: 이틀 전 아침 — 편안(RECOMMEND)
         INSERT INTO meal_records (user_id, eaten_at, grade, external_id, created_at, modified_at)

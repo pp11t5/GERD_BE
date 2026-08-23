@@ -1,8 +1,11 @@
 package com.gerd.domain.notification.service
 
+import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
+import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.enums.NotificationPendingStatus.PENDING
@@ -15,6 +18,9 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 private val log = KotlinLogging.logger {}
 
@@ -31,6 +37,8 @@ class PostMealPendingSender(
     private val userFcmTokenRepository: UserFcmTokenRepository,
     private val fcmPushSender: FcmPushSender,
     private val mealRecordRepository: MealRecordRepository,
+    private val mealFoodRepository: MealFoodRepository,
+    private val foodRepository: FoodRepository,
 ) {
 
     // 호출 즉시 반환, 별도 스레드/트랜잭션에서 실행
@@ -79,11 +87,8 @@ class PostMealPendingSender(
                 type = NotificationType.POST_MEAL_DELAYED_SINGLE,
                 targetId = resolveTargetId(pendings.first().mealRecordId),
             )
-            // 낮 단건 — 리치 푸시, 바로 증상 기록
-            else -> NotificationPayloadFactory.of(
-                type = NotificationType.POST_MEAL,
-                targetId = resolveTargetId(pendings.first().mealRecordId),
-            )
+            // 낮 단건 — 리치 푸시, 끼니 시각·경과시간·음식 목록 포함
+            else -> buildPostMealPayload(pendings.first().mealRecordId)
         }
         fcmPushSender.send(fcmToken, payload)
         pendings.forEach { it.markSent() }
@@ -93,4 +98,27 @@ class PostMealPendingSender(
     // targetId는 내부 PK가 아니라 외부 노출용 UUID(externalId)를 내려준다 — 다른 API가 끼니를 참조하는 방식과 통일
     private fun resolveTargetId(mealRecordId: Long?): String? =
         mealRecordId?.let { mealRecordRepository.findById(it).orElse(null)?.externalId?.toString() }
+
+    // 낮 단건 리치 푸시용 데이터
+    private fun buildPostMealPayload(mealRecordId: Long?): FcmPayload {
+        val mealRecord = mealRecordId?.let { mealRecordRepository.findById(it).orElse(null) }
+            ?: error("발송 대상 PENDING의 끼니를 찾을 수 없음 mealRecordId=$mealRecordId")
+
+        val mealFoods = mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(mealRecord.id!!)
+        val foodIds = mealFoods.map { it.foodId }.distinct()
+        val foodMap = if (foodIds.isEmpty()) emptyMap() else foodRepository.findAllByIdsIncludingDeleted(foodIds).associateBy { it.id }
+        val foodNames = foodIds.mapNotNull { foodMap[it]?.name }.joinToString(",")
+
+        return NotificationPayloadFactory.of(
+            type = NotificationType.POST_MEAL,
+            targetId = mealRecord.externalId.toString(),
+            mealOccurredAt = mealRecord.eatenAt.format(TIME_FORMATTER),
+            hoursElapsed = Duration.between(mealRecord.eatenAt, LocalDateTime.now()).toHours().toString(),
+            foodNames = foodNames,
+        )
+    }
+
+    companion object {
+        private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
+    }
 }

@@ -4,7 +4,9 @@ import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
+import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.meal.entity.MealRecord
+import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.UserNotificationSetting
@@ -27,6 +29,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
@@ -38,6 +41,8 @@ class PostMealPendingSenderTest {
     @Mock private lateinit var userFcmTokenRepository: UserFcmTokenRepository
     @Mock private lateinit var fcmPushSender: FcmPushSender
     @Mock private lateinit var mealRecordRepository: MealRecordRepository
+    @Mock private lateinit var mealFoodRepository: MealFoodRepository
+    @Mock private lateinit var foodRepository: FoodRepository
 
     @InjectMocks private lateinit var sender: PostMealPendingSender
 
@@ -121,6 +126,8 @@ class PostMealPendingSenderTest {
         }
 
         private fun mockMealRecord(externalId: UUID = UUID.randomUUID()) = mock<MealRecord>().also {
+            whenever(it.id).thenReturn(10L)
+            whenever(it.eatenAt).thenReturn(LocalDateTime.now().minusHours(6))
             whenever(it.externalId).thenReturn(externalId)
         }
 

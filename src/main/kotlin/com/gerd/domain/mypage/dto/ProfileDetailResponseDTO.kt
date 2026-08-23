@@ -11,7 +11,7 @@ data class ProfileDetailResponseDTO(
     val provider: AuthProvider,
     @field:Schema(description = "진단 병명", example = "gerd")
     val diseaseType: DiseaseType,
-    @field:Schema(description = "대표 건강 정보 1건(알레르기 또는 복용약), 없으면 null", nullable = true, example = "우유")
+    @field:Schema(description = "대표 건강 정보 1건(알레르기), 없으면 null", nullable = true, example = "우유")
     val representativeInfo: String?,
     @field:Schema(description = "대표 건강 정보 외 나머지 항목 수, 없으면 0", example = "3")
     val etcCount: Int,

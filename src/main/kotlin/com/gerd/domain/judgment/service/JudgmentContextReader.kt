@@ -16,7 +16,6 @@ import com.gerd.domain.judgment.dto.UserContext
 import com.gerd.domain.judgment.dto.SubstituteCandidateDTO
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
-import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
 import com.gerd.domain.onboarding.repository.UserTriggerRepository
 import com.gerd.domain.symptom.entity.enums.SymptomState
@@ -45,7 +44,6 @@ class JudgmentContextReader(
     private val foodCategoryReader: FoodCategoryReader,
     private val userTriggerRepository: UserTriggerRepository,
     private val userAllergenRepository: UserAllergenRepository,
-    private val userMedicationRepository: UserMedicationRepository,
     private val userSymptomRepository: UserSymptomRepository,
     private val symptomRepository: SymptomRepository,
     private val mealRecordRepository: MealRecordRepository,
@@ -70,7 +68,6 @@ class JudgmentContextReader(
                 foodAllergens = emptyList(),
                 userTriggers = emptyList(),
                 userAllergens = emptyList(),
-                medications = emptyList(),
                 symptomCodes = emptyList(),
                 stateRecords = loadStateRecords(userId, foodId),
             )
@@ -88,7 +85,6 @@ class JudgmentContextReader(
                 .map { TagDTO(it.code, it.displayName) },
             userAllergens = userAllergenRepository.findAllergensByUserId(userId)
                 .map { TagDTO(it.code, it.displayName) },
-            medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },
             symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
             history = loadHistory(userId, food.name, category),
             stateRecords = loadStateRecords(userId, foodId),
@@ -98,7 +94,6 @@ class JudgmentContextReader(
     fun loadUserContext(userId: Long): UserContext = UserContext(
         userTriggers = userTriggerRepository.findTriggerLabelsByUserId(userId).map { TagDTO(it.code, it.displayName) },
         userAllergens = userAllergenRepository.findAllergensByUserId(userId).map { TagDTO(it.code, it.displayName) },
-        medications = userMedicationRepository.findByUserProfileUserId(userId).map { it.name },
         symptomCodes = userSymptomRepository.findByIdUserId(userId).map { it.id.symptomCode },
     )
 

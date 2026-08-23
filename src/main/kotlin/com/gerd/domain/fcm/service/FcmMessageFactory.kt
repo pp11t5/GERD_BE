@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 
 /**
  * platform별 FCM 메시지 빌더
- * - 공통: notification 블록 없이 title/body를 data로 전달
+ * - 공통: notification 블록 없이 title/body와 리치 푸시 데이터를 data로 전달
  * - ANDROID: AndroidConfig (priority=HIGH)
  * - IOS: APNs alert(payload title/body, category)로 시스템 알림과 액션을 표시
  */

@@ -73,7 +73,6 @@ class OnboardingControllerTest @Autowired constructor(
             val request = OnboardingRequestDTO(
                 symptoms = setOf(SymptomCode.HEARTBURN_REFLUX),
                 triggers = listOf(TriggerCode.CAFFEINE),
-                medications = listOf("PPI"),
                 customTriggerText = "오렌지주스",
             )
 

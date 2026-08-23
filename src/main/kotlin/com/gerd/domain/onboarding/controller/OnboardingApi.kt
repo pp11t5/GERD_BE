@@ -34,9 +34,9 @@ interface OnboardingApi {
     @Operation(
         summary = "온보딩 일괄 제출",
         description = """
-            온보딩 4단계(증상/트리거/알레르기/복용약)를 한 번에 제출합니다(단일 트랜잭션).
+            온보딩 3단계(증상/트리거/알레르기)를 한 번에 제출합니다(단일 트랜잭션).
             - symptoms / triggers / allergens 는 한글 라벨이 아니라 영어 code(enum)로 전달합니다. 허용값은 요청 스키마의 enum 참고.
-            - 요청 예시: { "symptoms": ["heartburn_reflux"], "triggers": ["caffeine","spicy"], "allergens": ["milk"], "medications": ["PPI"], "customTriggerText": "오렌지주스" }
+            - 요청 예시: { "symptoms": ["heartburn_reflux"], "triggers": ["caffeine","spicy"], "allergens": ["milk"], "customTriggerText": "오렌지주스" }
             - 이미 온보딩을 완료한 경우 409로 거부합니다.
         """,
     )

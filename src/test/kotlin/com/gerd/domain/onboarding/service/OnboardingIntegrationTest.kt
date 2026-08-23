@@ -17,7 +17,6 @@ import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.TermRepository
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
 import com.gerd.domain.onboarding.repository.UserConsentRepository
-import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
 import com.gerd.domain.onboarding.repository.UserTriggerRepository
@@ -42,7 +41,6 @@ class OnboardingIntegrationTest @Autowired constructor(
     private val userSymptomRepository: UserSymptomRepository,
     private val userTriggerRepository: UserTriggerRepository,
     private val userAllergenRepository: UserAllergenRepository,
-    private val userMedicationRepository: UserMedicationRepository,
     private val triggerLabelRepository: TriggerLabelRepository,
     private val allergenRepository: AllergenRepository,
     private val termRepository: TermRepository,
@@ -54,7 +52,6 @@ class OnboardingIntegrationTest @Autowired constructor(
         userSymptomRepository.deleteAll()
         userTriggerRepository.deleteAll()
         userAllergenRepository.deleteAll()
-        userMedicationRepository.deleteAll()
         userProfileRepository.deleteAll()
         userConsentRepository.deleteAll()
         termRepository.deleteAll()
@@ -109,7 +106,6 @@ class OnboardingIntegrationTest @Autowired constructor(
                     symptoms = setOf(SymptomCode.HEARTBURN_REFLUX, SymptomCode.THROAT_GLOBUS),
                     triggers = listOf(TriggerCode.CAFFEINE),
                     allergens = listOf(AllergenCode.MILK),
-                    medications = listOf("PPI", "제산제"),
                     customTriggerText = "오렌지주스",
                 ),
             )
@@ -120,7 +116,6 @@ class OnboardingIntegrationTest @Autowired constructor(
             assertThat(userSymptomRepository.count()).isEqualTo(2)
             assertThat(userTriggerRepository.count()).isEqualTo(1)
             assertThat(userAllergenRepository.count()).isEqualTo(1)
-            assertThat(userMedicationRepository.count()).isEqualTo(2)
         }
 
         @Test

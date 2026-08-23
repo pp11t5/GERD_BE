@@ -37,14 +37,14 @@ interface MyPageApi {
         @CurrentUser userDetails: CustomUserDetails,
     ): ResponseEntity<ApiResponse<ProfileDetailResponseDTO>>
 
-    @Operation(summary = "알레르기 및 복용약 조회", description = "저장된 알레르기 항목과 복용약 목록을 조회합니다.")
+    @Operation(summary = "알레르기 조회", description = "저장된 알레르기 항목을 조회합니다.")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
     @GetMapping("/health-info")
     fun getHealthInfo(
         @CurrentUser userDetails: CustomUserDetails,
     ): ResponseEntity<ApiResponse<MedicalInfoResponseDTO>>
 
-    @Operation(summary = "알레르기 및 복용약 수정", description = "알레르기 항목과 복용약 목록을 수정합니다.")
+    @Operation(summary = "알레르기 수정", description = "알레르기 항목을 수정합니다.")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "수정 성공"))
     @PatchMapping("/health-info")
     fun updateHealthInfo(
