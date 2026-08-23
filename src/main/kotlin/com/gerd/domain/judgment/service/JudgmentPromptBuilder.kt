@@ -76,7 +76,6 @@ class JudgmentPromptBuilder(
               heartburn_reflux=속쓰림·역류, post_meal_cough=식후 기침, throat_globus=목 이물감,
               sour_mouth_odor=신물 올라옴·입냄새, supine_chest_tight=누우면 가슴 답답함,
               none_but_manage=현재 증상은 없고 관리 목적
-            - user.meds: medications currently taken (free text)
             - history: summary of symptom records linked to this food or similar-category foods over the last 14 days.
               Use the comfortCount/discomfortCount numbers and similarFoodRecords as evidence.
 

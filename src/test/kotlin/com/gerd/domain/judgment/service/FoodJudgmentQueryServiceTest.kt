@@ -76,7 +76,6 @@ class FoodJudgmentQueryServiceTest {
         foodAllergens = foodAllergens,
         userTriggers = listOf(caffeine),
         userAllergens = userAllergens,
-        medications = emptyList(),
         symptomCodes = listOf("heartburn_reflux"),
     )
 
@@ -87,7 +86,6 @@ class FoodJudgmentQueryServiceTest {
         foodAllergens = emptyList(),
         userTriggers = emptyList(),
         userAllergens = emptyList(),
-        medications = emptyList(),
         symptomCodes = emptyList(),
     )
 
@@ -101,7 +99,6 @@ class FoodJudgmentQueryServiceTest {
                 com.gerd.domain.judgment.dto.UserContext(
                     userTriggers = emptyList(),
                     userAllergens = emptyList(),
-                    medications = emptyList(),
                     symptomCodes = emptyList(),
                 ),
             )
@@ -127,7 +124,6 @@ class FoodJudgmentQueryServiceTest {
                 com.gerd.domain.judgment.dto.UserContext(
                     userTriggers = emptyList(),
                     userAllergens = emptyList(),
-                    medications = emptyList(),
                     symptomCodes = emptyList(),
                 ),
             )
@@ -150,7 +146,6 @@ class FoodJudgmentQueryServiceTest {
             val userContext = com.gerd.domain.judgment.dto.UserContext(
                 userTriggers = emptyList(),
                 userAllergens = emptyList(),
-                medications = emptyList(),
                 symptomCodes = emptyList(),
             )
             whenever(judgmentContextReader.loadUserContext(userId)).thenReturn(userContext)
@@ -176,7 +171,6 @@ class FoodJudgmentQueryServiceTest {
                 com.gerd.domain.judgment.dto.UserContext(
                     userTriggers = emptyList(),
                     userAllergens = emptyList(),
-                    medications = emptyList(),
                     symptomCodes = emptyList(),
                 ),
             )
@@ -198,7 +192,6 @@ class FoodJudgmentQueryServiceTest {
                 com.gerd.domain.judgment.dto.UserContext(
                     userTriggers = emptyList(),
                     userAllergens = emptyList(),
-                    medications = emptyList(),
                     symptomCodes = emptyList(),
                 ),
             )
@@ -218,7 +211,6 @@ class FoodJudgmentQueryServiceTest {
                 com.gerd.domain.judgment.dto.UserContext(
                     userTriggers = emptyList(),
                     userAllergens = emptyList(),
-                    medications = emptyList(),
                     symptomCodes = emptyList(),
                 ),
             )
@@ -306,7 +298,6 @@ class FoodJudgmentQueryServiceTest {
                 com.gerd.domain.judgment.dto.UserContext(
                     userTriggers = emptyList(),
                     userAllergens = emptyList(),
-                    medications = emptyList(),
                     symptomCodes = emptyList(),
                 ),
             )

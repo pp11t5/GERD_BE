@@ -11,14 +11,12 @@ import com.gerd.domain.food.repository.TriggerLabelRepository
 import com.gerd.domain.onboarding.dto.OnboardingRequestDTO
 import com.gerd.domain.onboarding.dto.OnboardingStatusResponseDTO
 import com.gerd.domain.onboarding.entity.UserAllergen
-import com.gerd.domain.onboarding.entity.UserMedication
 import com.gerd.domain.onboarding.entity.UserProfile
 import com.gerd.domain.onboarding.entity.UserSymptom
 import com.gerd.domain.onboarding.entity.UserTrigger
 import com.gerd.domain.onboarding.entity.id.UserSymptomId
 import com.gerd.domain.onboarding.exception.OnboardingErrorCode
 import com.gerd.domain.onboarding.repository.UserAllergenRepository
-import com.gerd.domain.onboarding.repository.UserMedicationRepository
 import com.gerd.domain.onboarding.repository.UserProfileRepository
 import com.gerd.domain.onboarding.repository.UserSymptomRepository
 import com.gerd.domain.onboarding.repository.UserTriggerRepository
@@ -31,7 +29,7 @@ import java.time.LocalDateTime
  * 온보딩 조회·제출 서비스
  *
  * - 온보딩 완료 여부 조회 (user_profiles row 존재)
- * - 4단계(증상/트리거/알레르기/복용약) 일괄 제출 (단일 트랜잭션)
+ * - 3단계(증상/트리거/알레르기) 일괄 제출 (단일 트랜잭션)
  */
 @Service
 @Transactional(readOnly = true)
@@ -40,7 +38,6 @@ class OnboardingService(
     private val userSymptomRepository: UserSymptomRepository,
     private val userTriggerRepository: UserTriggerRepository,
     private val userAllergenRepository: UserAllergenRepository,
-    private val userMedicationRepository: UserMedicationRepository,
     private val triggerLabelRepository: TriggerLabelRepository,
     private val allergenRepository: AllergenRepository,
     private val userRepository: UserRepository,
@@ -86,11 +83,6 @@ class OnboardingService(
         if (allergens.isNotEmpty()) {
             userAllergenRepository.saveAll(
                 allergens.map { allergen -> UserAllergen(userProfile = profile, allergen = allergen) },
-            )
-        }
-        if (request.medications.isNotEmpty()) {
-            userMedicationRepository.saveAll(
-                request.medications.map { name -> UserMedication(userProfile = profile, name = name) },
             )
         }
     }

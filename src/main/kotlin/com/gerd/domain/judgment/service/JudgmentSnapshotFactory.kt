@@ -31,7 +31,6 @@ class JudgmentSnapshotFactory {
                 symptoms = userContext.symptomCodes.sorted(),
                 triggerFoods = userContext.userTriggers.sortedBy { it.code },
                 allergies = userContext.userAllergens.sortedBy { it.code },
-                meds = userContext.medications.sorted(),
             ),
             history = history,
         )
@@ -49,7 +48,6 @@ class JudgmentSnapshotFactory {
                 symptoms = context.symptomCodes.sorted(),
                 triggerFoods = context.userTriggers.sortedBy { it.code },
                 allergies = context.userAllergens.sortedBy { it.code },
-                meds = context.medications.sorted(),
             ),
             history = context.history,
         )
