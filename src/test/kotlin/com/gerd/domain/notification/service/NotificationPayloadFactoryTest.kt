@@ -28,10 +28,14 @@ class NotificationPayloadFactoryTest {
             type = NotificationType.POST_MEAL_DELAYED_SINGLE,
             targetId = "meal-external-id",
             mealOccurredAt = "22:30",
+            hoursElapsed = "10",
+            foodNames = "된장찌개,잡곡밥",
         )
 
         assertThat(payload.targetId).isEqualTo("meal-external-id")
         assertThat(payload.mealOccurredAt).isEqualTo("22:30")
+        assertThat(payload.hoursElapsed).isEqualTo("10")
+        assertThat(payload.foodNames).isEqualTo("된장찌개,잡곡밥")
         assertThat(payload.title).isEqualTo("어젯밤 식사, 기록하셨나요?")
         assertThat(payload.body).isEqualTo("어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.")
     }

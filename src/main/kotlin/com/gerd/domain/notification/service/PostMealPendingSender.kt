@@ -84,7 +84,7 @@ class PostMealPendingSender(
             )
             // 이연 단건 — 식사 기록 증상 입력 화면으로 이동할 컨텍스트 포함
             pendings.first().delayed -> buildDelayedPostMealPayload(pendings.first().mealRecordId)
-            // 낮 단건 — 리치 푸시, 끼니 시각·경과시간·음식 목록 포함
+            // 낮 단건 — 식사 기록 증상 입력 화면으로 이동할 컨텍스트 포함
             else -> buildPostMealPayload(pendings.first().mealRecordId)
         }
         fcmPushSender.send(fcmToken, payload)
@@ -92,8 +92,16 @@ class PostMealPendingSender(
         log.info { "식후 알림 발송: userId=${fcmToken.userId}, type=${payload.type.code}, ${pendings.size}건" }
     }
 
-    // 낮 단건 리치 푸시용 데이터
     private fun buildPostMealPayload(mealRecordId: Long?): FcmPayload {
+        return buildMealPayload(mealRecordId, NotificationType.POST_MEAL)
+    }
+
+    private fun buildDelayedPostMealPayload(mealRecordId: Long?): FcmPayload {
+        return buildMealPayload(mealRecordId, NotificationType.POST_MEAL_DELAYED_SINGLE)
+    }
+
+    // 식사 상세 이동 알림의 공통 컨텍스트 구성
+    private fun buildMealPayload(mealRecordId: Long?, type: NotificationType): FcmPayload {
         val mealRecord = mealRecordId?.let { mealRecordRepository.findById(it).orElse(null) }
             ?: error("발송 대상 PENDING의 끼니를 찾을 수 없음 mealRecordId=$mealRecordId")
 
@@ -103,22 +111,11 @@ class PostMealPendingSender(
         val foodNames = foodIds.mapNotNull { foodMap[it]?.name }.joinToString(",")
 
         return NotificationPayloadFactory.of(
-            type = NotificationType.POST_MEAL,
+            type = type,
             targetId = mealRecord.externalId.toString(),
             mealOccurredAt = mealRecord.eatenAt.format(TIME_FORMATTER),
             hoursElapsed = Duration.between(mealRecord.eatenAt, LocalDateTime.now()).toHours().toString(),
             foodNames = foodNames,
-        )
-    }
-
-    private fun buildDelayedPostMealPayload(mealRecordId: Long?): FcmPayload {
-        val mealRecord = mealRecordId?.let { mealRecordRepository.findById(it).orElse(null) }
-            ?: error("발송 대상 PENDING의 끼니를 찾을 수 없음 mealRecordId=$mealRecordId")
-
-        return NotificationPayloadFactory.of(
-            type = NotificationType.POST_MEAL_DELAYED_SINGLE,
-            targetId = mealRecord.externalId.toString(),
-            mealOccurredAt = mealRecord.eatenAt.format(TIME_FORMATTER),
         )
     }
 

@@ -11,10 +11,10 @@
 | `body` | string | O | `"방금 드신 식사, 속은 좀 어떠세요? 지금 증상을 기록해 보세요."` | 클라이언트 표시용 본문 |
 | `targetId` | string(UUID) | X | `"c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f"` | 식사 기록 외부 식별자. 대상이 없으면 키를 포함하지 않음 |
 | `mealOccurredAt` | string | X | `"13:24"` | `post_meal`, `post_meal_delayed_single`의 식사 시각 (`HH:mm`) |
-| `hoursElapsed` | string | X | `"6"` | `post_meal` 낮 단건 알림의 식후 경과 시간(정수 시간) |
-| `foodNames` | string | X | `"된장찌개,잡곡밥"` | `post_meal` 낮 단건 알림의 음식명. 콤마 구분 문자열 |
+| `hoursElapsed` | string | X | `"6"` | `post_meal`, `post_meal_delayed_single`의 식후 경과 시간(정수 시간) |
+| `foodNames` | string | X | `"된장찌개,잡곡밥"` | `post_meal`, `post_meal_delayed_single`의 음식명. 콤마 구분 문자열 |
 
-`mealOccurredAt`은 식사 기록 화면으로 이동하는 `post_meal`, `post_meal_delayed_single`에 포함한다. `hoursElapsed`, `foodNames`는 `post_meal` 낮 단건에만 포함한다. 음식이 없거나 확인할 수 없으면 `foodNames`는 빈 문자열일 수 있다.
+식사 기록 화면으로 이동하는 `post_meal`, `post_meal_delayed_single`은 `targetId`, `mealOccurredAt`, `hoursElapsed`, `foodNames`를 모두 포함한다. 음식이 없거나 확인할 수 없으면 `foodNames`는 빈 문자열일 수 있다.
 
 ## 전송 방식
 
@@ -63,7 +63,9 @@
       "title": "어젯밤 식사, 기록하셨나요?",
       "body": "어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.",
       "targetId": "c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f",
-      "mealOccurredAt": "22:30"
+      "mealOccurredAt": "22:30",
+      "hoursElapsed": "10",
+      "foodNames": "된장찌개,잡곡밥"
     }
   }
 }
@@ -78,6 +80,8 @@
 | 발송 시점 | 22:00~09:00 사이에 예정된 알림을 다음 날 09:00에 발송 |
 | `targetId` | 식사 기록 외부 ID(UUID) |
 | `mealOccurredAt` | 식사 발생 시각 (`HH:mm`) |
+| `hoursElapsed` | 식후 경과 시간(정수 시간) |
+| `foodNames` | 음식명(콤마 구분 문자열) |
 | 이동 화면 | 해당 식사 기록의 증상 입력 화면 |
 | title | 어젯밤 식사, 기록하셨나요? |
 | body | 어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요. |
