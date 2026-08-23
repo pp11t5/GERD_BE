@@ -1,6 +1,6 @@
-# FCM 리치 푸시 data-only payload
+# FCM 식후 알림 payload
 
-FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전송한다. 앱이 `data.title`, `data.body`를 사용해 알림 UI와 액션을 직접 구성한다.
+`post_meal_delayed_single`만 data-only 방식으로 전송한다. 그 외 알림은 FCM `notification`과 `data`를 함께 전송한다.
 
 ## 공통 data 필드
 
@@ -18,9 +18,8 @@ FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전�
 
 ## 전송 방식
 
-- Android: `AndroidConfig.Priority.HIGH`로 data-only 메시지를 전송한다.
-- iOS: `apns-push-type=alert`, `apns-priority=10`으로 전송한다. `aps.alert`에 `title`, `body`를 넣고 `aps.category`에는 알림 `type`을 넣는다.
-- iOS 앱은 `post_meal` category를 등록해 액션을 연결한다. 이때 `post_meal` 알림은 `aps.alert.title`, `aps.alert.body`로 시스템 알림이 표시된다.
+- `post_meal_delayed_single`: FCM `notification` 없이 `data`만 전송한다. iOS는 `apns-push-type=alert`, `apns-priority=10`, `aps.alert`, `aps.category=post_meal_delayed_single`을 추가한다.
+- `post_meal`, `post_meal_delayed_bulk`, `daily_record`, `weekly_report`: FCM `notification`과 `data`를 함께 전송한다. iOS custom APNs alert/category는 구성하지 않는다.
 
 ## 메시지 예시
 
@@ -38,7 +37,7 @@ FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전�
 }
 ```
 
-## iOS APNs 예시
+## 이연 단건 iOS APNs 예시
 
 ```json
 {
@@ -52,10 +51,10 @@ FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전�
       "payload": {
         "aps": {
           "alert": {
-            "title": "속은 좀 어떠세요?",
-            "body": "방금 드신 식사, 속은 좀 어떠세요?"
+            "title": "어젯밤 식사, 기록하셨나요?",
+            "body": "어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요."
           },
-          "category": "post_meal"
+          "category": "post_meal_delayed_single"
         }
       }
     }
@@ -74,7 +73,7 @@ FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전�
 | 이동 화면 | 해당 식사 기록의 증상 입력 화면 |
 | title | 어젯밤 식사, 기록하셨나요? |
 | body | 어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요. |
-| iOS APNs | `aps.alert`로 표시, `aps.category`는 `post_meal_delayed_single` |
+| 전송 방식 | data-only. iOS는 `aps.alert`와 `aps.category=post_meal_delayed_single`을 포함 |
 
 ## `post_meal_delayed_bulk`
 
@@ -88,7 +87,7 @@ FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전�
 | 이동 화면 | 증상 미기록 목록 화면 |
 | title | 미기록 식사가 있어요 |
 | body | 어젯밤 식사 N건의 증상 기록이 남아 있어요. 잊기 전에 확인해 보세요. |
-| iOS APNs | `aps.alert`로 표시, `aps.category`는 `post_meal_delayed_bulk` |
+| 전송 방식 | FCM `notification`과 `data`를 함께 전송 |
 
 `N`은 실제 미기록 식사 개수로 동적으로 변경한다.
 

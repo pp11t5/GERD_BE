@@ -34,10 +34,10 @@ class FcmMessageFactoryTest {
         return getNotification.invoke(message)
     }
 
-    private fun apnsOf(message: Message): ApnsConfig {
+    private fun apnsOf(message: Message): ApnsConfig? {
         val getApnsConfig = Message::class.java.getDeclaredMethod("getApnsConfig")
         getApnsConfig.isAccessible = true
-        return getApnsConfig.invoke(message) as ApnsConfig
+        return getApnsConfig.invoke(message) as ApnsConfig?
     }
 
     private fun fieldOf(instance: Any, name: String): Any? {
@@ -57,7 +57,7 @@ class FcmMessageFactoryTest {
         }
 
         @Test
-        fun `IOS 플랫폼이면 ApnsConfig가 포함된 메시지를 반환한다`() {
+        fun `IOS 플랫폼이면 메시지를 반환한다`() {
             val message = factory.build("fcm-token", DevicePlatform.IOS, payload)
 
             assertThat(message).isNotNull
@@ -84,16 +84,24 @@ class FcmMessageFactoryTest {
         }
 
         @Test
-        fun `data-only 메시지라 notification 블록은 비어있다`() {
-            val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
+        fun `이연 단건 식후 알림만 data-only 메시지다`() {
+            val message = factory.build(
+                "fcm-token",
+                DevicePlatform.ANDROID,
+                payload.copy(type = NotificationType.POST_MEAL_DELAYED_SINGLE),
+            )
 
             assertThat(notificationOf(message)).isNull()
         }
 
         @Test
-        fun `IOS 플랫폼이면 APNs alert와 post_meal category를 포함한다`() {
-            val message = factory.build("fcm-token", DevicePlatform.IOS, payload)
-            val apns = apnsOf(message)
+        fun `이연 단건 식후 알림은 IOS APNs alert와 category를 포함한다`() {
+            val message = factory.build(
+                "fcm-token",
+                DevicePlatform.IOS,
+                payload.copy(type = NotificationType.POST_MEAL_DELAYED_SINGLE),
+            )
+            val apns = apnsOf(message)!!
 
             @Suppress("UNCHECKED_CAST")
             val headers = fieldOf(apns, "headers") as Map<String, String>
@@ -106,24 +114,23 @@ class FcmMessageFactoryTest {
             )
             assertThat(fieldOf(alert, "title")).isEqualTo("테스트 제목")
             assertThat(fieldOf(alert, "body")).isEqualTo("테스트 내용")
-            assertThat(aps).containsEntry("category", "post_meal")
+            assertThat(aps).containsEntry("category", "post_meal_delayed_single")
         }
 
         @Test
-        fun `이연 식후 알림도 IOS APNs alert category를 포함한다`() {
+        fun `이연 단건 외 알림은 FCM notification을 포함하고 커스텀 APNs 설정을 사용하지 않는다`() {
             val types = listOf(
-                NotificationType.POST_MEAL_DELAYED_SINGLE,
+                NotificationType.POST_MEAL,
                 NotificationType.POST_MEAL_DELAYED_BULK,
+                NotificationType.DAILY_RECORD,
+                NotificationType.WEEKLY_REPORT,
             )
 
             types.forEach { type ->
                 val message = factory.build("fcm-token", DevicePlatform.IOS, payload.copy(type = type))
-                val apns = apnsOf(message)
-                @Suppress("UNCHECKED_CAST")
-                val aps = (fieldOf(apns, "payload") as Map<String, Any>)["aps"] as Map<String, Any>
 
-                assertThat(aps).containsEntry("category", type.code)
-                assertThat(aps).containsKey("alert")
+                assertThat(notificationOf(message)).isNotNull
+                assertThat(apnsOf(message)).isNull()
             }
         }
     }
