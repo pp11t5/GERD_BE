@@ -5,15 +5,15 @@ import com.gerd.domain.fcm.entity.enums.DevicePlatform
 import com.google.firebase.messaging.AndroidConfig
 import com.google.firebase.messaging.ApnsConfig
 import com.google.firebase.messaging.Aps
+import com.google.firebase.messaging.ApsAlert
 import com.google.firebase.messaging.Message
 import org.springframework.stereotype.Component
 
 /**
- * platform별 FCM 메시지 빌더 — data-only (notification 블록 없음, title/body도 data로 전달)
- * - 클라이언트가 항상 직접 알림을 빌드해야 액션 버튼(인터랙티브) 부착이 가능하기 때문
+ * platform별 FCM 메시지 빌더
+ * - 공통: notification 블록 없이 title/body를 data로 전달
  * - ANDROID: AndroidConfig (priority=HIGH)
- * - IOS: ApnsConfig background push (apns-push-type=background, apns-priority=5, content-available=1)
- *   — Apple이 배터리/네트워크 상황에 따라 지연·스로틀링·드롭할 수 있음(전달 보장 없음)
+ * - IOS: APNs alert(payload title/body, category)로 시스템 알림과 액션을 표시
  */
 @Component
 class FcmMessageFactory {
@@ -40,15 +40,25 @@ class FcmMessageFactory {
             )
             .build()
 
-    // iOS: silent(background) push — alert/sound/badge 없이 앱을 깨워 데이터만 전달
+    // iOS: APNs alert — category는 앱의 UNNotificationCategory 식별자와 일치해야 한다.
     private fun buildIos(token: String, payload: FcmPayload): Message =
         baseBuilder(payload)
             .setToken(token)
             .setApnsConfig(
                 ApnsConfig.builder()
-                    .putHeader("apns-push-type", "background")
-                    .putHeader("apns-priority", "5")
-                    .setAps(Aps.builder().setContentAvailable(true).build())
+                    .putHeader("apns-push-type", "alert")
+                    .putHeader("apns-priority", "10")
+                    .setAps(
+                        Aps.builder()
+                            .setAlert(
+                                ApsAlert.builder()
+                                    .setTitle(payload.title)
+                                    .setBody(payload.body)
+                                    .build()
+                            )
+                            .setCategory(payload.type.code)
+                            .build()
+                    )
                     .build()
             )
             .build()

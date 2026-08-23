@@ -3,6 +3,7 @@ package com.gerd.domain.fcm.service
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.enums.DevicePlatform
 import com.gerd.domain.notification.entity.enums.NotificationType
+import com.google.firebase.messaging.ApnsConfig
 import com.google.firebase.messaging.Message
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
@@ -31,6 +32,18 @@ class FcmMessageFactoryTest {
         val getNotification = Message::class.java.getDeclaredMethod("getNotification")
         getNotification.isAccessible = true
         return getNotification.invoke(message)
+    }
+
+    private fun apnsOf(message: Message): ApnsConfig {
+        val getApnsConfig = Message::class.java.getDeclaredMethod("getApnsConfig")
+        getApnsConfig.isAccessible = true
+        return getApnsConfig.invoke(message) as ApnsConfig
+    }
+
+    private fun fieldOf(instance: Any, name: String): Any? {
+        val field = instance.javaClass.getDeclaredField(name)
+        field.isAccessible = true
+        return field.get(instance)
     }
 
     @Nested
@@ -75,6 +88,25 @@ class FcmMessageFactoryTest {
             val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
 
             assertThat(notificationOf(message)).isNull()
+        }
+
+        @Test
+        fun `IOS 플랫폼이면 APNs alert와 post_meal category를 포함한다`() {
+            val message = factory.build("fcm-token", DevicePlatform.IOS, payload)
+            val apns = apnsOf(message)
+
+            @Suppress("UNCHECKED_CAST")
+            val headers = fieldOf(apns, "headers") as Map<String, String>
+            @Suppress("UNCHECKED_CAST")
+            val aps = (fieldOf(apns, "payload") as Map<String, Any>)["aps"] as Map<String, Any>
+            val alert = aps["alert"]!!
+
+            assertThat(headers).containsExactlyInAnyOrderEntriesOf(
+                mapOf("apns-push-type" to "alert", "apns-priority" to "10"),
+            )
+            assertThat(fieldOf(alert, "title")).isEqualTo("테스트 제목")
+            assertThat(fieldOf(alert, "body")).isEqualTo("테스트 내용")
+            assertThat(aps).containsEntry("category", "post_meal")
         }
     }
 }

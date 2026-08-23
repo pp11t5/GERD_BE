@@ -16,8 +16,8 @@ FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전�
 ## 전송 방식
 
 - Android: `AndroidConfig.Priority.HIGH`로 data-only 메시지를 전송한다.
-- iOS: `apns-push-type=background`, `apns-priority=5`, `content-available=1`의 background push로 전송한다.
-- iOS background push는 OS 정책에 따라 지연되거나 제한될 수 있으므로, 전달 보장이 필요한 기능은 앱의 동기화 경로도 제공해야 한다.
+- iOS: `apns-push-type=alert`, `apns-priority=10`으로 전송한다. `aps.alert`에 `title`, `body`를 넣고 `aps.category`에는 알림 `type`을 넣는다.
+- iOS 앱은 `post_meal` category를 등록해 액션을 연결한다. 이때 `post_meal` 알림은 `aps.alert.title`, `aps.alert.body`로 시스템 알림이 표시된다.
 
 ## 메시지 예시
 
@@ -28,6 +28,31 @@ FCM 알림은 Android와 iOS 모두 `notification` 블록 없이 `data`만 전�
     "title": "속은 좀 어떠세요?",
     "body": "방금 드신 식사, 속은 좀 어떠세요? 지금 증상을 기록해 보세요.",
     "targetId": "c4e90e6a-2b3c-4d5e-8f90-1a2b3c4d5e6f"
+  }
+}
+```
+
+## iOS APNs 예시
+
+```json
+{
+  "message": {
+    "token": "<fcm-token>",
+    "apns": {
+      "headers": {
+        "apns-push-type": "alert",
+        "apns-priority": "10"
+      },
+      "payload": {
+        "aps": {
+          "alert": {
+            "title": "속은 좀 어떠세요?",
+            "body": "방금 드신 식사, 속은 좀 어떠세요?"
+          },
+          "category": "post_meal"
+        }
+      }
+    }
   }
 }
 ```
