@@ -82,11 +82,8 @@ class PostMealPendingSender(
                 type = NotificationType.POST_MEAL_DELAYED_BULK,
                 bulkCount = pendings.size,
             )
-            // 이연 단건 — 리치 푸시, 과거형 카피
-            pendings.first().delayed -> NotificationPayloadFactory.of(
-                type = NotificationType.POST_MEAL_DELAYED_SINGLE,
-                targetId = resolveTargetId(pendings.first().mealRecordId),
-            )
+            // 이연 단건 — 식사 기록 증상 입력 화면으로 이동할 컨텍스트 포함
+            pendings.first().delayed -> buildDelayedPostMealPayload(pendings.first().mealRecordId)
             // 낮 단건 — 리치 푸시, 끼니 시각·경과시간·음식 목록 포함
             else -> buildPostMealPayload(pendings.first().mealRecordId)
         }
@@ -94,10 +91,6 @@ class PostMealPendingSender(
         pendings.forEach { it.markSent() }
         log.info { "식후 알림 발송: userId=${fcmToken.userId}, type=${payload.type.code}, ${pendings.size}건" }
     }
-
-    // targetId는 내부 PK가 아니라 외부 노출용 UUID(externalId)를 내려준다 — 다른 API가 끼니를 참조하는 방식과 통일
-    private fun resolveTargetId(mealRecordId: Long?): String? =
-        mealRecordId?.let { mealRecordRepository.findById(it).orElse(null)?.externalId?.toString() }
 
     // 낮 단건 리치 푸시용 데이터
     private fun buildPostMealPayload(mealRecordId: Long?): FcmPayload {
@@ -115,6 +108,17 @@ class PostMealPendingSender(
             mealOccurredAt = mealRecord.eatenAt.format(TIME_FORMATTER),
             hoursElapsed = Duration.between(mealRecord.eatenAt, LocalDateTime.now()).toHours().toString(),
             foodNames = foodNames,
+        )
+    }
+
+    private fun buildDelayedPostMealPayload(mealRecordId: Long?): FcmPayload {
+        val mealRecord = mealRecordId?.let { mealRecordRepository.findById(it).orElse(null) }
+            ?: error("발송 대상 PENDING의 끼니를 찾을 수 없음 mealRecordId=$mealRecordId")
+
+        return NotificationPayloadFactory.of(
+            type = NotificationType.POST_MEAL_DELAYED_SINGLE,
+            targetId = mealRecord.externalId.toString(),
+            mealOccurredAt = mealRecord.eatenAt.format(TIME_FORMATTER),
         )
     }
 

@@ -10,7 +10,8 @@ import com.gerd.domain.notification.entity.enums.NotificationType
 object NotificationPayloadFactory {
 
     // bulkCount: POST_MEAL_DELAYED_BULK 전용 — 실제 미기록 건수(테스트 발송 시엔 예시값)
-    // mealOccurredAt/hoursElapsed/foodNames: POST_MEAL(낮 단건) 리치 푸시 전용
+    // mealOccurredAt: POST_MEAL, POST_MEAL_DELAYED_SINGLE의 식사 시각
+    // hoursElapsed/foodNames: POST_MEAL(낮 단건) 리치 푸시 전용
     fun of(
         type: NotificationType,
         targetId: String? = null,
@@ -34,6 +35,7 @@ object NotificationPayloadFactory {
             body = "어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.",
             type = type,
             targetId = targetId,
+            mealOccurredAt = mealOccurredAt,
         )
 
         NotificationType.POST_MEAL_DELAYED_BULK -> FcmPayload(

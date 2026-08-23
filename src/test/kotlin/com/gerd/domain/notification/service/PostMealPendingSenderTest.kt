@@ -169,17 +169,27 @@ class PostMealPendingSenderTest {
 
         @Test
         fun `지연 단건이면 POST_MEAL_DELAYED_SINGLE로 발송한다`() {
+            val externalId = UUID.randomUUID()
             val pending = mock<NotificationPending>().also {
                 whenever(it.delayed).thenReturn(true)
                 whenever(it.mealRecordId).thenReturn(10L)
             }
             stubReady(listOf(pending))
+            val mealRecord = mock<MealRecord>().also {
+                whenever(it.externalId).thenReturn(externalId)
+                whenever(it.eatenAt).thenReturn(LocalDateTime.now().minusHours(6))
+            }
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
 
             sender.sendForUser(userId, pendingIds)
 
             val captor = argumentCaptor<FcmPayload>()
             verify(fcmPushSender).send(eq(token), captor.capture())
             assertThat(captor.firstValue.type).isEqualTo(NotificationType.POST_MEAL_DELAYED_SINGLE)
+            assertThat(captor.firstValue.targetId).isEqualTo(externalId.toString())
+            assertThat(captor.firstValue.mealOccurredAt).isNotBlank()
+            assertThat(captor.firstValue.title).isEqualTo("어젯밤 식사, 기록하셨나요?")
+            assertThat(captor.firstValue.body).isEqualTo("어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.")
             verify(pending).markSent()
         }
 
