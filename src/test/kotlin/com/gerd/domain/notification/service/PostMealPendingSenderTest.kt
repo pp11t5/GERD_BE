@@ -4,7 +4,9 @@ import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.domain.fcm.service.FcmPushSender
+import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
 import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
@@ -176,10 +178,18 @@ class PostMealPendingSenderTest {
             }
             stubReady(listOf(pending))
             val mealRecord = mock<MealRecord>().also {
+                whenever(it.id).thenReturn(10L)
                 whenever(it.externalId).thenReturn(externalId)
                 whenever(it.eatenAt).thenReturn(LocalDateTime.now().minusHours(6))
             }
+            val mealFood = mock<MealFood>().also { whenever(it.foodId).thenReturn(100L) }
+            val food = mock<Food>().also {
+                whenever(it.id).thenReturn(100L)
+                whenever(it.name).thenReturn("된장찌개")
+            }
             whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
+            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(10L)).thenReturn(listOf(mealFood))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
 
             sender.sendForUser(userId, pendingIds)
 
@@ -188,6 +198,8 @@ class PostMealPendingSenderTest {
             assertThat(captor.firstValue.type).isEqualTo(NotificationType.POST_MEAL_DELAYED_SINGLE)
             assertThat(captor.firstValue.targetId).isEqualTo(externalId.toString())
             assertThat(captor.firstValue.mealOccurredAt).isNotBlank()
+            assertThat(captor.firstValue.hoursElapsed).isNotBlank()
+            assertThat(captor.firstValue.foodNames).isEqualTo("된장찌개")
             assertThat(captor.firstValue.title).isEqualTo("어젯밤 식사, 기록하셨나요?")
             assertThat(captor.firstValue.body).isEqualTo("어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.")
             verify(pending).markSent()
