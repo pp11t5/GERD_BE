@@ -33,13 +33,6 @@ class FcmMessageFactoryTest {
         return getNotification.invoke(message)
     }
 
-    // Notification은 getter도 없이 private final 필드뿐이라 필드 리플렉션으로 조회
-    private fun titleBodyOf(notification: Any): Pair<String, String> {
-        val titleField = notification.javaClass.getDeclaredField("title").apply { isAccessible = true }
-        val bodyField = notification.javaClass.getDeclaredField("body").apply { isAccessible = true }
-        return (titleField.get(notification) as String) to (bodyField.get(notification) as String)
-    }
-
     @Nested
     inner class `build` {
 
@@ -58,11 +51,11 @@ class FcmMessageFactoryTest {
         }
 
         @Test
-        fun `data 필드에 type과 targetId가 명세대로 채워진다`() {
+        fun `data 필드에 type·title·body·targetId가 명세대로 채워진다`() {
             val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
 
             assertThat(dataOf(message)).containsExactlyInAnyOrderEntriesOf(
-                mapOf("type" to "post_meal", "targetId" to "record-1"),
+                mapOf("type" to "post_meal", "title" to "테스트 제목", "body" to "테스트 내용", "targetId" to "record-1"),
             )
         }
 
@@ -72,16 +65,16 @@ class FcmMessageFactoryTest {
 
             val message = factory.build("fcm-token", DevicePlatform.ANDROID, noTargetPayload)
 
-            assertThat(dataOf(message)).containsExactlyEntriesOf(mapOf("type" to "daily_record"))
+            assertThat(dataOf(message)).containsExactlyInAnyOrderEntriesOf(
+                mapOf("type" to "daily_record", "title" to "테스트 제목", "body" to "테스트 내용"),
+            )
         }
 
         @Test
-        fun `notification에 title과 body가 채워진다`() {
+        fun `data-only 메시지라 notification 블록은 비어있다`() {
             val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
 
-            val notification = notificationOf(message)
-            assertThat(notification).isNotNull
-            assertThat(titleBodyOf(notification!!)).isEqualTo("테스트 제목" to "테스트 내용")
+            assertThat(notificationOf(message)).isNull()
         }
     }
 }
