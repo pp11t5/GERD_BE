@@ -52,4 +52,11 @@ class JudgmentCacheKeyFactoryTest {
 
         assertThat(keyFactory.createKey(1L, snapshot)).isNotEqualTo(keyFactory.createKey(2L, snapshot))
     }
+
+    @Test
+    fun `키에 캐시 계약 버전을 포함한다`() {
+        val key = keyFactory.createKey(1L, snapshotFactory.create(context()))
+
+        assertThat(key).startsWith("${JudgmentCacheKeyFactory.CACHE_KEY_VERSION}:food:")
+    }
 }
