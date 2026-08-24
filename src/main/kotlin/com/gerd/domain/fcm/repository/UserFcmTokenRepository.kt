@@ -10,8 +10,8 @@ import org.springframework.data.repository.query.Param
 
 interface UserFcmTokenRepository : JpaRepository<UserFcmToken, Long> {
 
-    // 발송 실패 시 만료 토큰 조회용
-    fun findByToken(token: String): UserFcmToken?
+    // 발송 실패 시 만료 토큰 조회용 — 데이터 정합성이 깨져 중복되어도 모두 정리한다.
+    fun findAllByToken(token: String): List<UserFcmToken>
 
     // 주간 리포트 멀티캐스트용 — 활성화된 유저 토큰을 userId 커서로 페이징 (탈퇴 명시 제외)
     @Query("""

@@ -46,7 +46,7 @@ class FcmClient(
 
     // 단일 토큰 직접 발송 — 테스트용
     override fun sendRaw(token: String, payload: FcmPayload) {
-        val fcmToken = fcmTokenRepository.findByToken(token)
+        val fcmToken = fcmTokenRepository.findAllByToken(token).firstOrNull()
             ?: throw GeneralException(FcmErrorCode.FCM_TOKEN_NOT_FOUND)
 
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)

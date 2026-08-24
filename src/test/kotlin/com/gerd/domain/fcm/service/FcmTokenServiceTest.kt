@@ -57,6 +57,25 @@ class FcmTokenServiceTest {
             }
 
             @Test
+            fun `다른 유저에 남아 있는 같은 디바이스 토큰을 제거하고 등록한다`() {
+                // given
+                val otherUserToken = mock<UserFcmToken>().also {
+                    whenever(it.userId).thenReturn(2L)
+                }
+                whenever(userFcmTokenRepository.findAllByToken(request.token)).thenReturn(listOf(otherUserToken))
+                whenever(userFcmTokenRepository.findById(userId)).thenReturn(Optional.empty())
+                whenever(userRepository.findById(userId)).thenReturn(Optional.of(user))
+                whenever(userFcmTokenRepository.save(any())).thenReturn(mock())
+
+                // when
+                fcmTokenService.register(userId, request)
+
+                // then
+                verify(userFcmTokenRepository).deleteAll(listOf(otherUserToken))
+                verify(userFcmTokenRepository).save(any())
+            }
+
+            @Test
             fun `토큰이 없으면 신규 토큰을 저장한다`() {
                 // given
                 whenever(userFcmTokenRepository.findById(userId)).thenReturn(Optional.empty())
@@ -138,25 +157,39 @@ class FcmTokenServiceTest {
             fun `만료 토큰을 삭제한다`() {
                 // given
                 val existingToken = mock<UserFcmToken>()
-                whenever(userFcmTokenRepository.findByToken("fcm-token-123")).thenReturn(existingToken)
+                whenever(userFcmTokenRepository.findAllByToken("fcm-token-123")).thenReturn(listOf(existingToken))
 
                 // when
                 fcmTokenService.deleteByToken("fcm-token-123")
 
                 // then
-                verify(userFcmTokenRepository).delete(existingToken)
+                verify(userFcmTokenRepository).deleteAll(listOf(existingToken))
+            }
+
+            @Test
+            fun `중복된 만료 토큰을 모두 삭제한다`() {
+                // given
+                val first = mock<UserFcmToken>()
+                val second = mock<UserFcmToken>()
+                whenever(userFcmTokenRepository.findAllByToken("duplicated-token")).thenReturn(listOf(first, second))
+
+                // when
+                fcmTokenService.deleteByToken("duplicated-token")
+
+                // then
+                verify(userFcmTokenRepository).deleteAll(listOf(first, second))
             }
 
             @Test
             fun `토큰이 없으면 아무 작업도 하지 않는다`() {
                 // given
-                whenever(userFcmTokenRepository.findByToken("expired-token")).thenReturn(null)
+                whenever(userFcmTokenRepository.findAllByToken("expired-token")).thenReturn(emptyList())
 
                 // when
                 fcmTokenService.deleteByToken("expired-token")
 
                 // then
-                verify(userFcmTokenRepository, never()).delete(any())
+                verify(userFcmTokenRepository, never()).deleteAll(any<List<UserFcmToken>>())
             }
         }
     }

@@ -24,6 +24,12 @@ class FcmTokenService(
 
     // 기존 토큰이 있으면 갱신, 없으면 신규 등록 (upsert 방식)
     fun register(userId: Long, request: FcmTokenRegisterRequestDTO) {
+        // 디바이스 토큰은 다른 계정에 남아 있으면 안 된다. 계정 전환 시 기존 소유 행을 정리한다.
+        userFcmTokenRepository.findAllByToken(request.token)
+            .filter { it.userId != userId }
+            .takeIf { it.isNotEmpty() }
+            ?.let { userFcmTokenRepository.deleteAll(it) }
+
         val existing = userFcmTokenRepository.findById(userId).orElse(null)
 
         if (existing != null) {
@@ -46,7 +52,8 @@ class FcmTokenService(
 
     // FCM 발송 실패(UNREGISTERED) 시 만료 토큰 제거
     fun deleteByToken(token: String) {
-        userFcmTokenRepository.findByToken(token)
-            ?.let { userFcmTokenRepository.delete(it) }
+        userFcmTokenRepository.findAllByToken(token)
+            .takeIf { it.isNotEmpty() }
+            ?.let { userFcmTokenRepository.deleteAll(it) }
     }
 }
