@@ -41,6 +41,7 @@ class FcmClient(
     // 토큰 엔티티로 바로 발송 — 재조회 없이 (배치에서 토큰 1회 조회 후 재사용)
     override fun send(fcmToken: UserFcmToken, payload: FcmPayload) {
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)
+        logMessage(fcmToken.token, fcmToken.platform.name, payload)
         send(message, fcmToken.token)
     }
 
@@ -50,6 +51,7 @@ class FcmClient(
             ?: throw GeneralException(FcmErrorCode.FCM_TOKEN_NOT_FOUND)
 
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)
+        logMessage(fcmToken.token, fcmToken.platform.name, payload)
         try {
             firebaseMessaging.send(message)
         } catch (e: FirebaseMessagingException) {
@@ -101,6 +103,17 @@ class FcmClient(
             log.warn { "FCM 발송 실패: errorCode=${e.messagingErrorCode}" }
         }
     }
+
+    // 토큰을 마스킹한 FCM 요청 로그
+    private fun logMessage(token: String, platform: String, payload: FcmPayload) {
+        log.info {
+            "FCM 전송 요청: token=${maskToken(token)}, platform=$platform, " +
+                "notification={title=${payload.title}, body=${payload.body}}, data=${payload.toDataMap()}"
+        }
+    }
+
+    private fun maskToken(token: String): String =
+        if (token.length <= 8) "***" else "${token.take(4)}...${token.takeLast(4)}"
 
     companion object {
         private val INVALID_TOKEN_CODES = setOf(
