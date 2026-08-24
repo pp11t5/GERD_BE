@@ -64,11 +64,26 @@ class FcmMessageFactoryTest {
         }
 
         @Test
-        fun `data 필드에 type·title·body·targetId가 명세대로 채워진다`() {
-            val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
+        fun `식후 알림 data에는 식사 컨텍스트만 채워진다`() {
+            val message = factory.build(
+                "fcm-token",
+                DevicePlatform.IOS,
+                payload.copy(
+                    targetId = "record-1",
+                    mealOccurredAt = "20:22",
+                    hoursElapsed = "0",
+                    foodNames = "커피",
+                ),
+            )
 
             assertThat(dataOf(message)).containsExactlyInAnyOrderEntriesOf(
-                mapOf("type" to "post_meal", "title" to "테스트 제목", "body" to "테스트 내용", "targetId" to "record-1"),
+                mapOf(
+                    "type" to "post_meal",
+                    "targetId" to "record-1",
+                    "mealOccurredAt" to "20:22",
+                    "hoursElapsed" to "0",
+                    "foodNames" to "커피",
+                ),
             )
         }
 
