@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 
 /**
  * platform별 FCM 메시지 빌더
- * - POST_MEAL_DELAYED_SINGLE: data-only + iOS APNs alert/category
+ * - POST_MEAL, POST_MEAL_DELAYED_SINGLE: data-only + iOS APNs alert/category
  * - 그 외 알림: FCM notification과 data를 함께 전송
  */
 @Component
@@ -26,6 +26,23 @@ class FcmMessageFactory {
             DevicePlatform.IOS -> buildIos(token, payload)
         }
 
+    // 전송 요청 로그가 실제 플랫폼별 전달 계약을 그대로 보여주도록 구성한다.
+    fun deliveryMetadata(platform: DevicePlatform, payload: FcmPayload): Map<String, Any> = buildMap {
+        put("platform", platform.name)
+        put("dataOnly", isDataOnly(payload))
+        if (platform == DevicePlatform.IOS && isDataOnly(payload)) {
+            put(
+                "apns",
+                mapOf(
+                    "pushType" to "alert",
+                    "priority" to "10",
+                    "category" to payload.type.code,
+                    "alert" to true,
+                ),
+            )
+        }
+    }
+
     private fun baseBuilder(payload: FcmPayload): Message.Builder =
         Message.builder()
             .putAllData(payload.toDataMap())
@@ -36,7 +53,7 @@ class FcmMessageFactory {
             }
 
     private fun isDataOnly(payload: FcmPayload): Boolean =
-        payload.type == NotificationType.POST_MEAL_DELAYED_SINGLE
+        payload.type in DATA_ONLY_TYPES
 
     // Android
     private fun buildAndroid(token: String, payload: FcmPayload): Message =
@@ -49,7 +66,7 @@ class FcmMessageFactory {
             )
             .build()
 
-    // 이연 단건만 iOS의 커스텀 액션을 위해 APNs alert/category를 직접 구성한다.
+    // 식후 알림은 iOS의 커스텀 액션을 위해 APNs alert/category를 직접 구성한다.
     private fun buildIos(token: String, payload: FcmPayload): Message =
         baseBuilder(payload)
             .setToken(token)
@@ -75,4 +92,11 @@ class FcmMessageFactory {
                 }
             }
             .build()
+
+    companion object {
+        private val DATA_ONLY_TYPES = setOf(
+            NotificationType.POST_MEAL,
+            NotificationType.POST_MEAL_DELAYED_SINGLE,
+        )
+    }
 }
