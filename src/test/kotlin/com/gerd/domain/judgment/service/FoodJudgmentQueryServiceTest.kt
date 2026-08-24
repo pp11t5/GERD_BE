@@ -40,6 +40,7 @@ class FoodJudgmentQueryServiceTest {
     private val foodExternalId = FoodFixture.EXTERNAL_ID.toString()
 
     private val milk = TagDTO("milk", "우유")
+    private val peanut = TagDTO("peanut", "땅콩")
     private val caffeine = TagDTO("caffeine", "카페인")
 
     private val llmJudgment = LlmJudgmentDTO(
@@ -316,9 +317,9 @@ class FoodJudgmentQueryServiceTest {
     inner class `판정 파이프라인` {
 
         @Test
-        fun `알레르겐 매치 시 RISK로 강등하고 대체식단을 조회한다`() {
+        fun `치명 위험군 알레르겐 매치 시 RISK로 강등하고 대체식단을 조회한다`() {
             whenever(judgmentContextReader.load(foodExternalId, userId))
-                .thenReturn(seedContext(foodAllergens = listOf(milk), userAllergens = listOf(milk)))
+                .thenReturn(seedContext(foodAllergens = listOf(peanut), userAllergens = listOf(peanut)))
             whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any()))
                 .thenReturn(llmJudgment.copy(grade = JudgmentGrade.RECOMMEND))
             whenever(judgmentContextReader.loadSubstituteCandidates(any()))
@@ -333,7 +334,7 @@ class FoodJudgmentQueryServiceTest {
 
         @Test
         fun `사용자 트리거·알레르겐을 가진 대체식 후보는 노출 전에 제외한다`() {
-            // 사용자: caffeine 트리거 + milk 알레르기. 음식: 우유 알레르겐 매치로 RISK
+            // 사용자: caffeine 트리거 + milk 알레르기. 음식: 우유 알레르겐 매치로 CAUTION
             whenever(judgmentContextReader.load(foodExternalId, userId))
                 .thenReturn(seedContext(foodAllergens = listOf(milk), userAllergens = listOf(milk)))
             whenever(judgmentGeminiAdapter.generateJudgment(any(), any(), any())).thenReturn(llmJudgment)

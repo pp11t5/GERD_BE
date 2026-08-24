@@ -150,8 +150,8 @@ class JudgmentPromptBuilder(
               · Allowed allergenTags: ${AllergenCode.entries.joinToString { it.code }}
             - Only include ingredients generally known to be present based on the food name/attributes. If evidence is
               uncertain, leave it out and keep the array empty.
-            - allergenTags need a HIGHER confidence bar than triggerTags: a single allergen match forces the grade to
-              RISK unconditionally on the server, regardless of anything else. Only tag an allergen when the food's
+            - allergenTags need a HIGHER confidence bar than triggerTags: a match can lower RECOMMEND to CAUTION,
+              and peanut/tree nut/crustacean/fish-shellfish matches force RISK on the server. Only tag an allergen when the food's
               name/attributes make its presence near-certain (e.g. "milk" for "우유라떼"). Do not tag an allergen from
               loose association, a food category's typical recipe, or a "some versions might contain this" guess.
             - These values feed the server's safety override — do not fill them by guessing.

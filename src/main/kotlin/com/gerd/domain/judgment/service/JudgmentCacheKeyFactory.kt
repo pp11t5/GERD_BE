@@ -8,8 +8,7 @@ import tools.jackson.databind.SerializationFeature
 import tools.jackson.databind.json.JsonMapper
 
 /**
- * 캐시 키 = foodId + LLM 입력 스냅샷 해시
- *
+ * 캐시 키 = 캐시 계약 버전 + foodId + LLM 입력 스냅샷 해시
  */
 @Component
 class JudgmentCacheKeyFactory {
@@ -21,8 +20,13 @@ class JudgmentCacheKeyFactory {
         .build()
 
     fun createKey(foodId: Long, snapshot: LlmInputSnapshotDTO): String =
-        "$foodId:${HashUtils.sha256(canonicalMapper.writeValueAsString(snapshot))}"
+        "$CACHE_KEY_VERSION:food:$foodId:${HashUtils.sha256(canonicalMapper.writeValueAsString(snapshot))}"
 
     fun createTextKey(snapshot: LlmInputSnapshotDTO): String =
-        "text:${HashUtils.sha256(canonicalMapper.writeValueAsString(snapshot))}"
+        "$CACHE_KEY_VERSION:text:${HashUtils.sha256(canonicalMapper.writeValueAsString(snapshot))}"
+
+    companion object {
+        // L8/L11/L12 배포: 복용약 제거·트리거 집합 변경·안전 룰 정책 변경을 기존 캐시와 절연한다.
+        const val CACHE_KEY_VERSION = "judgment-v2"
+    }
 }

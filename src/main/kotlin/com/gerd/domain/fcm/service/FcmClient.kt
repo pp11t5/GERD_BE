@@ -107,8 +107,7 @@ class FcmClient(
     // 토큰을 마스킹한 FCM 요청 로그
     private fun logMessage(token: String, platform: String, payload: FcmPayload) {
         log.info {
-            "FCM 전송 요청: token=${maskToken(token)}, platform=$platform, " +
-                "notification={title=${payload.title}, body=${payload.body}}, data=${payload.toDataMap()}"
+            "FCM 전송 요청: token=${maskToken(token)}, platform=$platform, data=${payload.toDataMap()}"
         }
     }
 

@@ -84,43 +84,39 @@ class FcmMessageFactoryTest {
         }
 
         @Test
-        fun `이연 단건 식후 알림만 data-only 메시지다`() {
-            val message = factory.build(
-                "fcm-token",
-                DevicePlatform.ANDROID,
-                payload.copy(type = NotificationType.POST_MEAL_DELAYED_SINGLE),
-            )
+        fun `식후 알림은 Android에서 data-only 메시지다`() {
+            listOf(NotificationType.POST_MEAL, NotificationType.POST_MEAL_DELAYED_SINGLE).forEach { type ->
+                val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload.copy(type = type))
 
-            assertThat(notificationOf(message)).isNull()
+                assertThat(notificationOf(message)).isNull()
+            }
         }
 
         @Test
-        fun `이연 단건 식후 알림은 IOS APNs alert와 category를 포함한다`() {
-            val message = factory.build(
-                "fcm-token",
-                DevicePlatform.IOS,
-                payload.copy(type = NotificationType.POST_MEAL_DELAYED_SINGLE),
-            )
-            val apns = apnsOf(message)!!
+        fun `식후 알림은 IOS에서 FCM notification 없이 APNs alert와 category를 포함한다`() {
+            listOf(NotificationType.POST_MEAL, NotificationType.POST_MEAL_DELAYED_SINGLE).forEach { type ->
+                val message = factory.build("fcm-token", DevicePlatform.IOS, payload.copy(type = type))
+                val apns = apnsOf(message)!!
 
-            @Suppress("UNCHECKED_CAST")
-            val headers = fieldOf(apns, "headers") as Map<String, String>
-            @Suppress("UNCHECKED_CAST")
-            val aps = (fieldOf(apns, "payload") as Map<String, Any>)["aps"] as Map<String, Any>
-            val alert = aps["alert"]!!
+                @Suppress("UNCHECKED_CAST")
+                val headers = fieldOf(apns, "headers") as Map<String, String>
+                @Suppress("UNCHECKED_CAST")
+                val aps = (fieldOf(apns, "payload") as Map<String, Any>)["aps"] as Map<String, Any>
+                val alert = aps["alert"]!!
 
-            assertThat(headers).containsExactlyInAnyOrderEntriesOf(
-                mapOf("apns-push-type" to "alert", "apns-priority" to "10"),
-            )
-            assertThat(fieldOf(alert, "title")).isEqualTo("테스트 제목")
-            assertThat(fieldOf(alert, "body")).isEqualTo("테스트 내용")
-            assertThat(aps).containsEntry("category", "post_meal_delayed_single")
+                assertThat(notificationOf(message)).isNull()
+                assertThat(headers).containsExactlyInAnyOrderEntriesOf(
+                    mapOf("apns-push-type" to "alert", "apns-priority" to "10"),
+                )
+                assertThat(fieldOf(alert, "title")).isEqualTo("테스트 제목")
+                assertThat(fieldOf(alert, "body")).isEqualTo("테스트 내용")
+                assertThat(aps).containsEntry("category", type.code)
+            }
         }
 
         @Test
-        fun `이연 단건 외 알림은 FCM notification을 포함하고 커스텀 APNs 설정을 사용하지 않는다`() {
+        fun `식후 알림 외 알림은 FCM notification을 포함하고 커스텀 APNs 설정을 사용하지 않는다`() {
             val types = listOf(
-                NotificationType.POST_MEAL,
                 NotificationType.POST_MEAL_DELAYED_BULK,
                 NotificationType.DAILY_RECORD,
                 NotificationType.WEEKLY_REPORT,
