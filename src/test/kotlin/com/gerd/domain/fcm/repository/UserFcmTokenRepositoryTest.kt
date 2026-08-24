@@ -69,22 +69,22 @@ class UserFcmTokenRepositoryTest @Autowired constructor(
     }
 
     @Nested
-    inner class `findByToken` {
+    inner class `findAllByToken` {
 
         @Test
-        fun `토큰 값으로 FCM 토큰을 조회한다`() {
-            val result = userFcmTokenRepository.findByToken("fcm-token-abc")
+        fun `토큰 값으로 일치하는 FCM 토큰을 모두 조회한다`() {
+            val result = userFcmTokenRepository.findAllByToken("fcm-token-abc")
 
-            assertThat(result).isNotNull
-            assertThat(result!!.token).isEqualTo("fcm-token-abc")
-            assertThat(result.platform).isEqualTo(DevicePlatform.IOS)
+            assertThat(result).hasSize(1)
+            assertThat(result.first().token).isEqualTo("fcm-token-abc")
+            assertThat(result.first().platform).isEqualTo(DevicePlatform.IOS)
         }
 
         @Test
-        fun `존재하지 않는 토큰이면 null을 반환한다`() {
-            val result = userFcmTokenRepository.findByToken("not-exist-token")
+        fun `존재하지 않는 토큰이면 빈 목록을 반환한다`() {
+            val result = userFcmTokenRepository.findAllByToken("not-exist-token")
 
-            assertThat(result).isNull()
+            assertThat(result).isEmpty()
         }
     }
 
