@@ -3,6 +3,7 @@ package com.gerd.domain.notification.service
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
+import com.gerd.domain.fcm.service.FcmSendResult
 import com.gerd.domain.fcm.service.FcmPushSender
 import com.gerd.domain.food.entity.Food
 import com.gerd.domain.food.repository.FoodRepository
@@ -118,13 +119,17 @@ class PostMealPendingSenderTest {
 
         private val token = mock<UserFcmToken>()
 
-        private fun stubReady(pendings: List<NotificationPending>) {
+        private fun stubReady(
+            pendings: List<NotificationPending>,
+            sendResult: FcmSendResult = FcmSendResult.SUCCESS,
+        ) {
             val setting = enabledSetting()
             whenever(notificationPendingRepository.findByIdInAndStatus(any(), eq(PENDING)))
                 .thenReturn(pendings)
             whenever(userNotificationSettingRepository.findById(userId))
                 .thenReturn(Optional.of(setting))
             whenever(userFcmTokenRepository.findById(userId)).thenReturn(Optional.of(token))
+            whenever(fcmPushSender.send(any(), any())).thenReturn(sendResult)
         }
 
         private fun mockMealRecord(externalId: UUID = UUID.randomUUID()) = mock<MealRecord>().also {
@@ -218,6 +223,38 @@ class PostMealPendingSenderTest {
             assertThat(captor.firstValue.type).isEqualTo(NotificationType.POST_MEAL_DELAYED_BULK)
             verify(first).markSent()
             verify(second).markSent()
+        }
+
+        @Test
+        fun `무효 토큰이면 PENDING을 취소하고 SENT 처리하지 않는다`() {
+            val pending = mock<NotificationPending>().also {
+                whenever(it.delayed).thenReturn(false)
+                whenever(it.mealRecordId).thenReturn(10L)
+            }
+            stubReady(listOf(pending), FcmSendResult.INVALID_TOKEN)
+            val mealRecord = mockMealRecord()
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
+
+            sender.sendForUser(userId, pendingIds)
+
+            verify(pending).cancel()
+            verify(pending, never()).markSent()
+        }
+
+        @Test
+        fun `일시 발송 실패면 PENDING 상태를 유지한다`() {
+            val pending = mock<NotificationPending>().also {
+                whenever(it.delayed).thenReturn(false)
+                whenever(it.mealRecordId).thenReturn(10L)
+            }
+            stubReady(listOf(pending), FcmSendResult.FAILED)
+            val mealRecord = mockMealRecord()
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
+
+            sender.sendForUser(userId, pendingIds)
+
+            verify(pending, never()).markSent()
+            verify(pending, never()).cancel()
         }
     }
 }

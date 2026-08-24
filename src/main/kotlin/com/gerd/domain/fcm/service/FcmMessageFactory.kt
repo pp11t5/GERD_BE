@@ -26,6 +26,23 @@ class FcmMessageFactory {
             DevicePlatform.IOS -> buildIos(token, payload)
         }
 
+    // 전송 요청 로그가 실제 플랫폼별 전달 계약을 그대로 보여주도록 구성한다.
+    fun deliveryMetadata(platform: DevicePlatform, payload: FcmPayload): Map<String, Any> = buildMap {
+        put("platform", platform.name)
+        put("dataOnly", isDataOnly(payload))
+        if (platform == DevicePlatform.IOS && isDataOnly(payload)) {
+            put(
+                "apns",
+                mapOf(
+                    "pushType" to "alert",
+                    "priority" to "10",
+                    "category" to payload.type.code,
+                    "alert" to true,
+                ),
+            )
+        }
+    }
+
     private fun baseBuilder(payload: FcmPayload): Message.Builder =
         Message.builder()
             .putAllData(payload.toDataMap())

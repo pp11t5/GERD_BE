@@ -3,6 +3,7 @@ package com.gerd.domain.notification.service
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
+import com.gerd.domain.fcm.service.FcmSendResult
 import com.gerd.domain.fcm.service.FcmPushSender
 import com.gerd.domain.food.repository.FoodRepository
 import com.gerd.domain.meal.repository.MealFoodRepository
@@ -87,9 +88,19 @@ class PostMealPendingSender(
             // 낮 단건 — 식사 기록 증상 입력 화면으로 이동할 컨텍스트 포함
             else -> buildPostMealPayload(pendings.first().mealRecordId)
         }
-        fcmPushSender.send(fcmToken, payload)
-        pendings.forEach { it.markSent() }
-        log.info { "식후 알림 발송: userId=${fcmToken.userId}, type=${payload.type.code}, ${pendings.size}건" }
+        when (fcmPushSender.send(fcmToken, payload)) {
+            FcmSendResult.SUCCESS -> {
+                pendings.forEach { it.markSent() }
+                log.info { "식후 알림 발송: userId=${fcmToken.userId}, type=${payload.type.code}, ${pendings.size}건" }
+            }
+            FcmSendResult.INVALID_TOKEN -> {
+                pendings.forEach { it.cancel() }
+                log.warn { "식후 알림 취소(무효 FCM 토큰): userId=${fcmToken.userId}, type=${payload.type.code}, ${pendings.size}건" }
+            }
+            FcmSendResult.FAILED -> {
+                log.warn { "식후 알림 발송 실패, 다음 크론에서 재시도: userId=${fcmToken.userId}, type=${payload.type.code}, ${pendings.size}건" }
+            }
+        }
     }
 
     private fun buildPostMealPayload(mealRecordId: Long?): FcmPayload {

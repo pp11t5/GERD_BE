@@ -115,6 +115,22 @@ class FcmMessageFactoryTest {
         }
 
         @Test
+        fun `IOS 식후 알림 로그 메타데이터에 APNs alert 설정을 포함한다`() {
+            val metadata = factory.deliveryMetadata(DevicePlatform.IOS, payload.copy(type = NotificationType.POST_MEAL))
+
+            assertThat(metadata).containsEntry("platform", "IOS")
+            assertThat(metadata).containsEntry("dataOnly", true)
+            assertThat(metadata["apns"]).isEqualTo(
+                mapOf(
+                    "pushType" to "alert",
+                    "priority" to "10",
+                    "category" to "post_meal",
+                    "alert" to true,
+                ),
+            )
+        }
+
+        @Test
         fun `식후 알림 외 알림은 FCM notification을 포함하고 커스텀 APNs 설정을 사용하지 않는다`() {
             val types = listOf(
                 NotificationType.POST_MEAL_DELAYED_BULK,
