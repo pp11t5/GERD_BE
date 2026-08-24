@@ -39,9 +39,9 @@ class FcmClient(
     }
 
     // 토큰 엔티티로 바로 발송 — 재조회 없이 (배치에서 토큰 1회 조회 후 재사용)
-    override fun send(fcmToken: UserFcmToken, payload: FcmPayload) {
+    override fun send(fcmToken: UserFcmToken, payload: FcmPayload): FcmSendResult {
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)
-        send(message, fcmToken.token)
+        return send(message, fcmToken.token)
     }
 
     // 단일 토큰 직접 발송 — 테스트용
@@ -90,15 +90,19 @@ class FcmClient(
     }
 
     // 발송 실패 시 만료 토큰 정리
-    private fun send(message: Message, token: String) {
+    private fun send(message: Message, token: String): FcmSendResult {
         try {
             val messageId = firebaseMessaging.send(message)
             log.info { "FCM 발송 성공: messageId=$messageId" }
+            return FcmSendResult.SUCCESS
         } catch (e: FirebaseMessagingException) {
             if (e.messagingErrorCode in INVALID_TOKEN_CODES) {
                 fcmTokenService.deleteByToken(token)
+                log.warn { "FCM 발송 실패(무효 토큰): errorCode=${e.messagingErrorCode}" }
+                return FcmSendResult.INVALID_TOKEN
             }
             log.warn { "FCM 발송 실패: errorCode=${e.messagingErrorCode}" }
+            return FcmSendResult.FAILED
         }
     }
 

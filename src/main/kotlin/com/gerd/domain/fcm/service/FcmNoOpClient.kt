@@ -19,8 +19,9 @@ class FcmNoOpClient : FcmPushSender {
         log.debug { "[NoOp] sendToUser: userId=$userId, type=${payload.type}" }
     }
 
-    override fun send(fcmToken: UserFcmToken, payload: FcmPayload) {
+    override fun send(fcmToken: UserFcmToken, payload: FcmPayload): FcmSendResult {
         log.debug { "[NoOp] send: token=${fcmToken.token}" }
+        return FcmSendResult.SUCCESS
     }
 
     override fun sendRaw(token: String, payload: FcmPayload) {
