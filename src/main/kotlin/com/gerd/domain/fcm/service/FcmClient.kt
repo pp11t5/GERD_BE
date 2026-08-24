@@ -2,6 +2,7 @@ package com.gerd.domain.fcm.service
 
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
+import com.gerd.domain.fcm.entity.enums.DevicePlatform
 import com.gerd.domain.fcm.exception.FcmErrorCode
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.global.apiPayload.GeneralException
@@ -11,10 +12,10 @@ import com.google.firebase.messaging.Message
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
 import com.google.firebase.messaging.Notification
-
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
+import tools.jackson.databind.json.JsonMapper
 
 private val log = KotlinLogging.logger {}
 
@@ -41,7 +42,7 @@ class FcmClient(
     // 토큰 엔티티로 바로 발송 — 재조회 없이 (배치에서 토큰 1회 조회 후 재사용)
     override fun send(fcmToken: UserFcmToken, payload: FcmPayload) {
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)
-        logMessage(fcmToken.token, fcmToken.platform.name, payload)
+        logMessage(fcmToken.platform, payload)
         send(message, fcmToken.token)
     }
 
@@ -51,7 +52,7 @@ class FcmClient(
             ?: throw GeneralException(FcmErrorCode.FCM_TOKEN_NOT_FOUND)
 
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)
-        logMessage(fcmToken.token, fcmToken.platform.name, payload)
+        logMessage(fcmToken.platform, payload)
         try {
             firebaseMessaging.send(message)
         } catch (e: FirebaseMessagingException) {
@@ -104,17 +105,16 @@ class FcmClient(
         }
     }
 
-    // 토큰을 마스킹한 FCM 요청 로그
-    private fun logMessage(token: String, platform: String, payload: FcmPayload) {
-        log.info {
-            "FCM 전송 요청: token=${maskToken(token)}, platform=$platform, data=${payload.toDataMap()}"
-        }
+    // 로그 message를 JSON으로 남겨 플랫폼별 FCM/APNs 전달 계약을 한눈에 확인한다.
+    private fun logMessage(platform: DevicePlatform, payload: FcmPayload) {
+        val metadata = LinkedHashMap<String, Any>(fcmMessageFactory.deliveryMetadata(platform, payload))
+        metadata["data"] = payload.toDataMap()
+        log.info { logJsonMapper.writeValueAsString(metadata) }
     }
 
-    private fun maskToken(token: String): String =
-        if (token.length <= 8) "***" else "${token.take(4)}...${token.takeLast(4)}"
-
     companion object {
+        private val logJsonMapper: JsonMapper = JsonMapper.builder().build()
+
         private val INVALID_TOKEN_CODES = setOf(
             MessagingErrorCode.UNREGISTERED,
             MessagingErrorCode.INVALID_ARGUMENT,
