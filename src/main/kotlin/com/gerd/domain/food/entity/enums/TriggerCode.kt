@@ -15,7 +15,6 @@ enum class TriggerCode(@get:JsonValue val code: String) {
     TOMATO("tomato"),
     MINT("mint"),
     ONION_GARLIC_RAW("onion_garlic_raw"),
-    CHEESE_DAIRY("cheese_dairy"),
     REFINED_FLOUR("refined_flour"),
     ;
 

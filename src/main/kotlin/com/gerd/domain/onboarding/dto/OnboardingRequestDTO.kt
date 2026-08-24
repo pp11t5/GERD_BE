@@ -25,10 +25,10 @@ data class OnboardingRequestDTO(
         description = """07 트리거 음식 칩(다중). 영어 code 배열로 전달.
             caffeine(커피·카페인), carbonated(탄산음료), alcohol(술), spicy(매운 음식), fried_fatty(튀김·기름진 음식),
             chocolate(초콜릿), citrus(감귤류), tomato(토마토), mint(민트), onion_garlic_raw(양파·마늘 생),
-            cheese_dairy(치즈·유제품), refined_flour(빵·정제 밀가루)""",
+            refined_flour(빵·정제 밀가루)""",
         example = "[\"caffeine\", \"carbonated\", \"spicy\"]",
     )
-    @field:Size(max = 12, message = "트리거 음식은 최대 12개까지 선택할 수 있습니다.")
+    @field:Size(max = 11, message = "트리거 음식은 최대 11개까지 선택할 수 있습니다.")
     val triggers: List<TriggerCode> = emptyList(),
 
     @field:Schema(
