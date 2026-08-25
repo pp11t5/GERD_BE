@@ -123,6 +123,9 @@ sentry:
   max-request-body-size: always
   send-default-pii: false
   traces-sample-rate: 0.0
+  webhook:
+    secret: ${SENTRY_WEBHOOK_SECRET:}
+    discord-webhook-url: ${DISCORD_WEBHOOK_URL:}
 
 admin:
   email: ${ADMIN_EMAIL:}
