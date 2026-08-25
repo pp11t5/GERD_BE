@@ -25,7 +25,7 @@ import java.time.LocalDateTime
 class AuthService(
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
-    private val refreshTokenRevokeService: RefreshTokenRevokeService,
+    private val refreshTokenRotationService: RefreshTokenRotationService,
     private val jwtProvider: JwtProvider,
     private val jwtProperties: JwtProperties,
     private val notificationSettingRepository: UserNotificationSettingRepository,
@@ -70,29 +70,16 @@ class AuthService(
         )
     }
 
-    // JWT 형식 검증 → DB 조회 (없으면 전체 로그아웃) → 상태 확인 → 토큰 로테이션
-    @Transactional
+    // JWT 형식 검증 → 사용자별 토큰 행 잠금 → 해시 비교 → 토큰 로테이션
     fun refresh(refreshToken: String): AuthTokenResponseDTO {
         val claims = jwtProvider.validateRefreshToken(refreshToken)
         val userId = jwtProvider.extractUserId(claims)
 
-        findStoredTokenOrDeleteAll(HashUtils.sha256(refreshToken), userId)
-
-        val user = userRepository.findById(userId)
-            .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
-        // @SQLRestriction + 탈퇴 시 토큰 선삭제로 DELETED 유저는 이 경로에 도달하지 않음
-
-        return issueTokens(user)
-    }
-
-    // DB에 없는 refresh token → 탈취 의심 → 해당 유저 전체 로그아웃
-    private fun findStoredTokenOrDeleteAll(tokenHash: String, userId: Long): RefreshToken {
-        return refreshTokenRepository.findByTokenHash(tokenHash)
-            ?: run {
-                // REQUIRES_NEW 트랜잭션에서 먼저 커밋 — 이후 refresh() 롤백에 영향받지 않고 별도 삭제가 정상적으로 이루어짐
-                refreshTokenRevokeService.revokeAllSessions(userId)
-                throw GeneralException(AuthErrorCode.INVALID_REFRESH_TOKEN)
-            }
+        return try {
+            refreshTokenRotationService.rotate(userId, refreshToken)
+        } catch (_: RefreshTokenReuseException) {
+            throw GeneralException(AuthErrorCode.INVALID_REFRESH_TOKEN)
+        }
     }
 
     fun getMe(userId: Long): UserMeResponseDTO {
