@@ -4,6 +4,7 @@ import com.gerd.domain.auth.filter.JwtAuthenticationFilter
 import com.gerd.domain.auth.filter.JwtExceptionFilter
 import com.gerd.domain.auth.security.CustomAccessDeniedHandler
 import com.gerd.domain.auth.security.CustomAuthenticationEntryPoint
+import com.gerd.global.filter.SensitivePathBlockFilter
 import com.gerd.global.config.properties.SwaggerProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -95,6 +96,7 @@ class WebSecurityConfig(
                 it.accessDeniedHandler(customAccessDeniedHandler)
                 it.authenticationEntryPoint(customAuthenticationEntryPoint)
             }
+            .addFilterBefore(SensitivePathBlockFilter(), JwtExceptionFilter::class.java)
             .addFilterBefore(jwtExceptionFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterAfter(jwtAuthenticationFilter, JwtExceptionFilter::class.java)
 

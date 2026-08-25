@@ -132,6 +132,17 @@ main push
 | Replicas | 1에서 시작 | 비용 절약, 완전 무중단은 아님 |
 | Serverless | Off | 일반 API 서버 기본값 권장 |
 
+### 2.9 스테이징 외부 접근 제한
+
+Railway의 `*.up.railway.app` 공개 도메인은 인터넷에서 직접 접근 가능하므로, Spring Security의 `401` 응답만으로는 자동화 스캔 요청이 애플리케이션에 도달하는 것을 막을 수 없다. 스테이징은 아래 순서로 외부 접근을 제한한다.
+
+1. `staging-api.<domain>` 커스텀 도메인을 Railway 서비스에 연결하고 Cloudflare Proxy를 활성화한다.
+2. Cloudflare WAF Custom Rule에서 해당 호스트에 대해 팀의 고정 IP 또는 VPN egress IP 목록 이외의 요청을 `Block`한다. Railway health check를 Cloudflare 경유로 구성했다면 Railway의 egress IP도 허용 목록에 포함한다.
+3. Cloudflare Security Events에서 차단 동작을 확인한 뒤 Railway가 자동 생성한 `*.up.railway.app` Public Domain을 삭제한다. 이 도메인이 남아 있으면 Cloudflare 규칙을 우회할 수 있다.
+4. 모바일 기기처럼 고정 IP를 사용할 수 없는 테스트가 필요하면, 제한 시간을 정해 임시 IP를 허용 목록에 추가하고 종료 후 제거한다.
+
+애플리케이션은 `/.env`, `/.git`, `/.aws` 같은 숨김 경로 및 PHP 탐색 경로를 보안 필터에서 `404`로 즉시 응답한다. 이는 노이즈와 정보 노출을 줄이는 보조 방어이며, 네트워크 접근 제한을 대체하지 않는다.
+
 ### 3. CI 파이프라인 (GitHub Actions)
 
 목표: PR 단계에서 빌드/테스트 실패를 조기 발견. 실제 배포는 Railway가 담당.
