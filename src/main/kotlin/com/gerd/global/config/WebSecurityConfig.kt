@@ -96,7 +96,7 @@ class WebSecurityConfig(
                 it.accessDeniedHandler(customAccessDeniedHandler)
                 it.authenticationEntryPoint(customAuthenticationEntryPoint)
             }
-            .addFilterBefore(SensitivePathBlockFilter(), JwtExceptionFilter::class.java)
+            .addFilterBefore(SensitivePathBlockFilter(), UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(jwtExceptionFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterAfter(jwtAuthenticationFilter, JwtExceptionFilter::class.java)
 
