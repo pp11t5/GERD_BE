@@ -2,6 +2,7 @@ package com.gerd.infra.monitoring.sentry
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -38,6 +39,7 @@ class SentryWebhookService(
             ?: issue.path("permalink").asText(null)
         val projectName = project.path("slug").asText(project.path("name").asText("unknown"))
         val level = event.path("level").asText("error")
+        val environment = extractEnvironment(event)
 
         discordWebhookClient.send(
             DiscordWebhookMessage(
@@ -49,6 +51,7 @@ class SentryWebhookService(
                         color = if (level.equals("fatal", ignoreCase = true)) FATAL_COLOR else ERROR_COLOR,
                         fields = listOf(
                             DiscordEmbedField(name = "Project", value = projectName, inline = true),
+                            DiscordEmbedField(name = "Environment", value = environment, inline = true),
                             DiscordEmbedField(name = "Level", value = level, inline = true),
                         ),
                     ),
@@ -56,6 +59,22 @@ class SentryWebhookService(
             ),
         )
         return true
+    }
+
+    private fun extractEnvironment(event: JsonNode): String {
+        event.path("environment").asText(null)?.takeIf(String::isNotBlank)?.let { return it }
+
+        val tags = event.path("tags")
+        tags.path("environment").asText(null)?.takeIf(String::isNotBlank)?.let { return it }
+
+        tags.firstOrNull { tag ->
+            tag.path("key").asText() == ENVIRONMENT_TAG || tag.path(0).asText() == ENVIRONMENT_TAG
+        }?.let { tag ->
+            tag.path("value").asText(null)?.takeIf(String::isNotBlank)
+                ?: tag.path(1).asText(null)?.takeIf(String::isNotBlank)
+        }?.let { return it }
+
+        return UNKNOWN_ENVIRONMENT
     }
 
     private fun isValidSignature(payload: ByteArray, signature: String?): Boolean {
@@ -80,6 +99,8 @@ class SentryWebhookService(
         private const val SHA256_HEX_LENGTH = 64
         private const val HEX_DIGITS = "0123456789abcdefABCDEF"
         private const val MAX_DESCRIPTION_LENGTH = 4_000
+        private const val ENVIRONMENT_TAG = "environment"
+        private const val UNKNOWN_ENVIRONMENT = "unknown"
         private const val ERROR_COLOR = 15_158_332
         private const val FATAL_COLOR = 10_036_732
     }

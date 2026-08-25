@@ -38,7 +38,7 @@ jwt:
 
 sentry:
   dsn: ${SENTRY_DSN}
-  environment: ${SENTRY_ENVIRONMENT:prod}
+  environment: ${SENTRY_ENVIRONMENT:production}
   release: ${SENTRY_RELEASE:${RAILWAY_GIT_COMMIT_SHA:unknown}}
   exception-resolver-order: -2147483647
   max-request-body-size: small
@@ -67,7 +67,7 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-      environment: ${SENTRY_ENVIRONMENT:prod}
+      environment: ${SENTRY_ENVIRONMENT:production}
   otlp:
     metrics:
       export:
