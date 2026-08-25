@@ -38,7 +38,11 @@ class SentryWebhookServiceTest {
                 {
                   "data": {
                     "issue": { "title": "유효하지 않은 Refresh Token입니다.", "web_url": "https://sentry.io/issues/1" },
-                    "event": { "message": "AUTH401_5", "level": "error" },
+                    "event": {
+                      "message": "AUTH401_5",
+                      "level": "error",
+                      "tags": [["environment", "staging"]]
+                    },
                     "project": { "slug": "gerd" }
                   }
                 }
@@ -55,8 +59,29 @@ class SentryWebhookServiceTest {
             assertThat(embed.url).isEqualTo("https://sentry.io/issues/1")
             assertThat(embed.fields).containsExactly(
                 DiscordEmbedField("Project", "gerd", true),
+                DiscordEmbedField("Environment", "staging", true),
                 DiscordEmbedField("Level", "error", true),
             )
+        }
+
+        @Test
+        fun `event의 environment 필드를 Discord 임베드에 표시한다`() {
+            val payload = """
+                {
+                  "data": {
+                    "issue": { "title": "서버 오류" },
+                    "event": { "environment": "production" },
+                    "project": { "slug": "gerd" }
+                  }
+                }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(captor.capture())
+            assertThat(captor.firstValue.embeds.single().fields)
+                .contains(DiscordEmbedField("Environment", "production", true))
         }
 
         @Test
