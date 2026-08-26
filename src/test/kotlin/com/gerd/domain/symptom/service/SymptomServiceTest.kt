@@ -37,6 +37,7 @@ import org.mockito.kotlin.isNull
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.LocalDateTime
 import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
@@ -187,9 +188,24 @@ class SymptomServiceTest {
         }
 
         @Test
+        fun `미래 증상 발생 시각이면 SYMPTOM_IN_FUTURE`() {
+            val request = createRequest(mealRecordId = null)
+            whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00"))
+                .thenReturn(LocalDateTime.now().plusMinutes(1))
+
+            assertThatThrownBy { service.create(userId, request) }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode").isEqualTo(SymptomErrorCode.SYMPTOM_IN_FUTURE)
+
+            verify(symptomRepository, never()).save(any())
+        }
+
+        @Test
         fun `끼니 식별자가 잘못된 형식이면 MEAL_RECORD_NOT_FOUND`() {
             val request = createRequest(mealRecordId = "bad")
             whenever(userRepository.findById(userId)).thenReturn(Optional.of(SymptomFixture.user()))
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00")).thenReturn(SymptomFixture.OCCURRED_AT)
 
             assertThatThrownBy { service.create(userId, request) }
                 .isInstanceOf(GeneralException::class.java)
@@ -304,6 +320,22 @@ class SymptomServiceTest {
                 .extracting("errorCode").isEqualTo(CommonErrorCode.INVALID_REQUEST)
 
             verify(dictionaryCommandService, never()).upsertFromSymptom(any(), any(), any())
+        }
+
+        @Test
+        fun `미래 증상 발생 시각으로 수정하면 SYMPTOM_IN_FUTURE`() {
+            val symptom = SymptomFixture.symptom()
+            whenever(symptomRepository.findByExternalIdAndUser_Id(SymptomFixture.SYMPTOM_EXTERNAL_ID, userId)).thenReturn(symptom)
+            whenever(symptomConverter.parseOccurredAt("2026-05-12T19:30:00+09:00"))
+                .thenReturn(LocalDateTime.now().plusMinutes(1))
+
+            assertThatThrownBy {
+                service.update(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString(), updateRequest(), userId)
+            }
+                .isInstanceOf(GeneralException::class.java)
+                .extracting("errorCode").isEqualTo(SymptomErrorCode.SYMPTOM_IN_FUTURE)
+
+            assertThat(symptom.occurredAt).isEqualTo(SymptomFixture.OCCURRED_AT)
         }
     }
 
