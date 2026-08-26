@@ -55,6 +55,7 @@ class SymptomService(
         val user = userRepository.findById(userId)
             .orElseThrow { GeneralException(AuthErrorCode.USER_NOT_FOUND) }
         val occurredAt = symptomConverter.parseOccurredAt(request.occurredAt)
+        validateOccurredAt(occurredAt)
         val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId, occurredAt) }
         val symptom = Symptom(
             user = user,
@@ -85,6 +86,7 @@ class SymptomService(
         val previousStreakTarget = symptom.symptomState.isStreakTarget()
         val previousDate = symptom.occurredAt.toLocalDate()
         val occurredAt = symptomConverter.parseOccurredAt(request.occurredAt)
+        validateOccurredAt(occurredAt)
         val mealRecordId: Long? = request.mealRecordId?.let { resolveMealRecordId(it, userId, occurredAt) }
 
         symptom.mealRecordId?.let { dictionaryCommandService.removeSafeEntries(userId, it) }
@@ -137,6 +139,12 @@ class SymptomService(
             ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
         if (occurredAt.isBefore(mealRecord.eatenAt)) throw GeneralException(SymptomErrorCode.SYMPTOM_BEFORE_MEAL)
         return mealRecord.id ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND)
+    }
+
+    private fun validateOccurredAt(occurredAt: LocalDateTime) {
+        if (occurredAt.isAfter(LocalDateTime.now())) {
+            throw GeneralException(SymptomErrorCode.SYMPTOM_IN_FUTURE)
+        }
     }
 
     // UUID 문자열을 파싱하여 UUID 객체로 변환, 실패 시 null 반환

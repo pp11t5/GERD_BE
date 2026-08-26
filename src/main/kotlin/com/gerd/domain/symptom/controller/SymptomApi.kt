@@ -33,6 +33,7 @@ interface SymptomApi {
         summary = "증상 기록 생성",
         description = "증상 목록을 선택하지 않으면 없음으로 입력됩니다.",
     )
+    @ApiErrorExample(SymptomErrorCode::class, "INVALID_DATE_TIME", "SYMPTOM_IN_FUTURE", "SYMPTOM_BEFORE_MEAL")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "생성 성공"))
     @PostMapping
     fun create(
@@ -41,7 +42,7 @@ interface SymptomApi {
     ): ResponseEntity<ApiResponse<SymptomResponseDTO>>
 
     @Operation(summary = "증상 기록 전체 수정", description = "증상 상태, 증상 목록, 발생 시각, 연결 끼니, 메모를 전체 수정합니다.")
-    @ApiErrorExample(SymptomErrorCode::class, "INVALID_DATE_TIME", "SYMPTOM_NOT_FOUND")
+    @ApiErrorExample(SymptomErrorCode::class, "INVALID_DATE_TIME", "SYMPTOM_IN_FUTURE", "SYMPTOM_BEFORE_MEAL", "SYMPTOM_NOT_FOUND")
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "수정 성공"))
     @PutMapping("/{symptomId}")
     fun update(
