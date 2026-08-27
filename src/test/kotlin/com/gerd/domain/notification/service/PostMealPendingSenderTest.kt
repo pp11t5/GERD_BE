@@ -3,8 +3,13 @@ package com.gerd.domain.notification.service
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
+import com.gerd.domain.fcm.service.FcmSendResult
 import com.gerd.domain.fcm.service.FcmPushSender
+import com.gerd.domain.food.entity.Food
+import com.gerd.domain.food.repository.FoodRepository
+import com.gerd.domain.meal.entity.MealFood
 import com.gerd.domain.meal.entity.MealRecord
+import com.gerd.domain.meal.repository.MealFoodRepository
 import com.gerd.domain.meal.repository.MealRecordRepository
 import com.gerd.domain.notification.entity.NotificationPending
 import com.gerd.domain.notification.entity.UserNotificationSetting
@@ -27,6 +32,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
@@ -38,6 +44,8 @@ class PostMealPendingSenderTest {
     @Mock private lateinit var userFcmTokenRepository: UserFcmTokenRepository
     @Mock private lateinit var fcmPushSender: FcmPushSender
     @Mock private lateinit var mealRecordRepository: MealRecordRepository
+    @Mock private lateinit var mealFoodRepository: MealFoodRepository
+    @Mock private lateinit var foodRepository: FoodRepository
 
     @InjectMocks private lateinit var sender: PostMealPendingSender
 
@@ -111,13 +119,23 @@ class PostMealPendingSenderTest {
 
         private val token = mock<UserFcmToken>()
 
-        private fun stubReady(pendings: List<NotificationPending>) {
+        private fun stubReady(
+            pendings: List<NotificationPending>,
+            sendResult: FcmSendResult = FcmSendResult.SUCCESS,
+        ) {
             val setting = enabledSetting()
             whenever(notificationPendingRepository.findByIdInAndStatus(any(), eq(PENDING)))
                 .thenReturn(pendings)
             whenever(userNotificationSettingRepository.findById(userId))
                 .thenReturn(Optional.of(setting))
             whenever(userFcmTokenRepository.findById(userId)).thenReturn(Optional.of(token))
+            whenever(fcmPushSender.send(any(), any())).thenReturn(sendResult)
+        }
+
+        private fun mockMealRecord(externalId: UUID = UUID.randomUUID()) = mock<MealRecord>().also {
+            whenever(it.id).thenReturn(10L)
+            whenever(it.eatenAt).thenReturn(LocalDateTime.now().minusHours(6))
+            whenever(it.externalId).thenReturn(externalId)
         }
 
         @Test
@@ -127,6 +145,8 @@ class PostMealPendingSenderTest {
                 whenever(it.mealRecordId).thenReturn(10L)
             }
             stubReady(listOf(pending))
+            val mealRecord = mockMealRecord()
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
 
             sender.sendForUser(userId, pendingIds)
 
@@ -139,9 +159,7 @@ class PostMealPendingSenderTest {
         @Test
         fun `targetId는 끼니의 내부 PK가 아니라 externalId(UUID)로 내려간다`() {
             val externalId = UUID.randomUUID()
-            val mealRecord = mock<MealRecord>().also {
-                whenever(it.externalId).thenReturn(externalId)
-            }
+            val mealRecord = mockMealRecord(externalId)
             val pending = mock<NotificationPending>().also {
                 whenever(it.delayed).thenReturn(false)
                 whenever(it.mealRecordId).thenReturn(10L)
@@ -158,17 +176,37 @@ class PostMealPendingSenderTest {
 
         @Test
         fun `지연 단건이면 POST_MEAL_DELAYED_SINGLE로 발송한다`() {
+            val externalId = UUID.randomUUID()
             val pending = mock<NotificationPending>().also {
                 whenever(it.delayed).thenReturn(true)
                 whenever(it.mealRecordId).thenReturn(10L)
             }
             stubReady(listOf(pending))
+            val mealRecord = mock<MealRecord>().also {
+                whenever(it.id).thenReturn(10L)
+                whenever(it.externalId).thenReturn(externalId)
+                whenever(it.eatenAt).thenReturn(LocalDateTime.now().minusHours(6))
+            }
+            val mealFood = mock<MealFood>().also { whenever(it.foodId).thenReturn(100L) }
+            val food = mock<Food>().also {
+                whenever(it.id).thenReturn(100L)
+                whenever(it.name).thenReturn("된장찌개")
+            }
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
+            whenever(mealFoodRepository.findByMealRecordIdOrderByEatenAtAsc(10L)).thenReturn(listOf(mealFood))
+            whenever(foodRepository.findAllByIdsIncludingDeleted(any())).thenReturn(listOf(food))
 
             sender.sendForUser(userId, pendingIds)
 
             val captor = argumentCaptor<FcmPayload>()
             verify(fcmPushSender).send(eq(token), captor.capture())
             assertThat(captor.firstValue.type).isEqualTo(NotificationType.POST_MEAL_DELAYED_SINGLE)
+            assertThat(captor.firstValue.targetId).isEqualTo(externalId.toString())
+            assertThat(captor.firstValue.mealOccurredAt).isNotBlank()
+            assertThat(captor.firstValue.hoursElapsed).isNotBlank()
+            assertThat(captor.firstValue.foodNames).isEqualTo("된장찌개")
+            assertThat(captor.firstValue.title).isEqualTo("어젯밤 식사, 기록하셨나요?")
+            assertThat(captor.firstValue.body).isEqualTo("어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.")
             verify(pending).markSent()
         }
 
@@ -185,6 +223,38 @@ class PostMealPendingSenderTest {
             assertThat(captor.firstValue.type).isEqualTo(NotificationType.POST_MEAL_DELAYED_BULK)
             verify(first).markSent()
             verify(second).markSent()
+        }
+
+        @Test
+        fun `무효 토큰이면 PENDING을 취소하고 SENT 처리하지 않는다`() {
+            val pending = mock<NotificationPending>().also {
+                whenever(it.delayed).thenReturn(false)
+                whenever(it.mealRecordId).thenReturn(10L)
+            }
+            stubReady(listOf(pending), FcmSendResult.INVALID_TOKEN)
+            val mealRecord = mockMealRecord()
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
+
+            sender.sendForUser(userId, pendingIds)
+
+            verify(pending).cancel()
+            verify(pending, never()).markSent()
+        }
+
+        @Test
+        fun `일시 발송 실패면 PENDING 상태를 유지한다`() {
+            val pending = mock<NotificationPending>().also {
+                whenever(it.delayed).thenReturn(false)
+                whenever(it.mealRecordId).thenReturn(10L)
+            }
+            stubReady(listOf(pending), FcmSendResult.FAILED)
+            val mealRecord = mockMealRecord()
+            whenever(mealRecordRepository.findById(10L)).thenReturn(Optional.of(mealRecord))
+
+            sender.sendForUser(userId, pendingIds)
+
+            verify(pending, never()).markSent()
+            verify(pending, never()).cancel()
         }
     }
 }

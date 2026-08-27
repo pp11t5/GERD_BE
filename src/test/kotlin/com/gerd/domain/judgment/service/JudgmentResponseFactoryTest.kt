@@ -1,6 +1,7 @@
 package com.gerd.domain.judgment.service
 
 import com.gerd.domain.judgment.dto.JudgmentContext
+import com.gerd.domain.judgment.dto.JudgmentResponseDTO
 import com.gerd.domain.judgment.dto.JudgmentResponseDTO.StateRecordsDTO
 import com.gerd.domain.judgment.dto.LlmInputSnapshotDTO.TagDTO
 import com.gerd.domain.judgment.dto.LlmJudgmentDTO
@@ -24,7 +25,6 @@ class JudgmentResponseFactoryTest {
         foodAllergens = emptyList(),
         userTriggers = listOf(TagDTO("caffeine", "카페인")),
         userAllergens = emptyList(),
-        medications = emptyList(),
         symptomCodes = emptyList(),
     )
 
@@ -36,8 +36,9 @@ class JudgmentResponseFactoryTest {
     private fun overrideOf(
         grade: JudgmentGrade,
         allergenMatches: List<TagDTO> = emptyList(),
+        criticalAllergenMatches: List<TagDTO> = emptyList(),
         triggerMatches: List<TagDTO> = emptyList(),
-    ) = OverrideResult(grade, allergenMatches, triggerMatches)
+    ) = OverrideResult(grade, allergenMatches, criticalAllergenMatches, triggerMatches)
 
     @Nested
     inner class `assembleCacheable` {
@@ -96,19 +97,36 @@ class JudgmentResponseFactoryTest {
         }
 
         @Test
-        fun `알레르겐 매치 시 items 슬롯 1을 결정적 카피로 교체한다`() {
-            val milk = TagDTO("milk", "우유")
+        fun `치명 위험군 알레르겐 매치 시 items 슬롯 1을 결정적 카피로 교체한다`() {
+            val peanut = TagDTO("peanut", "땅콩")
             val cached = assembler.assembleCacheable(
                 context = context,
                 llmJudgment = LlmJudgmentDTO(JudgmentGrade.RECOMMEND, items = llmItems),
-                override = overrideOf(JudgmentGrade.RISK, allergenMatches = listOf(milk)),
+                override = overrideOf(
+                    grade = JudgmentGrade.RISK,
+                    allergenMatches = listOf(peanut),
+                    criticalAllergenMatches = listOf(peanut),
+                ),
                 substitutes = emptyList(),
             )
 
             assertThat(cached.grade).isEqualTo(JudgmentGrade.RISK)
             assertThat(cached.items[0].emphasis).isEqualTo("카페인이 들어 있어요")
             assertThat(cached.items[1].emphasis).isEqualTo("알레르기 성분이 들어 있어요")
-            assertThat(cached.items[1].body).contains("우유")
+            assertThat(cached.items[1].body).contains("땅콩")
+        }
+
+        @Test
+        fun `일반 알레르겐 매치는 최근 증상 패턴 슬롯을 유지한다`() {
+            val milk = TagDTO("milk", "우유")
+            val cached = assembler.assembleCacheable(
+                context = context,
+                llmJudgment = LlmJudgmentDTO(JudgmentGrade.RECOMMEND, items = llmItems),
+                override = overrideOf(JudgmentGrade.CAUTION, allergenMatches = listOf(milk)),
+                substitutes = emptyList(),
+            )
+
+            assertThat(cached.items[1]).isEqualTo(JudgmentResponseDTO.JudgmentItemDTO("알레르기 해당 없어요", "알레르기 성분이 포함되지 않았어요."))
         }
     }
 

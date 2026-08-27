@@ -43,7 +43,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,configprops 
+        include: health,info
   endpoint:
     health:
       show-details: never

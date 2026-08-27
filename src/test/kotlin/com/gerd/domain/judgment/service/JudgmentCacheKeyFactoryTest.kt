@@ -13,15 +13,14 @@ class JudgmentCacheKeyFactoryTest {
 
     private fun context(
         userTriggers: List<TagDTO> = listOf(TagDTO("caffeine", "카페인"), TagDTO("spicy", "매운 음식")),
-        medications: List<String> = listOf("제산제"),
+        userAllergens: List<TagDTO> = emptyList(),
     ) = JudgmentContext(
         food = FoodFixture.food(name = "아메리카노"),
         category = "beverage",
         foodTriggers = listOf(TagDTO("caffeine", "카페인")),
         foodAllergens = emptyList(),
         userTriggers = userTriggers,
-        userAllergens = emptyList(),
-        medications = medications,
+        userAllergens = userAllergens,
         symptomCodes = listOf("heartburn_reflux"),
     )
 
@@ -42,7 +41,7 @@ class JudgmentCacheKeyFactoryTest {
     @Test
     fun `입력 스냅샷이 달라지면 키가 달라진다(자연 무효화)`() {
         val base = keyFactory.createKey(1L, snapshotFactory.create(context()))
-        val changed = keyFactory.createKey(1L, snapshotFactory.create(context(medications = listOf("제산제", "PPI"))))
+        val changed = keyFactory.createKey(1L, snapshotFactory.create(context(userAllergens = listOf(TagDTO("milk", "우유")))))
 
         assertThat(base).isNotEqualTo(changed)
     }
@@ -52,5 +51,12 @@ class JudgmentCacheKeyFactoryTest {
         val snapshot = snapshotFactory.create(context())
 
         assertThat(keyFactory.createKey(1L, snapshot)).isNotEqualTo(keyFactory.createKey(2L, snapshot))
+    }
+
+    @Test
+    fun `키에 캐시 계약 버전을 포함한다`() {
+        val key = keyFactory.createKey(1L, snapshotFactory.create(context()))
+
+        assertThat(key).startsWith("${JudgmentCacheKeyFactory.CACHE_KEY_VERSION}:food:")
     }
 }

@@ -54,6 +54,9 @@ class AppleApiClient(
                 "애플 로그인 실패: status=${exception.statusCode}, error=${appleError?.error}"
             }
 
+            if (exception.statusCode.is4xxClientError && appleError?.error == INVALID_GRANT) {
+                throw GeneralException(AuthErrorCode.APPLE_INVALID_AUTHORIZATION_CODE, exception)
+            }
             throw GeneralException(AuthErrorCode.APPLE_TOKEN_REQUEST_FAILED, exception)
         } catch (exception: ResourceAccessException) {
             log.warn(exception) { "애플 로그인 타임아웃" }
@@ -93,4 +96,8 @@ class AppleApiClient(
     // 로그에 원문 노출되지 않도록 앞 4자만 남기고 마스킹
     private fun mask(value: String): String =
         if (value.length <= 4) "****" else "${value.take(4)}****"
+
+    companion object {
+        private const val INVALID_GRANT = "invalid_grant"
+    }
 }

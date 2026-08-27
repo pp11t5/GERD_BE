@@ -17,7 +17,7 @@ data class TextJudgmentResponseDTO(
     @field:Schema(description = "개인화 제목 — LLM 생성, 생성 실패 시 등급별 고정 제목", example = "속이 편안할 수 있도록 천천히 드세요!")
     val personalTitle: String,
 
-    @field:Schema(description = "분석 항목 2슬롯 고정 — [0]=트리거·증상, [1]=알레르기·복용약")
+    @field:Schema(description = "분석 항목 2슬롯 고정 — [0]=트리거·증상, [1]=최근 증상 패턴")
     val items: List<JudgmentItemDTO>,
 
     @field:Schema(description = "연관 상태 기록 — 최대 3개 노출, total은 전체 개수")

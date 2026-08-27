@@ -2,6 +2,7 @@ package com.gerd.domain.fcm.service
 
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.UserFcmToken
+import com.gerd.domain.fcm.entity.enums.DevicePlatform
 import com.gerd.domain.fcm.exception.FcmErrorCode
 import com.gerd.domain.fcm.repository.UserFcmTokenRepository
 import com.gerd.global.apiPayload.GeneralException
@@ -11,10 +12,10 @@ import com.google.firebase.messaging.Message
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
 import com.google.firebase.messaging.Notification
-
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
+import tools.jackson.databind.json.JsonMapper
 
 private val log = KotlinLogging.logger {}
 
@@ -39,17 +40,19 @@ class FcmClient(
     }
 
     // 토큰 엔티티로 바로 발송 — 재조회 없이 (배치에서 토큰 1회 조회 후 재사용)
-    override fun send(fcmToken: UserFcmToken, payload: FcmPayload) {
+    override fun send(fcmToken: UserFcmToken, payload: FcmPayload): FcmSendResult {
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)
-        send(message, fcmToken.token)
+        logMessage(fcmToken.platform, payload)
+        return send(message, fcmToken.token)
     }
 
     // 단일 토큰 직접 발송 — 테스트용
     override fun sendRaw(token: String, payload: FcmPayload) {
-        val fcmToken = fcmTokenRepository.findByToken(token)
+        val fcmToken = fcmTokenRepository.findAllByToken(token).firstOrNull()
             ?: throw GeneralException(FcmErrorCode.FCM_TOKEN_NOT_FOUND)
 
         val message = fcmMessageFactory.build(fcmToken.token, fcmToken.platform, payload)
+        logMessage(fcmToken.platform, payload)
         try {
             firebaseMessaging.send(message)
         } catch (e: FirebaseMessagingException) {
@@ -90,19 +93,32 @@ class FcmClient(
     }
 
     // 발송 실패 시 만료 토큰 정리
-    private fun send(message: Message, token: String) {
+    private fun send(message: Message, token: String): FcmSendResult {
         try {
             val messageId = firebaseMessaging.send(message)
             log.info { "FCM 발송 성공: messageId=$messageId" }
+            return FcmSendResult.SUCCESS
         } catch (e: FirebaseMessagingException) {
             if (e.messagingErrorCode in INVALID_TOKEN_CODES) {
                 fcmTokenService.deleteByToken(token)
+                log.warn { "FCM 발송 실패(무효 토큰): errorCode=${e.messagingErrorCode}" }
+                return FcmSendResult.INVALID_TOKEN
             }
             log.warn { "FCM 발송 실패: errorCode=${e.messagingErrorCode}" }
+            return FcmSendResult.FAILED
         }
     }
 
+    // 로그 message를 JSON으로 남겨 플랫폼별 FCM/APNs 전달 계약을 한눈에 확인한다.
+    private fun logMessage(platform: DevicePlatform, payload: FcmPayload) {
+        val metadata = LinkedHashMap<String, Any>(fcmMessageFactory.deliveryMetadata(platform, payload))
+        metadata["data"] = payload.toDataMap()
+        log.info { logJsonMapper.writeValueAsString(metadata) }
+    }
+
     companion object {
+        private val logJsonMapper: JsonMapper = JsonMapper.builder().build()
+
         private val INVALID_TOKEN_CODES = setOf(
             MessagingErrorCode.UNREGISTERED,
             MessagingErrorCode.INVALID_ARGUMENT,

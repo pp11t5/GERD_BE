@@ -3,6 +3,7 @@ package com.gerd.domain.fcm.service
 import com.gerd.domain.fcm.dto.FcmPayload
 import com.gerd.domain.fcm.entity.enums.DevicePlatform
 import com.gerd.domain.notification.entity.enums.NotificationType
+import com.google.firebase.messaging.ApnsConfig
 import com.google.firebase.messaging.Message
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
@@ -33,11 +34,16 @@ class FcmMessageFactoryTest {
         return getNotification.invoke(message)
     }
 
-    // Notification은 getter도 없이 private final 필드뿐이라 필드 리플렉션으로 조회
-    private fun titleBodyOf(notification: Any): Pair<String, String> {
-        val titleField = notification.javaClass.getDeclaredField("title").apply { isAccessible = true }
-        val bodyField = notification.javaClass.getDeclaredField("body").apply { isAccessible = true }
-        return (titleField.get(notification) as String) to (bodyField.get(notification) as String)
+    private fun apnsOf(message: Message): ApnsConfig? {
+        val getApnsConfig = Message::class.java.getDeclaredMethod("getApnsConfig")
+        getApnsConfig.isAccessible = true
+        return getApnsConfig.invoke(message) as ApnsConfig?
+    }
+
+    private fun fieldOf(instance: Any, name: String): Any? {
+        val field = instance.javaClass.getDeclaredField(name)
+        field.isAccessible = true
+        return field.get(instance)
     }
 
     @Nested
@@ -51,18 +57,33 @@ class FcmMessageFactoryTest {
         }
 
         @Test
-        fun `IOS 플랫폼이면 ApnsConfig가 포함된 메시지를 반환한다`() {
+        fun `IOS 플랫폼이면 메시지를 반환한다`() {
             val message = factory.build("fcm-token", DevicePlatform.IOS, payload)
 
             assertThat(message).isNotNull
         }
 
         @Test
-        fun `data 필드에 type과 targetId가 명세대로 채워진다`() {
-            val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
+        fun `식후 알림 data에는 식사 컨텍스트만 채워진다`() {
+            val message = factory.build(
+                "fcm-token",
+                DevicePlatform.IOS,
+                payload.copy(
+                    targetId = "record-1",
+                    mealOccurredAt = "20:22",
+                    hoursElapsed = "0",
+                    foodNames = "커피",
+                ),
+            )
 
             assertThat(dataOf(message)).containsExactlyInAnyOrderEntriesOf(
-                mapOf("type" to "post_meal", "targetId" to "record-1"),
+                mapOf(
+                    "type" to "post_meal",
+                    "targetId" to "record-1",
+                    "mealOccurredAt" to "20:22",
+                    "hoursElapsed" to "0",
+                    "foodNames" to "커피",
+                ),
             )
         }
 
@@ -72,16 +93,72 @@ class FcmMessageFactoryTest {
 
             val message = factory.build("fcm-token", DevicePlatform.ANDROID, noTargetPayload)
 
-            assertThat(dataOf(message)).containsExactlyEntriesOf(mapOf("type" to "daily_record"))
+            assertThat(dataOf(message)).containsExactlyInAnyOrderEntriesOf(
+                mapOf("type" to "daily_record", "title" to "테스트 제목", "body" to "테스트 내용"),
+            )
         }
 
         @Test
-        fun `notification에 title과 body가 채워진다`() {
-            val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload)
+        fun `식후 알림은 Android에서 data-only 메시지다`() {
+            listOf(NotificationType.POST_MEAL, NotificationType.POST_MEAL_DELAYED_SINGLE).forEach { type ->
+                val message = factory.build("fcm-token", DevicePlatform.ANDROID, payload.copy(type = type))
 
-            val notification = notificationOf(message)
-            assertThat(notification).isNotNull
-            assertThat(titleBodyOf(notification!!)).isEqualTo("테스트 제목" to "테스트 내용")
+                assertThat(notificationOf(message)).isNull()
+            }
+        }
+
+        @Test
+        fun `식후 알림은 IOS에서 FCM notification 없이 APNs alert와 category를 포함한다`() {
+            listOf(NotificationType.POST_MEAL, NotificationType.POST_MEAL_DELAYED_SINGLE).forEach { type ->
+                val message = factory.build("fcm-token", DevicePlatform.IOS, payload.copy(type = type))
+                val apns = apnsOf(message)!!
+
+                @Suppress("UNCHECKED_CAST")
+                val headers = fieldOf(apns, "headers") as Map<String, String>
+                @Suppress("UNCHECKED_CAST")
+                val aps = (fieldOf(apns, "payload") as Map<String, Any>)["aps"] as Map<String, Any>
+                val alert = aps["alert"]!!
+
+                assertThat(notificationOf(message)).isNull()
+                assertThat(headers).containsExactlyInAnyOrderEntriesOf(
+                    mapOf("apns-push-type" to "alert", "apns-priority" to "10"),
+                )
+                assertThat(fieldOf(alert, "title")).isEqualTo("테스트 제목")
+                assertThat(fieldOf(alert, "body")).isEqualTo("테스트 내용")
+                assertThat(aps).containsEntry("category", type.code)
+            }
+        }
+
+        @Test
+        fun `IOS 식후 알림 로그 메타데이터에 APNs alert 설정을 포함한다`() {
+            val metadata = factory.deliveryMetadata(DevicePlatform.IOS, payload.copy(type = NotificationType.POST_MEAL))
+
+            assertThat(metadata).containsEntry("platform", "IOS")
+            assertThat(metadata).containsEntry("dataOnly", true)
+            assertThat(metadata["apns"]).isEqualTo(
+                mapOf(
+                    "pushType" to "alert",
+                    "priority" to "10",
+                    "category" to "post_meal",
+                    "alert" to true,
+                ),
+            )
+        }
+
+        @Test
+        fun `식후 알림 외 알림은 FCM notification을 포함하고 커스텀 APNs 설정을 사용하지 않는다`() {
+            val types = listOf(
+                NotificationType.POST_MEAL_DELAYED_BULK,
+                NotificationType.DAILY_RECORD,
+                NotificationType.WEEKLY_REPORT,
+            )
+
+            types.forEach { type ->
+                val message = factory.build("fcm-token", DevicePlatform.IOS, payload.copy(type = type))
+
+                assertThat(notificationOf(message)).isNotNull
+                assertThat(apnsOf(message)).isNull()
+            }
         }
     }
 }

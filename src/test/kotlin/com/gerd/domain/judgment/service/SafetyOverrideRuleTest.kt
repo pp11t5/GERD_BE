@@ -19,18 +19,36 @@ class SafetyOverrideRuleTest {
     inner class `알레르겐 교집합` {
 
         @Test
-        fun `알레르겐이 매치되면 등급 불문 RISK로 강등한다`() {
+        fun `치명 위험군 알레르겐이 매치되면 등급 불문 RISK로 강등한다`() {
             JudgmentGrade.entries.forEach { llmGrade ->
                 val result = rule.apply(
                     llmGrade = llmGrade,
                     foodTriggers = emptyList(),
-                    foodAllergens = listOf(milk, peanut),
+                    foodAllergens = listOf(peanut),
+                    userTriggers = emptyList(),
+                    userAllergens = listOf(peanut),
+                )
+
+                assertThat(result.grade).isEqualTo(JudgmentGrade.RISK)
+                assertThat(result.allergenMatches).containsExactly(peanut)
+            }
+        }
+
+        @Test
+        fun `일반 알레르겐 매치는 RECOMMEND만 CAUTION으로 강등한다`() {
+            JudgmentGrade.entries.forEach { llmGrade ->
+                val result = rule.apply(
+                    llmGrade = llmGrade,
+                    foodTriggers = emptyList(),
+                    foodAllergens = listOf(milk),
                     userTriggers = emptyList(),
                     userAllergens = listOf(milk),
                 )
 
-                assertThat(result.grade).isEqualTo(JudgmentGrade.RISK)
-                assertThat(result.allergenMatches).containsExactly(milk)
+                assertThat(result.grade).isEqualTo(
+                    if (llmGrade == JudgmentGrade.RECOMMEND) JudgmentGrade.CAUTION else llmGrade,
+                )
+                assertThat(result.criticalAllergenMatches).isEmpty()
             }
         }
     }

@@ -1,7 +1,8 @@
 package com.gerd.domain.auth.service
 
-import com.gerd.domain.auth.entity.RefreshToken
+import com.gerd.domain.auth.dto.AuthTokenResponseDTO
 import com.gerd.domain.auth.entity.User
+import com.gerd.domain.auth.entity.enums.UserRole
 import com.gerd.domain.auth.entity.enums.UserStatus
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.RefreshTokenRepository
@@ -26,7 +27,6 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -44,7 +44,7 @@ class AuthServiceTest {
     private lateinit var refreshTokenRepository: RefreshTokenRepository
 
     @Mock
-    private lateinit var refreshTokenRevokeService: RefreshTokenRevokeService
+    private lateinit var refreshTokenRotationService: RefreshTokenRotationService
 
     @Mock
     private lateinit var jwtProvider: JwtProvider
@@ -110,32 +110,25 @@ class AuthServiceTest {
         inner class `성공` {
 
             @Test
-            fun `유효한 리프레시 토큰이면 토큰을 재발급하고 기존 토큰을 삭제한다`() {
-                val user = UserFixture.user()
+            fun `유효한 리프레시 토큰이면 회전 서비스의 결과를 반환한다`() {
                 val claims = mock<Claims>()
-                val stored = RefreshTokenFixture.storedToken()
-                val newRefreshToken = JwtProvider.JwtToken("new.refresh.token", "new-jti")
+                val response = AuthTokenResponseDTO(
+                    accessToken = "new.access.token",
+                    refreshToken = "new.refresh.token",
+                    userId = "1",
+                    role = UserRole.USER,
+                )
 
                 whenever(jwtProvider.validateRefreshToken("refresh.token")).thenReturn(claims)
                 whenever(jwtProvider.extractUserId(claims)).thenReturn(1L)
-                whenever(refreshTokenRepository.findByTokenHash(HashUtils.sha256("refresh.token")))
-                    .thenReturn(stored)
-                whenever(userRepository.findById(1L)).thenReturn(Optional.of(user))
-                whenever(jwtProvider.createAccessToken(user)).thenReturn("new.access.token")
-                whenever(jwtProvider.createRefreshToken(user)).thenReturn(newRefreshToken)
+                whenever(refreshTokenRotationService.rotate(1L, "refresh.token")).thenReturn(response)
 
                 val result = authService.refresh("refresh.token")
 
                 assertThat(result.accessToken).isEqualTo("new.access.token")
                 assertThat(result.refreshToken).isEqualTo("new.refresh.token")
                 assertThat(result.userId).isEqualTo("1")
-
-                // RefreshToken은 equals()가 없으므로 captor로 필드 검증
-                val captor = argumentCaptor<RefreshToken>()
-                verify(refreshTokenRepository).save(captor.capture())
-                assertThat(captor.firstValue.jti).isEqualTo("new-jti")
-                assertThat(captor.firstValue.tokenHash).isEqualTo(HashUtils.sha256("new.refresh.token"))
-                assertThat(captor.firstValue.userId).isEqualTo(1L)
+                verify(refreshTokenRotationService).rotate(1L, "refresh.token")
             }
         }
 
@@ -143,20 +136,19 @@ class AuthServiceTest {
         inner class `실패` {
 
             @Test
-            fun `저장된 리프레시 토큰이 없으면 전체 세션을 삭제하고 INVALID_REFRESH_TOKEN을 던진다`() {
+            fun `재사용된 리프레시 토큰이면 INVALID_REFRESH_TOKEN을 던진다`() {
                 val claims = mock<Claims>()
                 whenever(jwtProvider.validateRefreshToken("refresh.token")).thenReturn(claims)
                 whenever(jwtProvider.extractUserId(claims)).thenReturn(1L)
-                whenever(refreshTokenRepository.findByTokenHash(HashUtils.sha256("refresh.token")))
-                    .thenReturn(null)
+                whenever(refreshTokenRotationService.rotate(1L, "refresh.token"))
+                    .thenThrow(RefreshTokenReuseException())
 
                 assertThatThrownBy { authService.refresh("refresh.token") }
                     .isInstanceOf(GeneralException::class.java)
                     .extracting("errorCode")
                     .isEqualTo(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
-                // 탈취 의심 시 전체 세션 삭제가 실제로 호출되는지 검증
-                verify(refreshTokenRevokeService).revokeAllSessions(1L)
+                verify(refreshTokenRotationService).rotate(1L, "refresh.token")
             }
 
         }
@@ -226,15 +218,15 @@ class AuthServiceTest {
             val claims = mock<Claims>()
             whenever(jwtProvider.validateRefreshToken("refresh.token")).thenReturn(claims)
             whenever(jwtProvider.extractUserId(claims)).thenReturn(1L)
-            whenever(refreshTokenRepository.findByTokenHash(HashUtils.sha256("refresh.token")))
-                .thenReturn(null)
+            whenever(refreshTokenRotationService.rotate(1L, "refresh.token"))
+                .thenThrow(RefreshTokenReuseException())
 
             assertThatThrownBy { authService.refresh("refresh.token") }
                 .isInstanceOf(GeneralException::class.java)
                 .extracting("errorCode")
                 .isEqualTo(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
-            verify(refreshTokenRepository, never()).deleteById(any())
+            verify(refreshTokenRotationService).rotate(1L, "refresh.token")
         }
     }
 }

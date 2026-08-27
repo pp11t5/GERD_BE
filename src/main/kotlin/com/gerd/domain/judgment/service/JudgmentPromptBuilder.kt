@@ -76,7 +76,6 @@ class JudgmentPromptBuilder(
               heartburn_reflux=속쓰림·역류, post_meal_cough=식후 기침, throat_globus=목 이물감,
               sour_mouth_odor=신물 올라옴·입냄새, supine_chest_tight=누우면 가슴 답답함,
               none_but_manage=현재 증상은 없고 관리 목적
-            - user.meds: medications currently taken (free text)
             - history: summary of symptom records linked to this food or similar-category foods over the last 14 days.
               Use the comfortCount/discomfortCount numbers and similarFoodRecords as evidence.
 
@@ -151,8 +150,8 @@ class JudgmentPromptBuilder(
               · Allowed allergenTags: ${AllergenCode.entries.joinToString { it.code }}
             - Only include ingredients generally known to be present based on the food name/attributes. If evidence is
               uncertain, leave it out and keep the array empty.
-            - allergenTags need a HIGHER confidence bar than triggerTags: a single allergen match forces the grade to
-              RISK unconditionally on the server, regardless of anything else. Only tag an allergen when the food's
+            - allergenTags need a HIGHER confidence bar than triggerTags: a match can lower RECOMMEND to CAUTION,
+              and peanut/tree nut/crustacean/fish-shellfish matches force RISK on the server. Only tag an allergen when the food's
               name/attributes make its presence near-certain (e.g. "milk" for "우유라떼"). Do not tag an allergen from
               loose association, a food category's typical recipe, or a "some versions might contain this" guess.
             - These values feed the server's safety override — do not fill them by guessing.

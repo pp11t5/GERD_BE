@@ -10,12 +10,23 @@ import com.gerd.domain.notification.entity.enums.NotificationType
 object NotificationPayloadFactory {
 
     // bulkCount: POST_MEAL_DELAYED_BULK 전용 — 실제 미기록 건수(테스트 발송 시엔 예시값)
-    fun of(type: NotificationType, targetId: String? = null, bulkCount: Int = 3): FcmPayload = when (type) {
+    // 식사 기록 화면으로 이동하는 단건 알림은 식사 컨텍스트를 함께 전송
+    fun of(
+        type: NotificationType,
+        targetId: String? = null,
+        bulkCount: Int = 3,
+        mealOccurredAt: String? = null,
+        hoursElapsed: String? = null,
+        foodNames: String? = null,
+    ): FcmPayload = when (type) {
         NotificationType.POST_MEAL -> FcmPayload(
             title = "속은 좀 어떠세요?",
             body = "방금 드신 식사, 속은 좀 어떠세요? 지금 증상을 기록해 보세요.",
             type = type,
             targetId = targetId,
+            mealOccurredAt = mealOccurredAt,
+            hoursElapsed = hoursElapsed,
+            foodNames = foodNames,
         )
 
         NotificationType.POST_MEAL_DELAYED_SINGLE -> FcmPayload(
@@ -23,6 +34,9 @@ object NotificationPayloadFactory {
             body = "어젯밤 드신 식사, 속은 좀 어떠셨어요? 잊기 전에 기록해 보세요.",
             type = type,
             targetId = targetId,
+            mealOccurredAt = mealOccurredAt,
+            hoursElapsed = hoursElapsed,
+            foodNames = foodNames,
         )
 
         NotificationType.POST_MEAL_DELAYED_BULK -> FcmPayload(

@@ -37,10 +37,11 @@ object JudgmentResponseFactory {
         )
     }
 
-    // 알레르겐 매치는 LLM이 언급을 놓쳐도 슬롯 [1](알레르기·복용약)을 결정적 카피로 보장 — 등급을 RISK로 무조건 덮어쓰는 것과 짝을 이루는 문구 보장
+    // 치명 위험군 알레르겐만 LLM 누락과 무관하게 슬롯 [1]의 경고 카피를 보장한다.
+    // 그 외 알레르겐은 최근 증상 패턴 슬롯을 유지하고, RECOMMEND일 때만 CAUTION으로 낮춘다.
     private fun applyAllergyOverride(baseItems: List<JudgmentItemDTO>, override: OverrideResult): List<JudgmentItemDTO> {
-        if (override.allergenMatches.isEmpty()) return baseItems
-        val labels = override.allergenMatches.joinToString(", ") { it.label }
+        if (override.criticalAllergenMatches.isEmpty()) return baseItems
+        val labels = override.criticalAllergenMatches.joinToString(", ") { it.label }
         return baseItems.toMutableList().apply {
             this[ALLERGY_SLOT] = JudgmentItemDTO(
                 emphasis = "알레르기 성분이 들어 있어요",
@@ -137,7 +138,7 @@ object JudgmentResponseFactory {
         )
 
     // 고정 응답 모음
-    // items 2슬롯 고정: [0]=트리거·증상, [1]=알레르기·복용약
+    // items 2슬롯 고정: [0]=트리거·증상, [1]=최근 증상 패턴(치명 위험군 알레르겐만 예외)
     private const val ALLERGY_SLOT = 1
 
     // LLM 제목을 쓸 수 없는 경우(누락·공백·등급 강등)의 등급별 고정 제목

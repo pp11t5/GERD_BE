@@ -12,7 +12,6 @@ data class JudgmentContext(
     val foodAllergens: List<TagDTO>,
     val userTriggers: List<TagDTO>,
     val userAllergens: List<TagDTO>,
-    val medications: List<String>,
     val symptomCodes: List<String>,
     val history: LlmInputSnapshotDTO.HistorySnapshotDTO = LlmInputSnapshotDTO.HistorySnapshotDTO(),
     val stateRecords: JudgmentResponseDTO.StateRecordsDTO = JudgmentResponseDTO.StateRecordsDTO(total = 0, records = emptyList()),

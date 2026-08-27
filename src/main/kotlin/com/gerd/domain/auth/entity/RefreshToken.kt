@@ -27,4 +27,11 @@ class RefreshToken(
 
     @Column(name = "expires_at", nullable = false)
     var expiresAt: LocalDateTime,
-)
+) {
+
+    fun rotate(jti: String, tokenHash: String, expiresAt: LocalDateTime) {
+        this.jti = jti
+        this.tokenHash = tokenHash
+        this.expiresAt = expiresAt
+    }
+}
