@@ -37,13 +37,16 @@ class SentryWebhookServiceTest {
             val payload = """
                 {
                   "data": {
-                    "issue": { "title": "유효하지 않은 Refresh Token입니다.", "web_url": "https://sentry.io/issues/1" },
+                    "issue": {
+                      "title": "유효하지 않은 Refresh Token입니다.",
+                      "web_url": "https://sentry.io/issues/1",
+                      "project": { "slug": "gerd" }
+                    },
                     "event": {
                       "message": "AUTH401_5",
                       "level": "error",
                       "tags": [["environment", "staging"]]
-                    },
-                    "project": { "slug": "gerd" }
+                    }
                   }
                 }
             """.trimIndent().toByteArray()
@@ -69,9 +72,8 @@ class SentryWebhookServiceTest {
             val payload = """
                 {
                   "data": {
-                    "issue": { "title": "서버 오류" },
-                    "event": { "environment": "production" },
-                    "project": { "slug": "gerd" }
+                    "issue": { "title": "서버 오류", "project": { "slug": "gerd" } },
+                    "event": { "environment": "production" }
                   }
                 }
             """.trimIndent().toByteArray()
