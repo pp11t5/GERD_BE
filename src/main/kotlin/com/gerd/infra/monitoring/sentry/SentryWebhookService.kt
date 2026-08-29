@@ -38,6 +38,7 @@ class SentryWebhookService(
         val description = event.path("message").asText(issue.path("culprit").asText(title))
         val issueUrl = issue.path("web_url").asText(null)
             ?: issue.path("permalink").asText(null)
+            ?: event.path("web_url").asText(null)
         val projectName = project.path("slug").asText(project.path("name").asText("unknown"))
         val level = event.path("level").asText("error")
         val environment = extractEnvironment(event)
@@ -47,7 +48,7 @@ class SentryWebhookService(
                 embeds = listOf(
                     DiscordEmbed(
                         title = "🚨 $title",
-                        description = description.take(MAX_DESCRIPTION_LENGTH),
+                        description = descriptionWithUrl(description, issueUrl),
                         url = issueUrl,
                         color = if (level.equals("fatal", ignoreCase = true)) FATAL_COLOR else ERROR_COLOR,
                         fields = listOf(
@@ -76,6 +77,13 @@ class SentryWebhookService(
         }?.let { return it }
 
         return UNKNOWN_ENVIRONMENT
+    }
+
+    private fun descriptionWithUrl(description: String, issueUrl: String?): String {
+        if (issueUrl.isNullOrBlank()) return description.take(MAX_DESCRIPTION_LENGTH)
+
+        val urlSuffix = "\n\nSentry URL: $issueUrl"
+        return description.take((MAX_DESCRIPTION_LENGTH - urlSuffix.length).coerceAtLeast(0)) + urlSuffix
     }
 
     private fun isValidSignature(payload: ByteArray, signature: String?): Boolean {

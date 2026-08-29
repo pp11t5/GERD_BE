@@ -39,11 +39,11 @@ class SentryWebhookServiceTest {
                   "data": {
                     "issue": {
                       "title": "유효하지 않은 Refresh Token입니다.",
-                      "web_url": "https://sentry.io/issues/1",
                       "project": { "slug": "gerd" }
                     },
                     "event": {
                       "message": "AUTH401_5",
+                      "web_url": "https://sentry.io/issues/1",
                       "level": "error",
                       "tags": [["environment", "staging"]]
                     }
@@ -58,7 +58,7 @@ class SentryWebhookServiceTest {
             verify(discordWebhookClient).send(captor.capture())
             val embed = captor.firstValue.embeds.single()
             assertThat(embed.title).isEqualTo("🚨 유효하지 않은 Refresh Token입니다.")
-            assertThat(embed.description).isEqualTo("AUTH401_5")
+            assertThat(embed.description).isEqualTo("AUTH401_5\n\nSentry URL: https://sentry.io/issues/1")
             assertThat(embed.url).isEqualTo("https://sentry.io/issues/1")
             assertThat(embed.fields).containsExactly(
                 DiscordEmbedField("Project", "gerd", true),
