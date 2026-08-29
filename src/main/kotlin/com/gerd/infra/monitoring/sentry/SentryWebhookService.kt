@@ -32,7 +32,8 @@ class SentryWebhookService(
         val data = root.path("data")
         val issue = data.path("issue")
         val event = data.path("event")
-        val project = data.path("project")
+        val project = issue.path("project").takeIf { !it.isMissingNode }
+            ?: data.path("project")
         val title = issue.path("title").asText("Sentry Alert")
         val description = event.path("message").asText(issue.path("culprit").asText(title))
         val issueUrl = issue.path("web_url").asText(null)
