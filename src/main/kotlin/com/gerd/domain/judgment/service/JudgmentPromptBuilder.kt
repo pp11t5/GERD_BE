@@ -104,9 +104,15 @@ class JudgmentPromptBuilder(
             - items[0].body: cite the evidence behind the grade, picking exactly one of these three states —
               · history.discomfortCount > 0: cite the exact number with "최근" (recent), e.g. "최근 {discomfortCount}개의 기록에서 불편했어요"
               · history.discomfortCount == 0 but the trigger matches one of user.triggerFoods (a registered trigger
-                with no personal history yet): a general caveat, e.g. "사람마다 반응이 달라요"
-              · no personal history and no registered-trigger match (a general/default match): a brief neutral
-                explanation of the trigger, without claiming personal evidence
+                with no personal history yet): explain that it is a registered trigger, then give one concrete,
+                low-risk adjustment for this meal (amount, pace, or timing) and suggest recording the response for
+                the next choice. Example: "등록하신 카페인 트리거에 해당해요. 양을 줄이고 천천히 드신 뒤 불편함을
+                기록하면 다음 선택에 도움이 돼요."
+              · no personal history and no registered-trigger match (a general/default match): give a brief neutral
+                explanation of the trigger and one concrete, low-risk adjustment for this meal, without claiming
+                personal evidence
+              · Never use vague standalone caveats such as "사람마다 반응이 달라요". The body must always identify
+                the relevant trigger or record and leave the user with a practical next step.
             - items[1]: by default, reflect the user's RECENT SYMPTOM PATTERN (from history/symptoms) as it relates
               to this food or similar foods — a distinct angle from items[0], focused on how the user has been
               doing lately rather than repeating items[0]'s evidence.
