@@ -59,16 +59,20 @@ class GeminiClientTest {
         server.stop(0)
     }
 
-    private fun envelope(judgmentJson: String): String =
+    private fun envelope(judgmentJson: String, usageMetadata: Map<String, Any>? = null): String =
         objectMapper.writeValueAsString(
-            mapOf(
-                "candidates" to listOf(
-                    mapOf(
-                        "content" to mapOf("parts" to listOf(mapOf("text" to judgmentJson))),
-                        "finishReason" to "STOP",
+            buildMap {
+                put(
+                    "candidates",
+                    listOf(
+                        mapOf(
+                            "content" to mapOf("parts" to listOf(mapOf("text" to judgmentJson))),
+                            "finishReason" to "STOP",
+                        ),
                     ),
-                ),
-            ),
+                )
+                usageMetadata?.let { put("usageMetadata", it) }
+            },
         )
 
     private fun call() = client.generateJson(LlmRequest("system", "user", mapOf("type" to "OBJECT")))
@@ -87,10 +91,35 @@ class GeminiClientTest {
                 """.trimIndent(),
             )
 
-            val text = call()
+            val result = call()
 
-            assertThat(text).contains("\"grade\":\"CAUTION\"")
-            assertThat(text).contains("오늘은 천천히 즐겨보세요")
+            assertThat(result?.text).contains("\"grade\":\"CAUTION\"")
+            assertThat(result?.text).contains("오늘은 천천히 즐겨보세요")
+        }
+
+        @Test
+        fun `usageMetadata가 있으면 토큰 사용량을 반환한다`() {
+            responseBody = envelope(
+                """{"grade":"CAUTION","items":[]}""",
+                usageMetadata = mapOf(
+                    "promptTokenCount" to 120,
+                    "candidatesTokenCount" to 45,
+                    "totalTokenCount" to 165,
+                ),
+            )
+
+            val usage = call()?.usage
+
+            assertThat(usage?.promptTokens).isEqualTo(120)
+            assertThat(usage?.completionTokens).isEqualTo(45)
+            assertThat(usage?.totalTokens).isEqualTo(165)
+        }
+
+        @Test
+        fun `usageMetadata가 없으면 usage는 null이다`() {
+            responseBody = envelope("""{"grade":"CAUTION","items":[]}""")
+
+            assertThat(call()?.usage).isNull()
         }
     }
 
@@ -124,7 +153,7 @@ class GeminiClientTest {
         fun `응답 텍스트가 JSON이 아니어도 공통 클라이언트는 그대로 반환한다`() {
             responseBody = envelope("죄송하지만 판단할 수 없습니다")
 
-            assertThat(call()).isEqualTo("죄송하지만 판단할 수 없습니다")
+            assertThat(call()?.text).isEqualTo("죄송하지만 판단할 수 없습니다")
         }
 
         @Test
@@ -133,7 +162,7 @@ class GeminiClientTest {
                 """{"grade":"CAUTION","reasons":[],"items":[{"emphasis":"하나","body":"뿐"}]}""",
             )
 
-            assertThat(call()).contains("\"grade\":\"CAUTION\"")
+            assertThat(call()?.text).contains("\"grade\":\"CAUTION\"")
         }
 
         @Test

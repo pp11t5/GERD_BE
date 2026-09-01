@@ -2,6 +2,7 @@ package com.gerd.domain.judgment.service
 
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.global.ai.LlmClient
+import com.gerd.global.ai.LlmResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -37,12 +38,14 @@ class JudgmentGeminiAdapterTest {
         @Test
         fun `structured output을 LlmJudgmentDTO로 파싱한다`() {
             whenever(llmClient.generateJson(any())).thenReturn(
-                """
-                {"grade":"CAUTION","personalTitle":"오늘은 천천히 즐겨보세요","items":[
-                  {"emphasis":"카페인이 들어 있어요","body":"천천히 드세요."},
-                  {"emphasis":"알레르기 해당 없어요","body":"포함되지 않았어요."}
-                ]}
-                """.trimIndent(),
+                LlmResult(
+                    text = """
+                    {"grade":"CAUTION","personalTitle":"오늘은 천천히 즐겨보세요","items":[
+                      {"emphasis":"카페인이 들어 있어요","body":"천천히 드세요."},
+                      {"emphasis":"알레르기 해당 없어요","body":"포함되지 않았어요."}
+                    ]}
+                    """.trimIndent(),
+                ),
             )
 
             val judgment = call()
@@ -66,7 +69,7 @@ class JudgmentGeminiAdapterTest {
 
         @Test
         fun `응답 텍스트가 JSON이 아니면 null을 반환한다`() {
-            whenever(llmClient.generateJson(any())).thenReturn("죄송하지만 판단할 수 없습니다")
+            whenever(llmClient.generateJson(any())).thenReturn(LlmResult(text = "죄송하지만 판단할 수 없습니다"))
 
             assertThat(call()).isNull()
         }
@@ -74,7 +77,7 @@ class JudgmentGeminiAdapterTest {
         @Test
         fun `items가 2개가 아니면 null을 반환한다`() {
             whenever(llmClient.generateJson(any()))
-                .thenReturn("""{"grade":"CAUTION","items":[{"emphasis":"하나","body":"뿐"}]}""")
+                .thenReturn(LlmResult(text = """{"grade":"CAUTION","items":[{"emphasis":"하나","body":"뿐"}]}"""))
 
             assertThat(call()).isNull()
         }

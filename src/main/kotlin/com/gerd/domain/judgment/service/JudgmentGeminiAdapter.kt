@@ -24,7 +24,7 @@ class JudgmentGeminiAdapter(
         userContent: String,
         responseSchema: Map<String, Any>,
     ): LlmJudgmentDTO? {
-        val text = llmClient.generateJson(
+        val result = llmClient.generateJson(
             LlmRequest(
                 systemInstruction = systemInstruction,
                 userContent = userContent,
@@ -32,8 +32,13 @@ class JudgmentGeminiAdapter(
             ),
         ) ?: return null
 
+        // 비용 모니터링용 지표 — 집계·알림은 #81에서 별도로 다룬다
+        result.usage?.let {
+            log.info { "Gemini 판정 토큰 사용량: prompt=${it.promptTokens} completion=${it.completionTokens} total=${it.totalTokens}" }
+        }
+
         return try {
-            val judgment = objectMapper.readValue(text, LlmJudgmentDTO::class.java)
+            val judgment = objectMapper.readValue(result.text, LlmJudgmentDTO::class.java)
             if (judgment.items.size != REQUIRED_ITEM_COUNT) {
                 log.warn { "Gemini 판정 items 슬롯 수 불일치: ${judgment.items.size}" }
                 return null
