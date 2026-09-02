@@ -3,6 +3,8 @@ package com.gerd.domain.judgment.service
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.global.ai.LlmClient
 import com.gerd.global.ai.LlmResult
+import com.gerd.global.ai.gemini.LlmBudgetGuard
+import com.gerd.global.config.properties.GeminiProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -20,6 +22,9 @@ class JudgmentGeminiAdapterTest {
     @Mock
     private lateinit var llmClient: LlmClient
 
+    @Mock
+    private lateinit var llmBudgetGuard: LlmBudgetGuard
+
     private lateinit var adapter: JudgmentGeminiAdapter
 
     @BeforeEach
@@ -27,6 +32,8 @@ class JudgmentGeminiAdapterTest {
         adapter = JudgmentGeminiAdapter(
             llmClient = llmClient,
             objectMapper = JsonMapper.builder().findAndAddModules().build(),
+            geminiProperties = GeminiProperties(model = "gemini-test"),
+            llmBudgetGuard = llmBudgetGuard,
         )
     }
 
