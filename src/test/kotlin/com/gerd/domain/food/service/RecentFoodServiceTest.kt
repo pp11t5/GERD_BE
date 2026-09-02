@@ -7,6 +7,7 @@ import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -26,6 +27,9 @@ class RecentFoodServiceTest {
 
     @Mock
     private lateinit var foodSearchHistoryRepository: FoodSearchHistoryRepository
+
+    @Mock
+    private lateinit var topSearchedFoodCache: TopSearchedFoodCache
 
     @InjectMocks
     private lateinit var service: RecentFoodService
@@ -109,6 +113,12 @@ class RecentFoodServiceTest {
     @Nested
     inner class getTopSearched {
 
+        // Mockito가 미스텁 List 반환을 emptyList()로 채우는 것 방지 — 캐시 미스(null) 기본값 고정
+        @BeforeEach
+        fun setUp() {
+            whenever(topSearchedFoodCache.get()).thenReturn(null)
+        }
+
         @Test
         fun `검색 기록이 없으면 빈 리스트를 반환한다`() {
             whenever(foodSearchHistoryRepository.findTop3MostSearched()).thenReturn(emptyList())
@@ -145,6 +155,28 @@ class RecentFoodServiceTest {
             val result = service.getTopSearched()
 
             assertThat(result[0].category).isNull()
+        }
+
+        @Test
+        fun `캐시에 값이 있으면 조회 없이 캐시값을 반환한다`() {
+            val cached = listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew"))
+            whenever(topSearchedFoodCache.get()).thenReturn(cached)
+
+            val result = service.getTopSearched()
+
+            assertThat(result).isEqualTo(cached)
+            verify(foodSearchHistoryRepository, never()).findTop3MostSearched()
+        }
+
+        @Test
+        fun `캐시가 비어있으면 조회 후 캐시에 채운다`() {
+            whenever(topSearchedFoodCache.get()).thenReturn(null)
+            val views = listOf(mockView("ext-1", "된장찌개", "soup_stew"))
+            whenever(foodSearchHistoryRepository.findTop3MostSearched()).thenReturn(views)
+
+            val result = service.getTopSearched()
+
+            verify(topSearchedFoodCache).put(result)
         }
 
         private fun mockView(
