@@ -7,7 +7,6 @@ import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 class TopSearchedFoodCacheTest {
 
@@ -24,23 +23,16 @@ class TopSearchedFoodCacheTest {
 
     @Test
     fun `캐시에 값이 있으면 loader를 실행하지 않는다`() {
-        val loadCount = AtomicInteger(0)
-        cache.get {
-            loadCount.incrementAndGet()
-            listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew"))
-        }
+        val first = listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew"))
+        cache.get { first }
 
-        cache.get {
-            loadCount.incrementAndGet()
-            listOf(FoodSummaryDTO("ext-2", "비빔밥", "rice"))
-        }
+        val result = cache.get { listOf(FoodSummaryDTO("ext-2", "비빔밥", "rice")) }
 
-        assertThat(loadCount.get()).isEqualTo(1)
+        assertThat(result).isEqualTo(first)
     }
 
     @Test
     fun `동시에 캐시 미스가 나도 loader는 한 번만 실행된다`() {
-        val loadCount = AtomicInteger(0)
         val ready = CountDownLatch(2)
         val start = CountDownLatch(1)
         val executor = Executors.newFixedThreadPool(2)
@@ -51,8 +43,8 @@ class TopSearchedFoodCacheTest {
                     Callable {
                         ready.countDown()
                         start.await(5, TimeUnit.SECONDS)
+                        // 매 실행마다 새 인스턴스를 만들어야 "로더가 두 번 돌았는지"를 참조 동일성으로 구분 가능
                         cache.get {
-                            loadCount.incrementAndGet()
                             Thread.sleep(50)
                             listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew"))
                         }
@@ -63,8 +55,7 @@ class TopSearchedFoodCacheTest {
             start.countDown()
             val results = futures.map { it.get(5, TimeUnit.SECONDS) }
 
-            assertThat(loadCount.get()).isEqualTo(1)
-            assertThat(results).allMatch { it == results[0] }
+            assertThat(results[0]).isSameAs(results[1])
         } finally {
             executor.shutdown()
         }
