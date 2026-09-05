@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 class TopSearchedFoodCache {
 
     private val cache: Cache<String, List<FoodSummaryDTO>> = Caffeine.newBuilder()
-        .expireAfterWrite(TTL_MINUTES, TimeUnit.MINUTES)
+        .expireAfterWrite(TTL_HOURS, TimeUnit.HOURS)
         .build()
 
     // Caffeine이 키 단위로 로딩을 직렬화 — 동시에 미스가 나도 loader는 한 번만 실행됨
@@ -23,6 +23,6 @@ class TopSearchedFoodCache {
 
     companion object {
         private const val KEY = "top3"
-        private const val TTL_MINUTES = 30L
+        private const val TTL_HOURS = 24L
     }
 }
