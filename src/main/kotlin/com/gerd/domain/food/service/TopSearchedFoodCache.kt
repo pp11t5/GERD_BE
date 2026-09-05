@@ -17,11 +17,9 @@ class TopSearchedFoodCache {
         .expireAfterWrite(TTL_MINUTES, TimeUnit.MINUTES)
         .build()
 
-    fun get(): List<FoodSummaryDTO>? = cache.getIfPresent(KEY)
-
-    fun put(foods: List<FoodSummaryDTO>) {
-        cache.put(KEY, foods)
-    }
+    // Caffeine이 키 단위로 로딩을 직렬화 — 동시에 미스가 나도 loader는 한 번만 실행됨
+    fun get(loader: () -> List<FoodSummaryDTO>): List<FoodSummaryDTO> =
+        cache.get(KEY) { loader() }
 
     companion object {
         private const val KEY = "top3"

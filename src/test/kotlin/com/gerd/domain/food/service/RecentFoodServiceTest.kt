@@ -7,7 +7,6 @@ import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.fixture.FoodFixture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -113,14 +112,16 @@ class RecentFoodServiceTest {
     @Nested
     inner class getTopSearched {
 
-        // Mockito가 미스텁 List 반환을 emptyList()로 채우는 것 방지 — 캐시 미스(null) 기본값 고정
-        @BeforeEach
-        fun setUp() {
-            whenever(topSearchedFoodCache.get()).thenReturn(null)
+        // 캐시 미스를 흉내냄 — loader를 그대로 실행해 실제 Caffeine get(key, loader) 동작 재현
+        private fun stubCacheMiss() {
+            whenever(topSearchedFoodCache.get(any())).thenAnswer { invocation ->
+                invocation.getArgument<() -> List<FoodSummaryDTO>>(0).invoke()
+            }
         }
 
         @Test
         fun `검색 기록이 없으면 빈 리스트를 반환한다`() {
+            stubCacheMiss()
             whenever(foodSearchHistoryRepository.findTop3MostSearched()).thenReturn(emptyList())
 
             val result = service.getTopSearched()
@@ -130,6 +131,7 @@ class RecentFoodServiceTest {
 
         @Test
         fun `검색 횟수 기준 상위 음식을 FoodSummaryDTO로 매핑한다`() {
+            stubCacheMiss()
             // mock() 호출을 whenever().thenReturn() 인자 안에서 할 경우 Mockito 진행 중 스터빙 상태와 충돌
             val views = listOf(
                 mockView("ext-1", "된장찌개", "soup_stew"),
@@ -149,6 +151,7 @@ class RecentFoodServiceTest {
 
         @Test
         fun `카테고리가 없는 음식도 null로 포함된다`() {
+            stubCacheMiss()
             val views = listOf(mockView("ext-1", "된장찌개", null))
             whenever(foodSearchHistoryRepository.findTop3MostSearched()).thenReturn(views)
 
@@ -160,7 +163,8 @@ class RecentFoodServiceTest {
         @Test
         fun `캐시에 값이 있으면 조회 없이 캐시값을 반환한다`() {
             val cached = listOf(FoodSummaryDTO("ext-1", "된장찌개", "soup_stew"))
-            whenever(topSearchedFoodCache.get()).thenReturn(cached)
+            // loader를 실행하지 않고 캐시값을 바로 반환 — 실제 캐시 히트 시 loader 미호출을 흉내냄
+            whenever(topSearchedFoodCache.get(any())).thenReturn(cached)
 
             val result = service.getTopSearched()
 
@@ -169,14 +173,17 @@ class RecentFoodServiceTest {
         }
 
         @Test
-        fun `캐시가 비어있으면 조회 후 캐시에 채운다`() {
-            whenever(topSearchedFoodCache.get()).thenReturn(null)
+        fun `캐시가 비어있으면 조회 후 매핑된 결과를 반환한다`() {
+            stubCacheMiss()
             val views = listOf(mockView("ext-1", "된장찌개", "soup_stew"))
             whenever(foodSearchHistoryRepository.findTop3MostSearched()).thenReturn(views)
 
             val result = service.getTopSearched()
 
-            verify(topSearchedFoodCache).put(result)
+            verify(foodSearchHistoryRepository).findTop3MostSearched()
+            assertThat(result).containsExactly(
+                FoodSummaryDTO("ext-1", "된장찌개", "soup_stew"),
+            )
         }
 
         private fun mockView(

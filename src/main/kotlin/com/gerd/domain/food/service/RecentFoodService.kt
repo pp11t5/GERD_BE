@@ -25,7 +25,7 @@ class RecentFoodService(
 ) {
 
     fun getTopSearched(): List<FoodSummaryDTO> =
-        topSearchedFoodCache.get() ?: loadTopSearched().also { topSearchedFoodCache.put(it) }
+        topSearchedFoodCache.get { loadTopSearched() }
 
     private fun loadTopSearched(): List<FoodSummaryDTO> =
         foodSearchHistoryRepository.findTop3MostSearched().map {
