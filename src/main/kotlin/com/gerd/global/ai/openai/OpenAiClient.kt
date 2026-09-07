@@ -59,7 +59,9 @@ class OpenAiClient(
                 .body<OpenAiChatResponseDTO>()
 
             val text = response?.choices?.firstOrNull()?.message?.content?.takeIf { it.isNotBlank() }
-            text?.let { LlmResult(text = it, usage = response.usage?.toTokenUsage()) }
+            val usage = response?.usage?.toTokenUsage()
+            // content가 없어도 usage는 올 수 있다 — 비용 집계를 위해 usage만 있어도 결과를 반환한다
+            if (response == null || (text == null && usage == null)) null else LlmResult(text = text, usage = usage)
         } catch (e: ResourceAccessException) {
             val cause = e.cause
             if (cause is HttpTimeoutException || cause is SocketTimeoutException) throw LlmTimeoutException(e)

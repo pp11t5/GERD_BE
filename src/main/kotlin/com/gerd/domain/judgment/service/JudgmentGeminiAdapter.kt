@@ -40,17 +40,20 @@ class JudgmentGeminiAdapter(
             ),
         ) ?: return null
 
-        val judgment = try {
-            val parsed = objectMapper.readValue(result.text, LlmJudgmentDTO::class.java)
-            if (parsed.items.size != REQUIRED_ITEM_COUNT) {
-                log.warn { "Gemini 판정 items 슬롯 수 불일치: ${parsed.items.size}" }
+        // 안전 필터 등으로 텍스트 없이 usage만 오는 응답도 있어 text가 없으면 파싱 자체를 건너뛴다 — 그래도 비용은 아래에서 기록한다
+        val judgment = result.text?.let { text ->
+            try {
+                val parsed = objectMapper.readValue(text, LlmJudgmentDTO::class.java)
+                if (parsed.items.size != REQUIRED_ITEM_COUNT) {
+                    log.warn { "Gemini 판정 items 슬롯 수 불일치: ${parsed.items.size}" }
+                    null
+                } else {
+                    parsed
+                }
+            } catch (e: Exception) {
+                log.warn { "Gemini 판정 응답 파싱 실패: ${e.javaClass.simpleName} - ${e.message}" }
                 null
-            } else {
-                parsed
             }
-        } catch (e: Exception) {
-            log.warn { "Gemini 판정 응답 파싱 실패: ${e.javaClass.simpleName} - ${e.message}" }
-            null
         }
 
         result.usage?.let { logTokenUsage(it, judgment?.grade) }

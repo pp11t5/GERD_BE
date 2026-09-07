@@ -150,6 +150,25 @@ class GeminiClientTest {
         }
 
         @Test
+        fun `candidates가 비어도 usageMetadata가 있으면 usage를 보존한다`() {
+            responseBody = objectMapper.writeValueAsString(
+                mapOf(
+                    "candidates" to emptyList<Any>(),
+                    "usageMetadata" to mapOf(
+                        "promptTokenCount" to 80,
+                        "candidatesTokenCount" to 0,
+                        "totalTokenCount" to 80,
+                    ),
+                ),
+            )
+
+            val result = call()
+
+            assertThat(result?.text).isNull()
+            assertThat(result?.usage?.promptTokens).isEqualTo(80)
+        }
+
+        @Test
         fun `응답 텍스트가 JSON이 아니어도 공통 클라이언트는 그대로 반환한다`() {
             responseBody = envelope("죄송하지만 판단할 수 없습니다")
 

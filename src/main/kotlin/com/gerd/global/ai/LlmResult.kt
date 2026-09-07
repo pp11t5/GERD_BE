@@ -1,7 +1,8 @@
 package com.gerd.global.ai
 
+// 후보 텍스트 없이 usageMetadata만 오는 응답도 있어 text는 nullable — 그래도 비용은 집계해야 한다
 data class LlmResult(
-    val text: String,
+    val text: String?,
     val usage: TokenUsage? = null,
 )
 

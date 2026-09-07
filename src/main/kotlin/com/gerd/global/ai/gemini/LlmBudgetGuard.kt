@@ -8,29 +8,35 @@ import com.gerd.infra.monitoring.sentry.DiscordWebhookMessage
 import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.concurrent.atomic.AtomicReference
 
 // 인메모리·단일 인스턴스 전제 — 여러 인스턴스로 스케일아웃되면 인스턴스별로 따로 누적돼 알림이 실제보다 늦게 뜰 수 있음
+// 판정 1건당 1번만 호출되는 낮은 빈도라 synchronized로 충분 — 누적·alerted 판정을 한 트랜잭션으로 묶어 중복 알림을 막는다
 @Component
 class LlmBudgetGuard(
     private val llmBudgetProperties: LlmBudgetProperties,
     private val discordWebhookClient: DiscordWebhookClient,
 ) {
 
-    private val state = AtomicReference(DailyState(today(), 0.0, alerted = false))
+    private var state = DailyState(today(), 0.0, alerted = false)
 
     fun record(feature: String, costUsd: Double) {
         if (llmBudgetProperties.dailyLimitUsd <= 0.0) return
 
-        val next = state.updateAndGet { prev ->
-            val base = if (prev.date == today()) prev else DailyState(today(), 0.0, alerted = false)
-            base.copy(spentUsd = base.spentUsd + costUsd)
+        val spentUsdToAlert = synchronized(this) {
+            if (state.date != today()) {
+                state = DailyState(today(), 0.0, alerted = false)
+            }
+            state = state.copy(spentUsd = state.spentUsd + costUsd)
+
+            if (state.spentUsd >= llmBudgetProperties.dailyLimitUsd && !state.alerted) {
+                state = state.copy(alerted = true)
+                state.spentUsd
+            } else {
+                null
+            }
         }
 
-        if (next.spentUsd >= llmBudgetProperties.dailyLimitUsd && !next.alerted) {
-            state.updateAndGet { it.copy(alerted = true) }
-            alert(feature, next.spentUsd)
-        }
+        spentUsdToAlert?.let { alert(feature, it) }
     }
 
     private fun alert(feature: String, spentUsd: Double) {

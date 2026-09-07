@@ -18,6 +18,10 @@ class DiscordWebhookClient(
             log.warn { "Discord webhook URL is not configured, skipping alert" }
             return
         }
+        if (!webhookUrl.startsWith("https://")) {
+            log.warn { "Discord webhook URL is not HTTPS, skipping alert" }
+            return
+        }
 
         try {
             restClient.post()

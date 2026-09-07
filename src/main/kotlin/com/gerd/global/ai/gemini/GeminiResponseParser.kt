@@ -12,11 +12,13 @@ class GeminiResponseParser {
 
     fun extractResult(response: GeminiGenerateResponseDTO): LlmResult? {
         val text = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
-        if (text.isNullOrBlank()) {
+        val usage = response.usageMetadata?.toTokenUsage()
+        // 후보 텍스트가 없어도 응답 수준 usageMetadata는 올 수 있다 — 그 경우에도 비용 집계는 남겨야 하니 usage가 있으면 null을 반환하지 않는다
+        if (text.isNullOrBlank() && usage == null) {
             log.warn { "Gemini 응답에 텍스트가 없습니다 (finishReason=${response.candidates.firstOrNull()?.finishReason})" }
             return null
         }
-        return LlmResult(text = text, usage = response.usageMetadata?.toTokenUsage())
+        return LlmResult(text = text?.takeIf { it.isNotBlank() }, usage = usage)
     }
 }
 

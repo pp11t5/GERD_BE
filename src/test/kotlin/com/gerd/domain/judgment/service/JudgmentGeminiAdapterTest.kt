@@ -3,6 +3,7 @@ package com.gerd.domain.judgment.service
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.global.ai.LlmClient
 import com.gerd.global.ai.LlmResult
+import com.gerd.global.ai.TokenUsage
 import com.gerd.global.ai.gemini.LlmBudgetGuard
 import com.gerd.global.config.properties.GeminiProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tools.jackson.databind.json.JsonMapper
 
@@ -87,6 +90,26 @@ class JudgmentGeminiAdapterTest {
                 .thenReturn(LlmResult(text = """{"grade":"CAUTION","items":[{"emphasis":"하나","body":"뿐"}]}"""))
 
             assertThat(call()).isNull()
+        }
+
+        @Test
+        fun `텍스트 없이 usage만 오면 null을 반환하되 비용은 기록한다`() {
+            // 단가표에 등록된 모델이어야 비용이 계산돼 record가 불린다
+            val pricedAdapter =
+                JudgmentGeminiAdapter(
+                    llmClient = llmClient,
+                    objectMapper = JsonMapper.builder().findAndAddModules().build(),
+                    geminiProperties = GeminiProperties(),
+                    llmBudgetGuard = llmBudgetGuard,
+                )
+            whenever(llmClient.generateJson(any())).thenReturn(
+                LlmResult(text = null, usage = TokenUsage(promptTokens = 50, completionTokens = 0, totalTokens = 50)),
+            )
+
+            val judgment = pricedAdapter.generateJudgment("system", "user", mapOf("type" to "OBJECT"))
+
+            assertThat(judgment).isNull()
+            verify(llmBudgetGuard).record(eq("judgment"), any())
         }
     }
 }
