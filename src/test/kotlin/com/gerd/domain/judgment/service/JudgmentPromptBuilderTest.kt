@@ -82,12 +82,15 @@ class JudgmentPromptBuilderTest {
     }
 
     @Test
-    fun `items 근거 규칙에 개인 기록 횟수·등록 트리거·일반 매칭 3단계를 포함한다`() {
+    fun `등록 트리거에 개인 기록이 없으면 구체적인 식사 조절과 기록을 안내한다`() {
         whenever(foodCategoryReader.getAll()).thenReturn(emptyList())
 
         val instruction = builder.buildSystemInstruction()
 
         assertThat(instruction).contains("discomfortCount > 0")
-        assertThat(instruction).contains("사람마다 반응이 달라요")
+        assertThat(instruction).contains("registered trigger")
+        assertThat(instruction).contains("amount, pace, or timing")
+        assertThat(instruction).contains("recording the response")
+        assertThat(instruction).contains("Never use vague standalone caveats")
     }
 }
