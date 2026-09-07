@@ -91,7 +91,7 @@ openai:
 llm:
   budget:
     daily-limit-usd: ${LLM_DAILY_BUDGET_USD:0}
-    discord-webhook-url: ${LLM_BUDGET_DISCORD_WEBHOOK_URL:}
+    discord-webhook-url: ${LLM_BUDGET_DISCORD_WEBHOOK_URL:${DISCORD_WEBHOOK_URL:}}
 
 resilience4j:
   circuitbreaker:
