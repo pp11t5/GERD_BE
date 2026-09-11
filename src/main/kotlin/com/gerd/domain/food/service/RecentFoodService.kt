@@ -21,9 +21,13 @@ import java.time.LocalDateTime
 @Transactional(readOnly = true)
 class RecentFoodService(
     private val foodSearchHistoryRepository: FoodSearchHistoryRepository,
+    private val topSearchedFoodCache: TopSearchedFoodCache,
 ) {
 
     fun getTopSearched(): List<FoodSummaryDTO> =
+        topSearchedFoodCache.get { loadTopSearched() }
+
+    private fun loadTopSearched(): List<FoodSummaryDTO> =
         foodSearchHistoryRepository.findTop3MostSearched().map {
             FoodSummaryDTO(externalId = it.getExternalId(), name = it.getName(), category = it.getCategory())
         }

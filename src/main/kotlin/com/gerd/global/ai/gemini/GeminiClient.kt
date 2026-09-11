@@ -2,6 +2,7 @@ package com.gerd.global.ai.gemini
 
 import com.gerd.global.ai.LlmClient
 import com.gerd.global.ai.LlmRequest
+import com.gerd.global.ai.LlmResult
 import com.gerd.global.ai.LlmTimeoutException
 import com.gerd.global.config.properties.GeminiProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -44,7 +45,7 @@ class GeminiClient(
         )
         .build()
 
-    override fun generateJson(request: LlmRequest): String? {
+    override fun generateJson(request: LlmRequest): LlmResult? {
         if (geminiProperties.apiKey.isBlank()) {
             log.warn { "[Gemini] Gemini API 키가 설정되지 않아 호출을 생략합니다 (GEMINI_API_KEY)" }
             return null
@@ -58,7 +59,7 @@ class GeminiClient(
                 .retrieve()
                 .body<GeminiGenerateResponseDTO>()
 
-            response?.let(geminiResponseParser::extractText)
+            response?.let(geminiResponseParser::extractResult)
         } catch (e: HttpServerErrorException) {
             throw e
         } catch (e: ResourceAccessException) {

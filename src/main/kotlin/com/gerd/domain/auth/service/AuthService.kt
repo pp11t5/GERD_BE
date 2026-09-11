@@ -72,7 +72,13 @@ class AuthService(
 
     // JWT 형식 검증 → 사용자별 토큰 행 잠금 → 해시 비교 → 토큰 로테이션
     fun refresh(refreshToken: String): AuthTokenResponseDTO {
-        val claims = jwtProvider.validateRefreshToken(refreshToken)
+        val claims = try {
+            jwtProvider.validateRefreshToken(refreshToken)
+        } catch (e: ExpiredJwtException) {
+            throw GeneralException(AuthErrorCode.EXPIRED_TOKEN)
+        } catch (e: JwtException) {
+            throw GeneralException(AuthErrorCode.INVALID_TOKEN)
+        }
         val userId = jwtProvider.extractUserId(claims)
 
         return try {

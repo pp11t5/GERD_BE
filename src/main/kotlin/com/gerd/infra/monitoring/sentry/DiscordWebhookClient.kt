@@ -10,25 +10,28 @@ private val log = KotlinLogging.logger {}
 
 @Component
 class DiscordWebhookClient(
-    private val sentryWebhookProperties: SentryWebhookProperties,
     private val restClient: RestClient,
 ) {
 
-    fun send(message: DiscordWebhookMessage) {
-        if (sentryWebhookProperties.discordWebhookUrl.isBlank()) {
-            log.warn { "Discord webhook URL is not configured, skipping Sentry alert" }
+    fun send(webhookUrl: String, message: DiscordWebhookMessage) {
+        if (webhookUrl.isBlank()) {
+            log.warn { "Discord webhook URL is not configured, skipping alert" }
+            return
+        }
+        if (!webhookUrl.startsWith("https://")) {
+            log.warn { "Discord webhook URL is not HTTPS, skipping alert" }
             return
         }
 
         try {
             restClient.post()
-                .uri(sentryWebhookProperties.discordWebhookUrl)
+                .uri(webhookUrl)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(message)
                 .retrieve()
                 .toBodilessEntity()
         } catch (exception: RestClientException) {
-            log.error(exception) { "Failed to deliver Sentry alert to Discord" }
+            log.error(exception) { "Failed to deliver alert to Discord" }
         }
     }
 }

@@ -2,7 +2,9 @@ package com.gerd.global.ai.openai
 
 import com.gerd.global.ai.LlmClient
 import com.gerd.global.ai.LlmRequest
+import com.gerd.global.ai.LlmResult
 import com.gerd.global.ai.LlmTimeoutException
+import com.gerd.global.ai.TokenUsage
 import com.gerd.global.config.properties.OpenAiProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.MediaType
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.body
+import tools.jackson.databind.PropertyNamingStrategies
+import tools.jackson.databind.annotation.JsonNaming
 import java.net.SocketTimeoutException
 import java.net.http.HttpClient
 import java.net.http.HttpTimeoutException
@@ -40,7 +44,7 @@ class OpenAiClient(
         )
         .build()
 
-    override fun generateJson(request: LlmRequest): String? {
+    override fun generateJson(request: LlmRequest): LlmResult? {
         if (openAiProperties.apiKey.isBlank()) {
             log.warn { "[OpenAI] API 키가 설정되지 않아 호출을 생략합니다 (OPENAI_API_KEY)" }
             return null
@@ -54,7 +58,10 @@ class OpenAiClient(
                 .retrieve()
                 .body<OpenAiChatResponseDTO>()
 
-            response?.choices?.firstOrNull()?.message?.content?.takeIf { it.isNotBlank() }
+            val text = response?.choices?.firstOrNull()?.message?.content?.takeIf { it.isNotBlank() }
+            val usage = response?.usage?.toTokenUsage()
+            // content가 없어도 usage는 올 수 있다 — 비용 집계를 위해 usage만 있어도 결과를 반환한다
+            if (response == null || (text == null && usage == null)) null else LlmResult(text = text, usage = usage)
         } catch (e: ResourceAccessException) {
             val cause = e.cause
             if (cause is HttpTimeoutException || cause is SocketTimeoutException) throw LlmTimeoutException(e)
@@ -85,7 +92,21 @@ class OpenAiClient(
 
 data class OpenAiChatResponseDTO(
     val choices: List<ChoiceDTO> = emptyList(),
+    val usage: UsageDTO? = null,
 ) {
     data class ChoiceDTO(val message: MessageDTO? = null)
     data class MessageDTO(val content: String? = null)
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
+    data class UsageDTO(
+        val promptTokens: Int = 0,
+        val completionTokens: Int = 0,
+        val totalTokens: Int = 0,
+    ) {
+        fun toTokenUsage() = TokenUsage(
+            promptTokens = promptTokens,
+            completionTokens = completionTokens,
+            totalTokens = totalTokens,
+        )
+    }
 }
