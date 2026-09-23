@@ -2,15 +2,12 @@ package com.gerd.domain.auth.service
 
 import com.gerd.domain.auth.entity.User
 import com.gerd.domain.auth.entity.enums.AuthProvider
-import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.AuthAccountRepository
 import com.gerd.domain.auth.repository.UserRepository
 import com.gerd.domain.onboarding.entity.Term
 import com.gerd.domain.onboarding.repository.TermRepository
 import com.gerd.domain.onboarding.repository.UserConsentRepository
-import com.gerd.global.apiPayload.GeneralException
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -123,26 +120,22 @@ class UserAccountRegistrarIntegrationTest
             }
 
             @Test
-            fun `탈퇴 유예 중인 이메일로 다른 provider 가입을 시도하면 ACCOUNT_RECOVERABLE을 던진다`() {
-                val email = "withdrawn@test.com"
-                val user = userRepository.save(User(email = email, nickname = "withdrawnuser"))
-                user.withdraw()
-                userRepository.save(user)
+            fun `같은 이메일이어도 provider가 다르면 각각 독립된 유저로 가입된다`() {
+                val email = "shared@test.com"
 
-                try {
-                    assertThatThrownBy {
-                        userAccountRegistrar.findOrRegister(email, AuthProvider.GOOGLE, "google-withdrawn-1") {
-                            User(email = email, nickname = "newnickname")
-                        }
-                    }.isInstanceOf(GeneralException::class.java)
-                        .extracting("errorCode")
-                        .isEqualTo(AuthErrorCode.ACCOUNT_RECOVERABLE)
+                val kakaoUserId =
+                    userAccountRegistrar.findOrRegister(email, AuthProvider.KAKAO, "kakao-shared-1") {
+                        User(email = email, nickname = "kakaouser")
+                    }
+                val googleUserId =
+                    userAccountRegistrar.findOrRegister(email, AuthProvider.GOOGLE, "google-shared-1") {
+                        User(email = email, nickname = "googleuser")
+                    }
 
-                    assertThat(authAccountRepository.findAll()).isEmpty()
-                } finally {
-                    // 탈퇴(soft-delete) 유저는 @SQLRestriction 때문에 tearDown의 userRepository.deleteAll()로 안 지워짐
-                    userRepository.hardDelete(user.id!!)
-                }
+                assertThat(kakaoUserId).isNotEqualTo(googleUserId)
+                assertThat(userRepository.findAll()).hasSize(2)
+                assertThat(userRepository.findAll()).allMatch { it.email == email }
+                assertThat(authAccountRepository.findAll()).hasSize(2)
             }
         }
     }

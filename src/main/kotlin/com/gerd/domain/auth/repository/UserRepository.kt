@@ -25,12 +25,6 @@ interface UserRepository : JpaRepository<User, Long> {
         @Param("userId") userId: Long,
     ): Optional<User>
 
-    // @SQLRestriction 우회 — 신규가입/타 provider 로그인 시 탈퇴 유예 중인 계정도 찾아서 복구 안내로 분기하기 위함
-    @Query(value = "SELECT * FROM users WHERE email = :email", nativeQuery = true)
-    fun findByEmailIncludingDeleted(
-        @Param("email") email: String,
-    ): Optional<User>
-
     // @SQLRestriction 우회 — 탈퇴 유예 중인 유저의 닉네임도 점유로 간주해 중복 체크에 포함
     // base는 NicknameWords 조합(고정 단어 목록)만 들어오므로 LIKE 와일드카드 이스케이프 불필요
     @Query(value = "SELECT nickname FROM users WHERE nickname = :base OR nickname LIKE CONCAT(:base, '%')", nativeQuery = true)
@@ -59,7 +53,11 @@ interface UserRepository : JpaRepository<User, Long> {
 
     // @SQLRestriction 우회 — 14일 유예 지난 DELETED 유저 ID를 keyset 페이지네이션으로 배치 조회
     @Query(
-        value = "SELECT user_id FROM users WHERE status = 'DELETED' AND deleted_at < :threshold AND user_id > :lastId ORDER BY user_id LIMIT :limit",
+        value = """
+            SELECT user_id FROM users
+            WHERE status = 'DELETED' AND deleted_at < :threshold AND user_id > :lastId
+            ORDER BY user_id LIMIT :limit
+        """,
         nativeQuery = true,
     )
     fun findIdsForHardDelete(
