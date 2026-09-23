@@ -129,15 +129,20 @@ class UserAccountRegistrarIntegrationTest
                 user.withdraw()
                 userRepository.save(user)
 
-                assertThatThrownBy {
-                    userAccountRegistrar.findOrRegister(email, AuthProvider.GOOGLE, "google-withdrawn-1") {
-                        User(email = email, nickname = "newnickname")
-                    }
-                }.isInstanceOf(GeneralException::class.java)
-                    .extracting("errorCode")
-                    .isEqualTo(AuthErrorCode.ACCOUNT_RECOVERABLE)
+                try {
+                    assertThatThrownBy {
+                        userAccountRegistrar.findOrRegister(email, AuthProvider.GOOGLE, "google-withdrawn-1") {
+                            User(email = email, nickname = "newnickname")
+                        }
+                    }.isInstanceOf(GeneralException::class.java)
+                        .extracting("errorCode")
+                        .isEqualTo(AuthErrorCode.ACCOUNT_RECOVERABLE)
 
-                assertThat(authAccountRepository.findAll()).isEmpty()
+                    assertThat(authAccountRepository.findAll()).isEmpty()
+                } finally {
+                    // 탈퇴(soft-delete) 유저는 @SQLRestriction 때문에 tearDown의 userRepository.deleteAll()로 안 지워짐
+                    userRepository.hardDelete(user.id!!)
+                }
             }
         }
     }
