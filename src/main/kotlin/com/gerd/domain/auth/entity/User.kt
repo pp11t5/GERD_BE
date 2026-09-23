@@ -22,24 +22,19 @@ class User(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     val id: Long? = null,
-
-    @Column(nullable = false, unique = true)
+    // unique 제약은 DB의 partial unique index(deleted_at IS NULL 스코프)가 담당 — ddl-auto가 전역 unique로 재생성하지 않도록 여기선 선언하지 않음
+    @Column(nullable = false)
     val email: String,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var role: UserRole = UserRole.USER,
-
     @Column(unique = true)
     var nickname: String,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: UserStatus = UserStatus.ACTIVE,
-
     @Column(name = "last_login_at")
     var lastLoginAt: LocalDateTime? = null,
-
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null,
 ) : BaseEntity() {
