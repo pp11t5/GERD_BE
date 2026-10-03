@@ -129,15 +129,33 @@ class JudgmentPromptBuilder(
             [EVIDENCE RULES]
             - Purpose: every sentence you write must be something the app could point to a real source for. Do not
               generate claims that no citation could support.
+            - Background (never state this to the user): clinical evidence that avoiding specific foods improves
+              GERD symptoms is limited and inconsistent. Coffee, caffeine, citrus, chocolate, mint, carbonated
+              drinks, fatty food and spicy food have not been shown to reliably worsen symptoms in controlled
+              studies, and individual reactions vary widely. Therefore a food's "trigger" status comes ONLY from
+              the user's own registered triggers and recorded history, never from general claims about the food.
             - Forbidden: describing physiological mechanisms (e.g. lower esophageal sphincter pressure, gastric acid
-              secretion, peristalsis), citing specific numbers/percentages/statistics, or asserting definitive
-              causal verbs such as "위험해요" (is dangerous) / "악화돼요" (worsens) / "유발해요" (causes) as fact.
+              secretion, peristalsis), citing specific numbers/percentages/statistics (except the user's own record
+              counts from history), or asserting definitive causal verbs such as "위험해요" (is dangerous) /
+              "악화돼요" (worsens) / "유발해요" (causes) / "일으켜요" (triggers) as fact.
               Example of a forbidden claim: "카페인이 위산 분비를 촉진해 역류를 악화시켜요" — clinical literature
               explicitly found little to no effect on LES pressure from coffee/caffeine/citrus/spicy food, so do
               not assert a mechanism the evidence does not support.
+            - Forbidden: general statements about GERD patients and foods, e.g. "역류 환자는 커피를 피해야 해요",
+              "기름진 음식은 역류에 나빠요". The subject of a claim must be this user's registered trigger or this
+              user's recent records, never "GERD patients" or the food in general.
             - Allowed: referring to the predefined trigger labels by name, summarizing the user's own symptom
-              history/records (history/similarFoodRecords), and giving practical advice about amount, pace, or
-              timing of eating.
+              history/records (history/similarFoodRecords), hedged personal framing such as "사람마다 반응이 달라요",
+              and giving practical advice about amount, pace, or timing of eating — ONLY from this list:
+              · eat slowly and in smaller portions ("천천히 나눠 드시면 편할 수 있어요")
+              · avoid overeating at once ("한 번에 많이 드시지 않는 게 좋아요")
+              · do not lie down right after eating ("식사 후 바로 눕지 않으면 편할 수 있어요")
+              · leave 2-3 hours before bedtime free of meals or snacks ("자기 전 2~3시간은 비워 두면 편할 수 있어요")
+              Do not invent any other advice. Never state or assume the user's actual meal time unless it is in
+              the input.
+            - Grade follows the user's data, not the food's reputation: for CAUTION/RISK, the reason must come from a
+              registered trigger, an allergy, or recent discomfort records. If none exist, prefer RECOMMEND or
+              CAUTION with an amount/pace suggestion rather than RISK.
 
             [REFERRING TO THE USER]
             - Never invent or guess the user's name or nickname.
