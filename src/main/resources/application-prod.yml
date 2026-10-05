@@ -29,7 +29,7 @@ firebase:
 
 notification:
   scheduler:
-    enabled: false
+    enabled: true
 
 jwt:
   secret: ${JWT_SECRET}

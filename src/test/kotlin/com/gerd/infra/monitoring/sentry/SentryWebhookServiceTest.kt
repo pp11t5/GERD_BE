@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.verify
@@ -55,7 +57,7 @@ class SentryWebhookServiceTest {
 
             assertThat(accepted).isTrue()
             val captor = argumentCaptor<DiscordWebhookMessage>()
-            verify(discordWebhookClient).send(captor.capture())
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
             val embed = captor.firstValue.embeds.single()
             assertThat(embed.title).isEqualTo("🚨 유효하지 않은 Refresh Token입니다.")
             assertThat(embed.description).isEqualTo("AUTH401_5")
@@ -81,7 +83,7 @@ class SentryWebhookServiceTest {
             service.receive(payload, signatureOf(payload))
 
             val captor = argumentCaptor<DiscordWebhookMessage>()
-            verify(discordWebhookClient).send(captor.capture())
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
             assertThat(captor.firstValue.embeds.single().fields)
                 .contains(DiscordEmbedField("Environment", "production", true))
         }
@@ -93,7 +95,7 @@ class SentryWebhookServiceTest {
             val accepted = service.receive(payload, "invalid")
 
             assertThat(accepted).isFalse()
-            verify(discordWebhookClient, never()).send(org.mockito.kotlin.any())
+            verify(discordWebhookClient, never()).send(any(), any())
         }
     }
 

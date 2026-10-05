@@ -2,6 +2,10 @@ package com.gerd.domain.judgment.service
 
 import com.gerd.domain.judgment.dto.enums.JudgmentGrade
 import com.gerd.global.ai.LlmClient
+import com.gerd.global.ai.LlmResult
+import com.gerd.global.ai.TokenUsage
+import com.gerd.global.ai.gemini.LlmBudgetGuard
+import com.gerd.global.config.properties.GeminiProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -10,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tools.jackson.databind.json.JsonMapper
 
@@ -19,6 +25,9 @@ class JudgmentGeminiAdapterTest {
     @Mock
     private lateinit var llmClient: LlmClient
 
+    @Mock
+    private lateinit var llmBudgetGuard: LlmBudgetGuard
+
     private lateinit var adapter: JudgmentGeminiAdapter
 
     @BeforeEach
@@ -26,6 +35,8 @@ class JudgmentGeminiAdapterTest {
         adapter = JudgmentGeminiAdapter(
             llmClient = llmClient,
             objectMapper = JsonMapper.builder().findAndAddModules().build(),
+            geminiProperties = GeminiProperties(model = "gemini-test"),
+            llmBudgetGuard = llmBudgetGuard,
         )
     }
 
@@ -37,12 +48,14 @@ class JudgmentGeminiAdapterTest {
         @Test
         fun `structured output을 LlmJudgmentDTO로 파싱한다`() {
             whenever(llmClient.generateJson(any())).thenReturn(
-                """
-                {"grade":"CAUTION","personalTitle":"오늘은 천천히 즐겨보세요","items":[
-                  {"emphasis":"카페인이 들어 있어요","body":"천천히 드세요."},
-                  {"emphasis":"알레르기 해당 없어요","body":"포함되지 않았어요."}
-                ]}
-                """.trimIndent(),
+                LlmResult(
+                    text = """
+                    {"grade":"CAUTION","personalTitle":"오늘은 천천히 즐겨보세요","items":[
+                      {"emphasis":"카페인이 들어 있어요","body":"천천히 드세요."},
+                      {"emphasis":"알레르기 해당 없어요","body":"포함되지 않았어요."}
+                    ]}
+                    """.trimIndent(),
+                ),
             )
 
             val judgment = call()
@@ -66,7 +79,7 @@ class JudgmentGeminiAdapterTest {
 
         @Test
         fun `응답 텍스트가 JSON이 아니면 null을 반환한다`() {
-            whenever(llmClient.generateJson(any())).thenReturn("죄송하지만 판단할 수 없습니다")
+            whenever(llmClient.generateJson(any())).thenReturn(LlmResult(text = "죄송하지만 판단할 수 없습니다"))
 
             assertThat(call()).isNull()
         }
@@ -74,9 +87,29 @@ class JudgmentGeminiAdapterTest {
         @Test
         fun `items가 2개가 아니면 null을 반환한다`() {
             whenever(llmClient.generateJson(any()))
-                .thenReturn("""{"grade":"CAUTION","items":[{"emphasis":"하나","body":"뿐"}]}""")
+                .thenReturn(LlmResult(text = """{"grade":"CAUTION","items":[{"emphasis":"하나","body":"뿐"}]}"""))
 
             assertThat(call()).isNull()
+        }
+
+        @Test
+        fun `텍스트 없이 usage만 오면 null을 반환하되 비용은 기록한다`() {
+            // 단가표에 등록된 모델이어야 비용이 계산돼 record가 불린다
+            val pricedAdapter =
+                JudgmentGeminiAdapter(
+                    llmClient = llmClient,
+                    objectMapper = JsonMapper.builder().findAndAddModules().build(),
+                    geminiProperties = GeminiProperties(),
+                    llmBudgetGuard = llmBudgetGuard,
+                )
+            whenever(llmClient.generateJson(any())).thenReturn(
+                LlmResult(text = null, usage = TokenUsage(promptTokens = 50, completionTokens = 0, totalTokens = 50)),
+            )
+
+            val judgment = pricedAdapter.generateJudgment("system", "user", mapOf("type" to "OBJECT"))
+
+            assertThat(judgment).isNull()
+            verify(llmBudgetGuard).record(eq("judgment"), any())
         }
     }
 }

@@ -43,6 +43,7 @@ class SentryWebhookService(
         val environment = extractEnvironment(event)
 
         discordWebhookClient.send(
+            sentryWebhookProperties.discordWebhookUrl,
             DiscordWebhookMessage(
                 embeds = listOf(
                     DiscordEmbed(
