@@ -82,6 +82,18 @@ class JudgmentPromptBuilderTest {
     }
 
     @Test
+    fun `EVIDENCE RULES에 음식 일반론 단정 금지와 허용 조언 목록을 포함한다`() {
+        whenever(foodCategoryReader.getAll()).thenReturn(emptyList())
+
+        val instruction = builder.buildSystemInstruction()
+
+        assertThat(instruction).contains("general statements about GERD patients and foods")
+        assertThat(instruction).contains("ONLY from this list")
+        assertThat(instruction).contains("Do not invent any other advice")
+        assertThat(instruction).contains("Grade follows the user's data")
+    }
+
+    @Test
     fun `등록 트리거에 개인 기록이 없으면 구체적인 식사 조절과 기록을 안내한다`() {
         whenever(foodCategoryReader.getAll()).thenReturn(emptyList())
 
