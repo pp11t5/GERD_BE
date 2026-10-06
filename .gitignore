@@ -18,3 +18,9 @@ out/
 # Env
 src/main/resources/.env
 src/main/resources/.env.prod
+
+# Claude hooks runtime log
+.claude/hooks/decisions.log
+.claude/hooks/__pycache__/
+.claude/hooks/decisions.log.1
+.claude/worktrees/
