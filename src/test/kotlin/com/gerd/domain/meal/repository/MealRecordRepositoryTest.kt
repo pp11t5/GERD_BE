@@ -116,6 +116,69 @@ class MealRecordRepositoryTest @Autowired constructor(
         }
     }
 
+    @Nested
+    inner class `식사 기록 존재 여부 조회` {
+
+        @Test
+        fun `식사 기록이 있으면 true를 반환한다`() {
+            val user = saveUser("exists@test.com")
+            mealRecordRepository.save(mealRecord(user = user))
+            em.flush()
+            em.clear()
+
+            val result = mealRecordRepository.existsByUser_Id(user.id!!)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `삭제된 식사 기록만 있으면 false를 반환한다`() {
+            val user = saveUser("deleted@test.com")
+            mealRecordRepository.save(mealRecord(user = user, deletedAt = LocalDateTime.of(2026, 6, 11, 13, 0)))
+            em.flush()
+            em.clear()
+
+            val result = mealRecordRepository.existsByUser_Id(user.id!!)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `삭제된 식사와 삭제되지 않은 식사가 함께 있으면 true를 반환한다`() {
+            val user = saveUser("mixed@test.com")
+            mealRecordRepository.save(mealRecord(user = user, deletedAt = LocalDateTime.of(2026, 6, 11, 13, 0)))
+            mealRecordRepository.save(mealRecord(user = user, eatenAt = LocalDateTime.of(2026, 6, 12, 12, 0)))
+            em.flush()
+            em.clear()
+
+            val result = mealRecordRepository.existsByUser_Id(user.id!!)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `다른 사용자의 식사 기록만 있으면 false를 반환한다`() {
+            val user = saveUser("me@test.com")
+            val otherUser = saveUser("other@test.com")
+            mealRecordRepository.save(mealRecord(user = otherUser))
+            em.flush()
+            em.clear()
+
+            val result = mealRecordRepository.existsByUser_Id(user.id!!)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `식사 기록이 없으면 false를 반환한다`() {
+            val user = saveUser("empty@test.com")
+
+            val result = mealRecordRepository.existsByUser_Id(user.id!!)
+
+            assertThat(result).isFalse()
+        }
+    }
+
     private fun saveUser(email: String = "user@test.com"): User =
         User(email = email, nickname = email.substringBefore("@")).also {
             em.persist(it)
@@ -126,7 +189,8 @@ class MealRecordRepositoryTest @Autowired constructor(
         user: User,
         eatenAt: LocalDateTime = LocalDateTime.of(2026, 6, 11, 12, 30),
         grade: JudgmentGrade? = null,
-    ) = MealRecord(user = user, eatenAt = eatenAt, grade = grade)
+        deletedAt: LocalDateTime? = null,
+    ) = MealRecord(user = user, eatenAt = eatenAt, grade = grade, deletedAt = deletedAt)
 
     private fun mealFood(
         user: User,

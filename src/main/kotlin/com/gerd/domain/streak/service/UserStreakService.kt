@@ -2,9 +2,12 @@ package com.gerd.domain.streak.service
 
 import com.gerd.domain.auth.exception.AuthErrorCode
 import com.gerd.domain.auth.repository.UserRepository
+import com.gerd.domain.meal.repository.MealRecordRepository
+import com.gerd.domain.streak.dto.StreakCharacterStatus
 import com.gerd.domain.streak.dto.UserStreakResponseDTO
 import com.gerd.domain.streak.entity.UserStreak
 import com.gerd.domain.streak.repository.UserStreakRepository
+import com.gerd.domain.symptom.entity.enums.SymptomState
 import com.gerd.domain.symptom.repository.SymptomRepository
 import com.gerd.global.apiPayload.GeneralException
 import org.springframework.data.repository.findByIdOrNull
@@ -17,21 +20,44 @@ class UserStreakService(
     private val userStreakRepository: UserStreakRepository,
     private val userRepository: UserRepository,
     private val symptomRepository: SymptomRepository,
+    private val mealRecordRepository: MealRecordRepository,
 ) {
 
     // 한번에 스트릭을 계산할 batch size
     companion object {
         private const val REBUILD_BATCH_SIZE = 50
+        private const val GRATEFUL_STREAK_DAYS = 7
     }
 
-    // 사용자의 현재 편안한 증상 기록 연속일을 조회
+    // 사용자의 현재 편안한 증상 기록 연속일과 캐릭터 상태를 조회
     fun getStreak(userId: Long): UserStreakResponseDTO {
         val today = LocalDate.now()
         val userStreak = userStreakRepository.findByIdOrNull(userId)
+        val streak = userStreak?.currentStreakOn(today) ?: 0
 
         return UserStreakResponseDTO(
-            streak = userStreak?.currentStreakOn(today) ?: 0,
+            streak = streak,
+            characterStatus = resolveCharacterStatus(userId, streak),
         )
+    }
+
+    // 스트릭 값으로 캐릭터 상태 분기, 스트릭이 0일 때만 최근 증상을 확인
+    private fun resolveCharacterStatus(
+        userId: Long,
+        streak: Int,
+    ): StreakCharacterStatus {
+        if (streak >= GRATEFUL_STREAK_DAYS) return StreakCharacterStatus.GRATEFUL
+        if (streak > 0) return StreakCharacterStatus.SATISFIED
+
+        val latestSymptom = symptomRepository.findFirstByUser_IdOrderByOccurredAtDescIdDesc(userId)
+        if (latestSymptom == null && !mealRecordRepository.existsByUser_Id(userId)) {
+            return StreakCharacterStatus.GREETING
+        }
+
+        return when (latestSymptom?.symptomState) {
+            SymptomState.UNCOMFORTABLE, SymptomState.SEVERE -> StreakCharacterStatus.TERRIBLE
+            else -> StreakCharacterStatus.SATISFIED
+        }
     }
 
     // 사용자가 오늘 편안한 증상 기록을 남겼을 때 연속일을 업데이트

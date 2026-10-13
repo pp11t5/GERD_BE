@@ -104,6 +104,86 @@ class SymptomRepositoryStreakTest @Autowired constructor(
         }
     }
 
+    @Nested
+    inner class `가장 최근 증상 기록 조회` {
+
+        @Test
+        fun `가장 최근 occurredAt의 증상을 반환한다`() {
+            val user = saveUser()
+            val today = LocalDate.of(2026, 6, 28)
+            saveSymptom(user, SymptomState.COMFORTABLE, today.minusDays(2))
+            saveSymptom(user, SymptomState.SEVERE, today)
+            saveSymptom(user, SymptomState.GOOD, today.minusDays(1))
+            flushAndClear()
+
+            val result = symptomRepository.findFirstByUser_IdOrderByOccurredAtDescIdDesc(user.id!!)
+
+            assertThat(result?.symptomState).isEqualTo(SymptomState.SEVERE)
+        }
+
+        @Test
+        fun `occurredAt이 같으면 id가 큰 증상을 반환한다`() {
+            val user = saveUser()
+            val occurredAt = LocalDateTime.of(2026, 6, 28, 12, 0)
+            saveSymptom(user, SymptomState.COMFORTABLE, occurredAt.toLocalDate(), occurredAt)
+            saveSymptom(user, SymptomState.UNCOMFORTABLE, occurredAt.toLocalDate(), occurredAt)
+            flushAndClear()
+
+            val result = symptomRepository.findFirstByUser_IdOrderByOccurredAtDescIdDesc(user.id!!)
+
+            assertThat(result?.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
+        }
+
+        @Test
+        fun `삭제된 증상은 건너뛰고 그 이전 증상을 반환한다`() {
+            val user = saveUser()
+            val today = LocalDate.of(2026, 6, 28)
+            saveSymptom(user, SymptomState.NORMAL, today.minusDays(1))
+            saveSymptom(user, SymptomState.SEVERE, today, deletedAt = today.atTime(13, 0))
+            flushAndClear()
+
+            val result = symptomRepository.findFirstByUser_IdOrderByOccurredAtDescIdDesc(user.id!!)
+
+            assertThat(result?.symptomState).isEqualTo(SymptomState.NORMAL)
+        }
+
+        @Test
+        fun `삭제된 증상만 있으면 null을 반환한다`() {
+            val user = saveUser()
+            val today = LocalDate.of(2026, 6, 28)
+            saveSymptom(user, SymptomState.SEVERE, today, deletedAt = today.atTime(13, 0))
+            flushAndClear()
+
+            val result = symptomRepository.findFirstByUser_IdOrderByOccurredAtDescIdDesc(user.id!!)
+
+            assertThat(result).isNull()
+        }
+
+        @Test
+        fun `다른 사용자의 증상은 반환하지 않는다`() {
+            val user = saveUser("user-a@test.com")
+            val otherUser = saveUser("user-b@test.com")
+            val today = LocalDate.of(2026, 6, 28)
+            saveSymptom(user, SymptomState.COMFORTABLE, today.minusDays(1))
+            saveSymptom(otherUser, SymptomState.SEVERE, today)
+            flushAndClear()
+
+            val result = symptomRepository.findFirstByUser_IdOrderByOccurredAtDescIdDesc(user.id!!)
+
+            assertThat(result?.symptomState).isEqualTo(SymptomState.COMFORTABLE)
+        }
+
+        @Test
+        fun `증상이 없으면 null을 반환한다`() {
+            val user = saveUser()
+            flushAndClear()
+
+            val result = symptomRepository.findFirstByUser_IdOrderByOccurredAtDescIdDesc(user.id!!)
+
+            assertThat(result).isNull()
+        }
+    }
+
     private fun saveUser(email: String = "user@test.com"): User =
         User(email = email, nickname = email.substringBefore("@"), role = UserRole.USER).also {
             em.persist(it)
@@ -114,6 +194,7 @@ class SymptomRepositoryStreakTest @Autowired constructor(
         state: SymptomState,
         date: LocalDate,
         occurredAt: LocalDateTime = date.atTime(12, 0),
+        deletedAt: LocalDateTime? = null,
     ) {
         em.persist(
             Symptom(
@@ -122,6 +203,7 @@ class SymptomRepositoryStreakTest @Autowired constructor(
                 symptomTypes = emptySet(),
                 occurredAt = occurredAt,
                 mealRecordId = null,
+                deletedAt = deletedAt,
             ),
         )
     }
