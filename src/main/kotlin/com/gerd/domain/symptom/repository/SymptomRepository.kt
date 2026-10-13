@@ -14,6 +14,9 @@ interface SymptomRepository : JpaRepository<Symptom, Long> , SymptomPatternQuery
 
     fun findByExternalIdAndUser_Id(externalId: UUID, userId: Long): Symptom?
 
+    // 가장 최근 증상 기록 조회
+    fun findFirstByUser_IdOrderByOccurredAtDescIdDesc(userId: Long): Symptom?
+
     @Query("""
         SELECT DISTINCT s
         FROM Symptom s

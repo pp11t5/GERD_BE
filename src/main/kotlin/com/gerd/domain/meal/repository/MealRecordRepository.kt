@@ -13,6 +13,7 @@ interface MealRecordRepository : JpaRepository<MealRecord, Long> {
     fun findByIdAndUser_Id(id: Long, userId: Long): MealRecord?
     fun findByUser_IdAndEatenAtAfter(userId: Long, cutoff: LocalDateTime): List<MealRecord>
     fun findByUser_IdAndEatenAtBetween(userId: Long, start: LocalDateTime, end: LocalDateTime): List<MealRecord>
+    fun existsByUser_Id(userId: Long): Boolean
 
     // 최근 cutoff 이후 끼니 중 증상이 연결되지 않은 끼니 수 (미기록 식사 개수)
     @Query(
