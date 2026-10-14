@@ -5,6 +5,7 @@ import com.gerd.domain.notification.entity.enums.DailyNotificationTime
 import com.gerd.domain.notification.entity.enums.NotificationSettingType
 import com.gerd.domain.notification.exception.NotificationErrorCode
 import com.gerd.domain.notification.repository.UserNotificationSettingRepository
+import com.gerd.domain.onboarding.service.ConsentService
 import com.gerd.global.apiPayload.GeneralException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
@@ -16,13 +17,14 @@ private val log = KotlinLogging.logger {}
 @Transactional(readOnly = true)
 class NotificationSettingService(
     private val userNotificationSettingRepository: UserNotificationSettingRepository,
+    private val consentService: ConsentService,
 ) {
 
     fun getNotificationSetting(userId: Long): NotificationSettingResponseDTO {
         val setting = userNotificationSettingRepository.findById(userId).orElseThrow {
             GeneralException(NotificationErrorCode.NOTIFICATION_SETTING_NOT_FOUND)
         }
-        return NotificationSettingResponseDTO.from(setting)
+        return NotificationSettingResponseDTO.from(setting, consentService.isMarketingAgreed(userId))
     }
 
     @Transactional
