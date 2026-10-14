@@ -30,6 +30,7 @@ interface NotificationSettingApi {
             - daily_record: 매일 기록 알림
             - weekly_report: 주간 리포트 알림
             - daily_notification_time: 매일 밤 기록 알림 시간대 (기본값: 오전 8시)
+            - marketing_enabled: 마케팅 정보 수신 동의 여부 (최신 마케팅 약관 동의 기준, 동의 기록이 없으면 false)
         """
     )
     @ApiResponses(SwaggerResponse(responseCode = "200", description = "조회 성공"))
