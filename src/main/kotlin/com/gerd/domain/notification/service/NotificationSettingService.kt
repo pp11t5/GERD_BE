@@ -5,7 +5,7 @@ import com.gerd.domain.notification.entity.enums.DailyNotificationTime
 import com.gerd.domain.notification.entity.enums.NotificationSettingType
 import com.gerd.domain.notification.exception.NotificationErrorCode
 import com.gerd.domain.notification.repository.UserNotificationSettingRepository
-import com.gerd.domain.onboarding.service.ConsentService
+import com.gerd.domain.onboarding.repository.UserConsentRepository
 import com.gerd.global.apiPayload.GeneralException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
@@ -17,14 +17,16 @@ private val log = KotlinLogging.logger {}
 @Transactional(readOnly = true)
 class NotificationSettingService(
     private val userNotificationSettingRepository: UserNotificationSettingRepository,
-    private val consentService: ConsentService,
+    private val userConsentRepository: UserConsentRepository,
 ) {
 
     fun getNotificationSetting(userId: Long): NotificationSettingResponseDTO {
         val setting = userNotificationSettingRepository.findById(userId).orElseThrow {
             GeneralException(NotificationErrorCode.NOTIFICATION_SETTING_NOT_FOUND)
         }
-        return NotificationSettingResponseDTO.from(setting, consentService.isMarketingAgreed(userId))
+        val marketingEnabled = userConsentRepository
+            .findLatestByUserIdAndTermCode(userId, MARKETING_TERM_CODE)?.agreed ?: false
+        return NotificationSettingResponseDTO.from(setting, marketingEnabled)
     }
 
     @Transactional
@@ -47,5 +49,9 @@ class NotificationSettingService(
         }
         setting.updateDailyNotificationTime(time)
         log.info { "알림 시간대 변경: userId=$userId, time=$time" }
+    }
+
+    companion object {
+        private const val MARKETING_TERM_CODE = "marketing"
     }
 }
