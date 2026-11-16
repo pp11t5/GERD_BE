@@ -24,6 +24,7 @@ import com.gerd.global.apiPayload.code.CommonErrorCode
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @Service
@@ -171,6 +172,7 @@ class SymptomService(
         return SymptomResponseDTO.LinkedMealDTO(
             mealRecordId = mealRecord.externalId?.toString()
                 ?: throw GeneralException(MealErrorCode.MEAL_RECORD_NOT_FOUND),
+            afterMealMinutes = ChronoUnit.MINUTES.between(mealRecord.eatenAt, symptom.occurredAt).toInt(),
             foods = mealFoods.mapNotNull { mealFood ->
                 val food = foodsById[mealFood.foodId] ?: return@mapNotNull null
                 SymptomResponseDTO.LinkedFoodDTO(

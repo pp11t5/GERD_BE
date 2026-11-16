@@ -114,13 +114,16 @@ class TimeLineService(
             val linkedRecord = s.mealRecordId?.let { mealRecordById[it] }
             val afterMealMinutes = linkedRecord?.let {
                 ChronoUnit.MINUTES.between(it.eatenAt, s.occurredAt).toInt()
-            } ?: 0
+            }
+            val types = s.symptomTypes.toList()
 
             TimeLineItemDTO.Symptom(
                 timeLineType = TimeLineType.SYMPTOM,
                 symptomId = s.externalId?.toString() ?: "",
                 symptomState = s.symptomState,
                 afterMealMinutes = afterMealMinutes,
+                representativeSymptoms = types.take(2),
+                etcCount = maxOf(0, types.size - 2),
                 occurredAt = s.occurredAt.toString(),
             )
         }

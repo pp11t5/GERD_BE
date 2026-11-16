@@ -38,6 +38,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
@@ -123,6 +124,8 @@ class SymptomServiceTest {
             assertThat(linkedMealCaptor.firstValue.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString())
             assertThat(linkedMealCaptor.firstValue.foods[0].mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
             assertThat(linkedMealCaptor.firstValue.foods[0].category).isEqualTo("soup_stew")
+            assertThat(linkedMealCaptor.firstValue.afterMealMinutes)
+                .isEqualTo(ChronoUnit.MINUTES.between(MealRecordFixture.EATEN_AT, SymptomFixture.OCCURRED_AT).toInt())
             assertThat(result.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
         }
 
@@ -402,6 +405,7 @@ class SymptomServiceTest {
         occurredAt = "2026-05-12T19:30+09:00",
         linkedMeal = SymptomResponseDTO.LinkedMealDTO(
             mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
+            afterMealMinutes = 30,
             foods = listOf(
                 SymptomResponseDTO.LinkedFoodDTO(
                     mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
@@ -410,6 +414,7 @@ class SymptomServiceTest {
                 ),
             ),
         ),
+        memo = null,
         analysis = null,
     )
 }
