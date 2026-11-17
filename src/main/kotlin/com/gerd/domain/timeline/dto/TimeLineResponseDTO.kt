@@ -56,8 +56,12 @@ sealed class TimeLineItemDTO {
         val symptomId: String,
         @field:Schema(description = "증상 상태: comfortable(편안), good(양호), normal(보통), uncomfortable(불편), severe(심각)", example = "uncomfortable")
         val symptomState: SymptomState,
-        @field:Schema(description = "식사 후 경과 시간 (분)", example = "30")
-        val afterMealMinutes: Int,
+        @field:Schema(description = "식사 후 경과 시간 (분). 식사에 연결되지 않은 증상은 null", example = "30", nullable = true)
+        val afterMealMinutes: Int?,
+        @field:Schema(description = "증상 유형 최대 2개: throat_foreign_body(목 이물감), acid_reflux(신물), cough(기침), chest_tightness(가슴 답답함)", example = "[\"acid_reflux\", \"chest_tightness\"]")
+        val representativeSymptoms: List<SymptomType>,
+        @field:Schema(description = "표시되지 않은 나머지 증상 유형 개수", example = "1")
+        val etcCount: Int,
         @field:Schema(description = "증상 발생 시각 (ISO 8601)", example = "2026-06-21T13:00:00")
         val occurredAt: String,
     ) : TimeLineItemDTO()

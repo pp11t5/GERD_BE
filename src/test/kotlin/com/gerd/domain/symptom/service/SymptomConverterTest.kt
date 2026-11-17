@@ -43,6 +43,16 @@ class SymptomConverterTest {
             assertThat(result.linkedMeal!!.mealRecordId).isEqualTo(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString())
             assertThat(result.linkedMeal!!.foods[0].mealFoodId).isEqualTo(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString())
             assertThat(result.linkedMeal!!.foods[0].name).isEqualTo("된장찌개")
+            assertThat(result.linkedMeal!!.afterMealMinutes).isEqualTo(30)
+        }
+
+        @Test
+        fun `메모가 있으면 그대로 반환하고 없으면 null을 반환한다`() {
+            val withMemo = converter.toResponse(SymptomFixture.symptom(memo = "속이 쓰렸어요"), null)
+            val withoutMemo = converter.toResponse(SymptomFixture.symptom(memo = null), null)
+
+            assertThat(withMemo.memo).isEqualTo("속이 쓰렸어요")
+            assertThat(withoutMemo.memo).isNull()
         }
 
         @Test
@@ -62,6 +72,7 @@ class SymptomConverterTest {
 
     private fun linkedMeal() = SymptomResponseDTO.LinkedMealDTO(
         mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
+        afterMealMinutes = 30,
         foods = listOf(
             SymptomResponseDTO.LinkedFoodDTO(
                 mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),

@@ -26,12 +26,18 @@ data class SymptomResponseDTO(
     @field:Schema(description = "연결된 원인 끼니. 미연결 증상은 null", nullable = true)
     val linkedMeal: LinkedMealDTO?,
 
+    @field:Schema(description = "추가 메모. 없으면 null", example = "저녁 늦게 먹어서 그런지 속이 쓰렸어요", nullable = true)
+    val memo: String?,
+
     @field:Schema(description = "AI 맞춤 분석. 분석 전이면 null", nullable = true)
     val analysis: AnalysisDTO?,
 ) {
     data class LinkedMealDTO(
         @field:Schema(description = "끼니 식별자(UUID)")
         val mealRecordId: String,
+
+        @field:Schema(description = "식사 후 증상 발생까지 경과 시간 (분)", example = "30")
+        val afterMealMinutes: Int,
 
         @field:Schema(description = "연결된 음식 목록")
         val foods: List<LinkedFoodDTO>,

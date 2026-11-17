@@ -72,7 +72,7 @@ class SymptomControllerTest @Autowired constructor(
                 jsonPath("$.result.symptomId") { value(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString()) }
                 jsonPath("$.result.linkedMeal.mealRecordId") { value(MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString()) }
                 jsonPath("$.result.linkedMeal.foods[0].mealFoodId") { value(MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString()) }
-                jsonPath("$.result.memo") { doesNotExist() }
+                jsonPath("$.result.memo") { value("속이 편했어요") }
             }
         }
 
@@ -156,6 +156,8 @@ class SymptomControllerTest @Autowired constructor(
                     jsonPath("$.result.symptomId") { value(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString()) }
                     jsonPath("$.result.analysis.title") { doesNotExist() }
                     jsonPath("$.result.linkedMeal.foods[0].name") { value("된장찌개") }
+                    jsonPath("$.result.linkedMeal.afterMealMinutes") { value(30) }
+                    jsonPath("$.result.memo") { value("속이 편했어요") }
                 }
         }
 
@@ -244,6 +246,7 @@ class SymptomControllerTest @Autowired constructor(
         occurredAt = "2026-05-12T19:30+09:00",
         linkedMeal = SymptomResponseDTO.LinkedMealDTO(
             mealRecordId = MealRecordFixture.MEAL_RECORD_EXTERNAL_ID.toString(),
+            afterMealMinutes = 30,
             foods = listOf(
                 SymptomResponseDTO.LinkedFoodDTO(
                     mealFoodId = MealRecordFixture.MEAL_FOOD_EXTERNAL_ID.toString(),
@@ -252,6 +255,7 @@ class SymptomControllerTest @Autowired constructor(
                 ),
             ),
         ),
+        memo = "속이 편했어요",
         analysis = SymptomResponseDTO.AnalysisDTO(
             items = listOf(
                 SymptomResponseDTO.Item(
