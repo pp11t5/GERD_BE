@@ -15,8 +15,6 @@ data class HomeRecommendationResponseDTO(
         val foodId: Long,
         @Schema(description = "음식명(음식 DB 표기명)", example = "우동")
         val foodName: String,
-        @Schema(description = "음식 대표 이미지 URL. 없으면 null", example = "https://cdn.example.com/foods/udon.png")
-        val imageUrl: String?,
         @Schema(description = "음식 카테고리명(음식 분류 DB의 표시명)", example = "면류")
         val categoryName: String,
         @Schema(description = "추천 근거 코드")

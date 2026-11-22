@@ -26,10 +26,10 @@ class HomeRecommendationController : HomeRecommendationApi {
                 profileStatus = ProfileStatus.PERSONALIZED,
                 foods =
                     listOf(
-                        RecommendedFoodDTO(101L, "우동", null, "면류", ReasonCode.SAME_CATEGORY, "비슷한 면류 메뉴"),
-                        RecommendedFoodDTO(102L, "순두부찌개", null, "찌개·탕류", ReasonCode.SIMILAR_CATEGORY, "비슷한 한식 메뉴"),
-                        RecommendedFoodDTO(103L, "닭죽", null, "밥·죽류", ReasonCode.RECENT_PREFERENCE, "최근 드신 음식과 비슷해요"),
-                        RecommendedFoodDTO(104L, "잔치국수", null, "면류", ReasonCode.SAME_CATEGORY, "비슷한 면류 메뉴"),
+                        RecommendedFoodDTO(101L, "우동", "면류", ReasonCode.SAME_CATEGORY, "비슷한 면류 메뉴"),
+                        RecommendedFoodDTO(102L, "순두부찌개", "찌개·탕류", ReasonCode.SIMILAR_CATEGORY, "비슷한 한식 메뉴"),
+                        RecommendedFoodDTO(103L, "닭죽", "밥·죽류", ReasonCode.RECENT_PREFERENCE, "최근 드신 음식과 비슷해요"),
+                        RecommendedFoodDTO(104L, "잔치국수", "면류", ReasonCode.SAME_CATEGORY, "비슷한 면류 메뉴"),
                     ),
             )
     }
