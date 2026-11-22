@@ -31,13 +31,13 @@ interface HomeRecommendationApi {
             - profile_status: PERSONALIZED(식단·상태 기록 기반) | NO_STATE(식단 기록만 있음) | NO_RECORD(식단 기록 없음, foods는 빈 배열이며 FE는 "식단 기록이 없어요." 표시)
             - food_name: 음식 DB 표기명
             - category_name: 음식 분류 DB의 카테고리 표시명
-            - reason_code / reason_label: 추천 근거. 실제 카테고리 매핑으로 확인되는 근거만 내려갑니다.
+            - reason_label: 추천 근거 문구. 확인 가능한 근거가 있을 때만 내려가며 없으면 null입니다. null이면 FE는 category_name을 보조 라벨로 표시합니다.
 
-            추천 근거(reason_code)와 유사 음식 매핑 기준
-            - SAME_CATEGORY: 사용자가 기록한 음식과 동일 카테고리 후보. 가장 먼저 탐색합니다.
-            - SIMILAR_CATEGORY: 후보가 부족할 때 음식 DB에 사전 연결된 유사 카테고리로 확장한 후보. 예: 국물 요리 ↔ 국수·탕·찌개류
-            - RECENT_PREFERENCE: 카테고리가 달라도 재료·조리 방식 등 속성이 최근 기록 취향과 가까워 순위가 오른 후보
-            - 근거가 충분하지 않으면 reason_label에는 카테고리명만 담깁니다.
+            추천 근거(reason_label)와 유사 음식 매핑 기준
+            - 동일 카테고리: 사용자가 기록한 음식과 같은 카테고리 후보. 가장 먼저 탐색합니다. 예: "비슷한 면류 메뉴"
+            - 유사 카테고리: 후보가 부족할 때 음식 DB에 사전 연결된 유사 카테고리로 확장한 후보. 예: 국물 요리 ↔ 국수·탕·찌개류
+            - 최근 기록 취향: 카테고리가 달라도 재료·조리 방식 등 속성이 최근 기록 취향과 가까워 순위가 오른 후보
+            - 위 근거로 문구를 만들 수 없으면 reason_label은 null입니다.
 
             제외 규칙
             - 등록 알레르기와 매칭되는 음식은 후보에서 제외됩니다.
