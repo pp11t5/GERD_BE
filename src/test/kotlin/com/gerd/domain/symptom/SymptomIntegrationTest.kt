@@ -108,7 +108,7 @@ class SymptomIntegrationTest @Autowired constructor(
                 jsonPath("$.result.linkedMeal.foods[0].mealFoodId") { value(meal.food.externalId.toString()) }
                 jsonPath("$.result.linkedMeal.foods[0].name") { value("통합 된장찌개") }
                 jsonPath("$.result.linkedMeal.foods[0].category") { value("soup_stew") }
-                jsonPath("$.result.memo") { doesNotExist() }
+                jsonPath("$.result.memo") { value("속이 편했어요") }
                 // 규칙 기반 패턴 분석은 같은 트랜잭션에서 동기로 계산된다 — 연결 기록이 이번 1건뿐이라 관찰중(OBSERVING) 라벨로 채워진다
                 jsonPath("$.result.analysis.items[0].emphasis") { value("아직 패턴을 말하기엔 기록이 조금 적어요.") }
                 jsonPath("$.result.analysis.items[0].body") { value("며칠만 더 기록하면 지원님만의 패턴을 찾아드릴 수 있어요.") }
@@ -122,7 +122,7 @@ class SymptomIntegrationTest @Autowired constructor(
                     status { isOk() }
                     jsonPath("$.result.symptomId") { value(symptomExternalId) }
                     jsonPath("$.result.linkedMeal.foods[0].name") { value("통합 된장찌개") }
-                    jsonPath("$.result.memo") { doesNotExist() }
+                    jsonPath("$.result.memo") { value("속이 편했어요") }
                 }
 
             mockMvc.put("/api/v1/symptoms/{symptomId}", symptomExternalId) {

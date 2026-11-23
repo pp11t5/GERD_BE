@@ -322,11 +322,12 @@ class TimeLineServiceTest {
         }
 
         @Test
-        fun `미연결 증상은 standalone Symptom 아이템으로 표시되며 afterMealMinutes는 0이다`() {
+        fun `미연결 증상은 standalone Symptom 아이템으로 표시되며 afterMealMinutes는 null이다`() {
             val symptom = SymptomFixture.symptom(
                 mealRecordId = null,
                 occurredAt = LocalDateTime.of(2026, 6, 17, 14, 32, 0),
                 symptomState = SymptomState.UNCOMFORTABLE,
+                symptomTypes = setOf(SymptomType.ACID_REFLUX, SymptomType.COUGH, SymptomType.CHEST_TIGHTNESS),
             )
 
             whenever(mealRecordRepository.findByUser_IdAndEatenAtBetween(any(), any(), any())).thenReturn(emptyList())
@@ -338,7 +339,9 @@ class TimeLineServiceTest {
             val symptomItem = result.items.first() as TimeLineItemDTO.Symptom
             assertThat(symptomItem.symptomId).isEqualTo(SymptomFixture.SYMPTOM_EXTERNAL_ID.toString())
             assertThat(symptomItem.symptomState).isEqualTo(SymptomState.UNCOMFORTABLE)
-            assertThat(symptomItem.afterMealMinutes).isEqualTo(0)
+            assertThat(symptomItem.afterMealMinutes).isNull()
+            assertThat(symptomItem.representativeSymptoms).containsExactly(SymptomType.ACID_REFLUX, SymptomType.COUGH)
+            assertThat(symptomItem.etcCount).isEqualTo(1)
         }
 
         @Test

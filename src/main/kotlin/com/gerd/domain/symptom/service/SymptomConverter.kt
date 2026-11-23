@@ -34,6 +34,7 @@ class SymptomConverter(
             symptomTypes = symptom.symptomTypes.toList(),
             occurredAt = symptom.occurredAt.atOffset(ZoneOffset.ofHours(9)).toString(),
             linkedMeal = linkedMeal,
+            memo = symptom.memo,
             analysis = deserializeAnalysis(symptom.analysisJson),
         )
 
