@@ -89,6 +89,56 @@ class SentryWebhookServiceTest {
         }
 
         @Test
+        fun `릴리스, 발생 위치, 런북, 시각을 임베드에 담고 레벨에 맞게 꾸민다`() {
+            properties.runbookUrl = "https://example.com/runbook"
+            val payload = """
+                {
+                  "data": {
+                    "issue": {
+                      "title": "서버 오류",
+                      "culprit": "com.gerd.Foo in bar",
+                      "project": { "slug": "gerd" }
+                    },
+                    "event": {
+                      "level": "warning",
+                      "environment": "production",
+                      "release": "0123456789abcdef0123456789abcdef01234567",
+                      "datetime": "2026-11-25T09:00:00.123456Z"
+                    }
+                  }
+                }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            assertThat(embed.title).isEqualTo("⚠️ 서버 오류")
+            assertThat(embed.timestamp).isEqualTo("2026-11-25T09:00:00.123456Z")
+            assertThat(embed.footer).isEqualTo(DiscordEmbedFooter("Sentry"))
+            assertThat(embed.fields).contains(
+                DiscordEmbedField("Release", "0123456", true),
+                DiscordEmbedField("Culprit", "`com.gerd.Foo in bar`", false),
+                DiscordEmbedField("Runbook", "[런북 열기](https://example.com/runbook)", false),
+            )
+        }
+
+        @Test
+        fun `긴 제목은 Discord 임베드 제한 길이로 자른다`() {
+            val longTitle = "a".repeat(300)
+            val payload = """
+                { "data": { "issue": { "title": "$longTitle", "project": { "slug": "gerd" } }, "event": {} } }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            assertThat(captor.firstValue.embeds.single().title).hasSize(256)
+        }
+
+        @Test
         fun `서명이 다르면 Discord로 전달하지 않는다`() {
             val payload = "{}".toByteArray()
 

@@ -8,4 +8,5 @@ import org.springframework.stereotype.Component
 data class SentryWebhookProperties(
     var secret: String = "",
     var discordWebhookUrl: String = "",
+    var runbookUrl: String = "",
 )
