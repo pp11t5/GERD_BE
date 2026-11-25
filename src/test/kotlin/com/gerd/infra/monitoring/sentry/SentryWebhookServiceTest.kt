@@ -139,6 +139,53 @@ class SentryWebhookServiceTest {
         }
 
         @Test
+        fun `런북 링크가 필드 제한 길이를 넘으면 Runbook 필드만 생략한다`() {
+            properties.runbookUrl = "https://example.com/" + "a".repeat(1_100)
+            val payload = """
+                { "data": { "issue": { "title": "서버 오류", "project": { "slug": "gerd" } }, "event": {} } }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            assertThat(embed.fields.map { it.name }).containsExactly("Project", "Environment", "Level")
+        }
+
+        @Test
+        fun `임베드 전체 글자 수가 Discord 제한을 넘지 않도록 설명을 줄인다`() {
+            properties.runbookUrl = "https://example.com/" + "a".repeat(900)
+            val payload = """
+                {
+                  "data": {
+                    "issue": {
+                      "title": "${"t".repeat(300)}",
+                      "culprit": "${"c".repeat(2_000)}",
+                      "project": { "slug": "gerd" }
+                    },
+                    "event": {
+                      "message": "${"m".repeat(5_000)}",
+                      "level": "error",
+                      "environment": "production",
+                      "release": "${"r".repeat(200)}"
+                    }
+                  }
+                }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            val total = embed.title.length + embed.description.length + embed.footer!!.text.length +
+                embed.fields.sumOf { it.name.length + it.value.length }
+            assertThat(total).isLessThanOrEqualTo(6_000)
+            assertThat(embed.description).isNotEmpty()
+        }
+
+        @Test
         fun `서명이 다르면 Discord로 전달하지 않는다`() {
             val payload = "{}".toByteArray()
 

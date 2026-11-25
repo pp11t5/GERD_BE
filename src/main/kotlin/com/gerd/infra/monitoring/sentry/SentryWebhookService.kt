@@ -52,22 +52,29 @@ class SentryWebhookService(
         if (culprit.isNotBlank()) {
             fields += DiscordEmbedField(name = "Culprit", value = "`${culprit.take(MAX_CULPRIT_LENGTH)}`", inline = false)
         }
-        sentryWebhookProperties.runbookUrl.takeIf(String::isNotBlank)?.let {
-            fields += DiscordEmbedField(name = "Runbook", value = "[런북 열기]($it)", inline = false)
-        }
+        sentryWebhookProperties.runbookUrl.takeIf(String::isNotBlank)
+            ?.let { "[런북 열기]($it)" }
+            ?.takeIf { it.length <= MAX_FIELD_VALUE_LENGTH }
+            ?.let { fields += DiscordEmbedField(name = "Runbook", value = it, inline = false) }
+
+        val embedTitle = "${levelEmoji(level)} $title".take(MAX_TITLE_LENGTH)
+        val fixedLength = embedTitle.length + FOOTER_TEXT.length +
+            fields.sumOf { it.name.length + it.value.length }
+        val descriptionBudget = (MAX_EMBED_TOTAL_LENGTH - fixedLength)
+            .coerceIn(0, MAX_DESCRIPTION_LENGTH)
 
         discordWebhookClient.send(
             sentryWebhookProperties.discordWebhookUrl,
             DiscordWebhookMessage(
                 embeds = listOf(
                     DiscordEmbed(
-                        title = "${levelEmoji(level)} $title".take(MAX_TITLE_LENGTH),
-                        description = description.take(MAX_DESCRIPTION_LENGTH),
+                        title = embedTitle,
+                        description = description.take(descriptionBudget),
                         url = issueUrl,
                         color = levelColor(level),
                         fields = fields,
                         timestamp = parseTimestamp(event.path("datetime").asText(null)),
-                        footer = DiscordEmbedFooter(text = "Sentry"),
+                        footer = DiscordEmbedFooter(text = FOOTER_TEXT),
                     ),
                 ),
             ),
@@ -138,6 +145,9 @@ class SentryWebhookService(
         private const val HEX_DIGITS = "0123456789abcdefABCDEF"
         private const val MAX_TITLE_LENGTH = 256
         private const val MAX_DESCRIPTION_LENGTH = 4_000
+        private const val MAX_FIELD_VALUE_LENGTH = 1_024
+        private const val MAX_EMBED_TOTAL_LENGTH = 6_000
+        private const val FOOTER_TEXT = "Sentry"
         private const val MAX_CULPRIT_LENGTH = 900
         private const val MAX_RELEASE_LENGTH = 100
         private const val GIT_SHA_LENGTH = 40
