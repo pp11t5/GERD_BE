@@ -44,9 +44,9 @@ class SentryWebhookService(
         val environment = extractEnvironment(event)
         val culprit = issue.path("culprit").asText(event.path("culprit").asText(""))
         val fields = mutableListOf(
-            DiscordEmbedField(name = "Project", value = projectName, inline = true),
-            DiscordEmbedField(name = "Environment", value = environment, inline = true),
-            DiscordEmbedField(name = "Level", value = level, inline = true),
+            DiscordEmbedField(name = "Project", value = projectName.take(MAX_TAG_FIELD_LENGTH), inline = true),
+            DiscordEmbedField(name = "Environment", value = environment.take(MAX_TAG_FIELD_LENGTH), inline = true),
+            DiscordEmbedField(name = "Level", value = level.take(MAX_TAG_FIELD_LENGTH), inline = true),
         )
         extractRelease(event)?.let { fields += DiscordEmbedField(name = "Release", value = it, inline = true) }
         if (culprit.isNotBlank()) {
@@ -146,6 +146,7 @@ class SentryWebhookService(
         private const val MAX_TITLE_LENGTH = 256
         private const val MAX_DESCRIPTION_LENGTH = 4_000
         private const val MAX_FIELD_VALUE_LENGTH = 1_024
+        private const val MAX_TAG_FIELD_LENGTH = 100
         private const val MAX_EMBED_TOTAL_LENGTH = 6_000
         private const val FOOTER_TEXT = "Sentry"
         private const val MAX_CULPRIT_LENGTH = 900

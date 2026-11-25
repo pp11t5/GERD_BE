@@ -186,6 +186,33 @@ class SentryWebhookServiceTest {
         }
 
         @Test
+        fun `프로젝트, 환경, 레벨 값이 매우 길어도 임베드 전체가 제한을 넘지 않는다`() {
+            val payload = """
+                {
+                  "data": {
+                    "issue": { "title": "서버 오류", "project": { "slug": "${"p".repeat(7_000)}" } },
+                    "event": {
+                      "message": "${"m".repeat(5_000)}",
+                      "level": "${"l".repeat(7_000)}",
+                      "environment": "${"e".repeat(7_000)}"
+                    }
+                  }
+                }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            val total = embed.title.length + embed.description.length + embed.footer!!.text.length +
+                embed.fields.sumOf { it.name.length + it.value.length }
+            assertThat(total).isLessThanOrEqualTo(6_000)
+            assertThat(embed.fields).allMatch { it.value.length <= 1_024 }
+            assertThat(embed.description).isNotEmpty()
+        }
+
+        @Test
         fun `서명이 다르면 Discord로 전달하지 않는다`() {
             val payload = "{}".toByteArray()
 
