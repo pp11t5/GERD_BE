@@ -28,6 +28,9 @@ data class RateLimitProperties(
         if (!enabled) {
             return
         }
+        check(clientIpHeader.isBlank() || trustedProxies.isNotEmpty()) {
+            "rate-limit client-ip-header를 설정하면 trusted-proxies도 설정해야 합니다: $clientIpHeader"
+        }
         val duplicated = policies.groupBy { it.name }.filter { it.value.size > 1 }.keys
         check(duplicated.isEmpty()) { "rate-limit 정책 이름이 중복되었습니다: $duplicated" }
         policies.forEach { policy ->

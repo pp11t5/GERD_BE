@@ -42,6 +42,23 @@ class RateLimitPropertiesTest {
         }
 
         @Test
+        fun `IP 헤더를 지정하고 신뢰 프록시가 없으면 시작 시 실패한다`() {
+            val properties = RateLimitProperties(clientIpHeader = "CF-Connecting-IP")
+
+            assertThatThrownBy { properties.validate() }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessageContaining("trusted-proxies")
+        }
+
+        @Test
+        fun `IP 헤더와 신뢰 프록시를 함께 지정하면 통과한다`() {
+            val properties =
+                RateLimitProperties(clientIpHeader = "CF-Connecting-IP", trustedProxies = listOf("10.0.0.0/8"))
+
+            assertThatCode { properties.validate() }.doesNotThrowAnyException()
+        }
+
+        @Test
         fun `비활성화되어 있으면 잘못된 값도 검사하지 않는다`() {
             assertThatCode { properties(Policy(name = "a", limitForPeriod = 0), enabled = false).validate() }
                 .doesNotThrowAnyException()
