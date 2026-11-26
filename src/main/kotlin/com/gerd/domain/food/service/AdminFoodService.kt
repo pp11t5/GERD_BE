@@ -1,5 +1,6 @@
 package com.gerd.domain.food.service
 
+import com.gerd.domain.admin.service.AdminAuditService
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
 import com.gerd.domain.food.dto.AdminUserFoodDTO
 import com.gerd.domain.food.entity.enums.FoodSource
@@ -22,6 +23,7 @@ class AdminFoodService(
     private val foodRepository: FoodRepository,
     private val userFoodRepository: UserFoodRepository,
     private val dictionaryRepository: UserFoodDictionaryRepository,
+    private val adminAuditService: AdminAuditService,
 ) {
 
     @Transactional(readOnly = true)
@@ -50,6 +52,7 @@ class AdminFoodService(
 
         userFoodRepository.deleteAllByFoodId(foodId)
         food.promote()
+        adminAuditService.record(AdminAuditService.FOOD_PROMOTE, AdminAuditService.TARGET_FOOD, foodExternalId, food.name)
         log.info { "음식 승격 완료: foodId=$foodId name=${food.name} → CURATED/PUBLIC" }
     }
 

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('음식 승격')}"></head>
+<body class="bg-[#F5F6FC] text-[#1B1B4B]">
+<div class="flex min-h-screen">
+    <aside th:replace="~{admin/fragments :: sidebar}"></aside>
+
+    <div class="flex-1 px-6 py-6 md:px-10">
+        <header class="mb-8 flex items-center justify-between">
+            <h1 class="text-3xl font-bold">음식 승격</h1>
+            <div class="flex items-center gap-3 rounded-full bg-white py-2 pl-2 pr-5 shadow-sm">
+                <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#5B5FE3] text-sm font-bold uppercase text-white"
+                     th:text="${#strings.substring(adminName, 0, 1)}">A</div>
+                <div class="leading-tight">
+                    <p class="text-sm font-semibold" th:text="${adminName}">admin</p>
+                    <p class="text-xs text-gray-400">Admin</p>
+                </div>
+            </div>
+        </header>
+
+        <p th:if="${message}" th:text="${message}" class="mb-4 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700"></p>
+        <p th:if="${error}" th:text="${error}" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></p>
+
+        <section class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:max-w-xl">
+            <div class="rounded-2xl bg-[#FFE2E5] p-5">
+                <p class="text-2xl font-bold" th:text="${#numbers.formatInteger(foods.totalElements, 1, 'COMMA')}">0</p>
+                <p class="mt-1 text-sm">조회된 유저 음식</p>
+            </div>
+            <div class="rounded-2xl bg-[#DCFCE7] p-5">
+                <p class="text-2xl font-bold" th:text="${foods.totalPages == 0 ? 0 : foods.page + 1} + ' / ' + ${foods.totalPages}">0 / 0</p>
+                <p class="mt-1 text-sm">현재 페이지</p>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-semibold">유저 등록 음식</h2>
+                    <p class="text-sm text-gray-400">승격하면 모든 사용자에게 노출되고, 같은 이름의 다른 유저 음식은 병합됩니다.</p>
+                </div>
+                <div class="flex gap-2 text-sm">
+                    <a th:href="@{/admin/foods}"
+                       th:class="${isUnknown == null} ? 'rounded-lg bg-[#5B5FE3] px-4 py-2 font-medium text-white' : 'rounded-lg border border-gray-200 px-4 py-2 text-gray-500 hover:bg-gray-50'">전체</a>
+                    <a th:href="@{/admin/foods(isUnknown=true)}"
+                       th:class="${isUnknown == true} ? 'rounded-lg bg-[#5B5FE3] px-4 py-2 font-medium text-white' : 'rounded-lg border border-gray-200 px-4 py-2 text-gray-500 hover:bg-gray-50'">Unknown</a>
+                    <a th:href="@{/admin/foods(isUnknown=false)}"
+                       th:class="${isUnknown == false} ? 'rounded-lg bg-[#5B5FE3] px-4 py-2 font-medium text-white' : 'rounded-lg border border-gray-200 px-4 py-2 text-gray-500 hover:bg-gray-50'">Known</a>
+                </div>
+            </div>
+
+            <table class="w-full text-left text-sm">
+                <thead>
+                <tr class="border-b border-gray-100 text-xs text-gray-400">
+                    <th class="w-16 py-3 font-normal">#</th>
+                    <th class="py-3 font-normal">이름</th>
+                    <th class="w-28 py-3 text-right font-normal">승격</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="food, stat : ${foods.content}" class="border-b border-gray-50">
+                    <td class="py-4 text-gray-400" th:text="${foods.page * foods.size + stat.count}">1</td>
+                    <td class="py-4 font-medium" th:text="${food.name}">음식</td>
+                    <td class="py-4 text-right">
+                        <form th:action="@{/admin/foods/{id}/promote(id=${food.externalId})}" method="post"
+                              onsubmit="return confirm('이 음식을 모든 사용자에게 노출하도록 승격할까요? 같은 이름의 다른 유저 음식은 병합되며 되돌릴 수 없습니다.')">
+                            <input type="hidden" name="page" th:value="${foods.page}">
+                            <input type="hidden" name="isUnknown" th:if="${isUnknown != null}" th:value="${isUnknown}">
+                            <button type="submit"
+                                    class="rounded-lg border border-[#5B5FE3] px-3 py-1.5 text-xs font-medium text-[#5B5FE3] hover:bg-[#5B5FE3] hover:text-white">
+                                승격
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(foods.content)}">
+                    <td colspan="3" class="py-12 text-center text-gray-400">표시할 음식이 없습니다.</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="mt-5 flex items-center justify-end gap-2 text-sm">
+                <a th:unless="${foods.first}" th:href="@{/admin/foods(page=${foods.page - 1}, isUnknown=${isUnknown})}"
+                   class="rounded-lg border border-gray-200 px-4 py-2 text-gray-500 hover:bg-gray-50">이전</a>
+                <a th:unless="${foods.last}" th:href="@{/admin/foods(page=${foods.page + 1}, isUnknown=${isUnknown})}"
+                   class="rounded-lg border border-gray-200 px-4 py-2 text-gray-500 hover:bg-gray-50">다음</a>
+            </div>
+        </section>
+    </div>
+</div>
+</body>
+</html>

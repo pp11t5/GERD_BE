@@ -137,6 +137,10 @@ admin:
   email: ${ADMIN_EMAIL:}
   secret: ${ADMIN_SECRET:}
 
+backoffice:
+  metabase-url: ${BACKOFFICE_METABASE_URL:}
+  better-stack-url: ${BACKOFFICE_BETTER_STACK_URL:}
+
 swagger:
   username: ${SWAGGER_USERNAME:admin}
   password: ${SWAGGER_PASSWORD:admin}

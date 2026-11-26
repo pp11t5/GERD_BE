@@ -27,7 +27,8 @@ class JpaAuditingConfig {
         if (auth == null || !auth.isAuthenticated || auth.principal == "anonymousUser") {
             Optional.empty()
         } else {
-            Optional.ofNullable((auth.principal as CustomUserDetails).userId)
+            // Backoffice 세션 로그인 주체는 CustomUserDetails가 아니라 auditor 없음으로 처리
+            Optional.ofNullable((auth.principal as? CustomUserDetails)?.userId)
         }
     }
 }
