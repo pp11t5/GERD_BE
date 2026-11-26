@@ -91,10 +91,13 @@ class RateLimitFilterTest {
         fun `퍼센트 인코딩한 경로로도 정책을 피할 수 없다`() {
             val filter = filter()
             val encoded = "/api/v1/auth/admin/%6cogin"
-            filter.call(uri = encoded)
-            filter.call(uri = encoded)
+            assertThat(filter.call(uri = encoded).passed()).isTrue()
+            assertThat(filter.call(uri = encoded).passed()).isTrue()
 
-            assertThat(filter.call(uri = encoded).passed()).isFalse()
+            val blocked = filter.call(uri = encoded)
+
+            assertThat(blocked.passed()).isFalse()
+            assertThat(blocked.response.status).isEqualTo(429)
             assertThat(filter.call().passed()).isFalse()
         }
 

@@ -2,6 +2,8 @@ package com.gerd.global.ratelimit
 
 import com.gerd.global.config.properties.RateLimitProperties
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
@@ -58,6 +60,20 @@ class ClientIpResolverTest {
             val resolver = resolver("CF-Connecting-IP", listOf("192.168.0.0/16"))
 
             assertThat(resolver.resolve(request)).isEqualTo("10.0.0.1")
+        }
+
+        @Test
+        fun `신뢰 프록시 형식이 잘못되면 생성 시 실패한다`() {
+            assertThatThrownBy { resolver("CF-Connecting-IP", listOf("10.0.0.0/33")) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+        }
+
+        @Test
+        fun `비활성화되어 있으면 잘못된 신뢰 프록시도 검사하지 않는다`() {
+            val properties =
+                RateLimitProperties(enabled = false, clientIpHeader = "CF-Connecting-IP", trustedProxies = listOf("bad"))
+
+            assertThatCode { ClientIpResolver(properties) }.doesNotThrowAnyException()
         }
 
         @Test

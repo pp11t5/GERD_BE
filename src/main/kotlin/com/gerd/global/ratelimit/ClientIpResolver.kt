@@ -9,9 +9,12 @@ import org.springframework.stereotype.Component
 class ClientIpResolver(
     private val properties: RateLimitProperties,
 ) {
-    private val trustedMatchers by lazy {
-        properties.trustedProxies.map { IpAddressMatcher(it.trim()) }
-    }
+    private val trustedMatchers: List<IpAddressMatcher> =
+        if (properties.enabled && properties.clientIpHeader.isNotBlank()) {
+            properties.trustedProxies.map { IpAddressMatcher(it.trim()) }
+        } else {
+            emptyList()
+        }
 
     fun resolve(request: HttpServletRequest): String {
         val header = properties.clientIpHeader
