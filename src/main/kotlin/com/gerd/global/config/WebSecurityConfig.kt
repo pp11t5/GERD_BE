@@ -5,6 +5,7 @@ import com.gerd.domain.auth.filter.JwtExceptionFilter
 import com.gerd.domain.auth.security.CustomAccessDeniedHandler
 import com.gerd.domain.auth.security.CustomAuthenticationEntryPoint
 import com.gerd.global.filter.SensitivePathBlockFilter
+import com.gerd.global.config.properties.AdminProperties
 import com.gerd.global.config.properties.SwaggerProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -12,7 +13,11 @@ import org.springframework.core.annotation.Order
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.provisioning.InMemoryUserDetailsManager
@@ -30,6 +35,7 @@ class WebSecurityConfig(
     private val customAccessDeniedHandler: CustomAccessDeniedHandler,
     private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
     private val swaggerProperties: SwaggerProperties,
+    private val adminProperties: AdminProperties,
 ) {
     companion object {
         val SWAGGER_URLS = arrayOf(
@@ -47,6 +53,52 @@ class WebSecurityConfig(
             "/api/v1/auth/admin/login",
             "/api/v1/webhooks/sentry",
         )
+    }
+
+    // Backoffice(Thymeleaf)는 세션 폼 로그인 + CSRF — JWT 체인과 분리
+    @Bean
+    @Order(0)
+    fun backofficeSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .securityMatcher("/admin/**")
+            .authenticationProvider(backofficeAuthenticationProvider())
+            .authorizeHttpRequests { auth ->
+                auth.requestMatchers("/admin/login").permitAll()
+                auth.anyRequest().hasRole("ADMIN")
+            }
+            .formLogin { form ->
+                form.loginPage("/admin/login")
+                form.loginProcessingUrl("/admin/login")
+                form.defaultSuccessUrl("/admin/foods", true)
+                form.failureUrl("/admin/login?error")
+            }
+            .logout { logout ->
+                logout.logoutUrl("/admin/logout")
+                logout.logoutSuccessUrl("/admin/login?logout")
+            }
+
+        return http.build()
+    }
+
+    private fun backofficeAuthenticationProvider(): DaoAuthenticationProvider {
+        val encoder = passwordEncoder()
+        val provider = DaoAuthenticationProvider(UserDetailsService { username -> loadBackofficeAdmin(username, encoder) })
+        provider.setPasswordEncoder(encoder)
+        return provider
+    }
+
+    private fun loadBackofficeAdmin(
+        username: String,
+        encoder: PasswordEncoder,
+    ): UserDetails {
+        val configured = adminProperties.email.isNotBlank() && adminProperties.secret.isNotBlank()
+        if (!configured || username != adminProperties.email) {
+            throw UsernameNotFoundException("admin")
+        }
+        val builder = User.withUsername(adminProperties.email)
+        builder.password(encoder.encode(adminProperties.secret))
+        builder.roles("ADMIN")
+        return builder.build()
     }
 
     // swagger 경로만 Basic Auth로 별도 보호 — JWT 체인보다 먼저 매칭되도록 순서 고정

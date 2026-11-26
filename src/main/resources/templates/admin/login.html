@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('로그인')}"></head>
+<body class="flex min-h-screen items-center justify-center bg-[#F5F6FC]">
+<main class="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
+    <div class="mb-8 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5B5FE3] text-lg font-bold text-white">G</div>
+        <span class="text-2xl font-bold text-[#1B1B4B]">GERD Admin</span>
+    </div>
+
+    <p th:if="${param.error}" class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">이메일 또는 시크릿이 올바르지 않습니다.</p>
+    <p th:if="${param.logout}" class="mb-4 rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-600">로그아웃되었습니다.</p>
+
+    <form th:action="@{/admin/login}" method="post" class="space-y-4">
+        <div>
+            <label for="username" class="mb-1 block text-sm text-gray-500">이메일</label>
+            <input id="username" name="username" type="email" required autofocus autocomplete="username"
+                   class="w-full rounded-xl bg-[#F5F6FC] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#5B5FE3]">
+        </div>
+        <div>
+            <label for="password" class="mb-1 block text-sm text-gray-500">시크릿</label>
+            <input id="password" name="password" type="password" required autocomplete="current-password"
+                   class="w-full rounded-xl bg-[#F5F6FC] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#5B5FE3]">
+        </div>
+        <button type="submit"
+                class="w-full rounded-xl bg-[#5B5FE3] py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-[#4A4ED0]">
+            로그인
+        </button>
+    </form>
+</main>
+</body>
+</html>

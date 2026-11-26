@@ -1,5 +1,6 @@
 package com.gerd.domain.food.service
 
+import com.gerd.domain.admin.service.AdminAuditService
 import com.gerd.domain.dictionary.repository.UserFoodDictionaryRepository
 import com.gerd.domain.food.entity.UserFood
 import com.gerd.domain.food.entity.enums.FoodSource
@@ -37,6 +38,9 @@ class AdminFoodServiceTest {
 
     @Mock
     private lateinit var dictionaryRepository: UserFoodDictionaryRepository
+
+    @Mock
+    private lateinit var adminAuditService: AdminAuditService
 
     @InjectMocks
     private lateinit var service: AdminFoodService

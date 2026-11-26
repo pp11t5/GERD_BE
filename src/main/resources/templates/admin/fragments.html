@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' · GERD Admin'">GERD Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <style>body { font-family: 'Pretendard', system-ui, sans-serif; }</style>
+</head>
+<body>
+<aside th:fragment="sidebar" class="hidden w-64 shrink-0 flex-col bg-white px-5 py-8 md:flex">
+    <div class="mb-10 flex items-center gap-3 px-2">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5B5FE3] text-lg font-bold text-white">G</div>
+        <span class="text-2xl font-bold text-[#1B1B4B]">GERD</span>
+    </div>
+
+    <nav class="flex flex-1 flex-col gap-2 text-sm">
+        <a th:href="@{/admin/foods}"
+           class="flex items-center gap-3 rounded-xl bg-[#5B5FE3] px-4 py-3 font-semibold text-white shadow-lg shadow-indigo-200">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
+            음식 승격
+        </a>
+        <a th:if="${!#strings.isEmpty(metabaseUrl)}" th:href="${metabaseUrl}" target="_blank" rel="noopener noreferrer"
+           class="flex items-center gap-3 rounded-xl px-4 py-3 text-gray-500 hover:bg-gray-50">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg>
+            Metabase
+        </a>
+        <a th:if="${!#strings.isEmpty(betterStackUrl)}" th:href="${betterStackUrl}" target="_blank" rel="noopener noreferrer"
+           class="flex items-center gap-3 rounded-xl px-4 py-3 text-gray-500 hover:bg-gray-50">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+            Better Stack
+        </a>
+    </nav>
+
+    <form th:action="@{/admin/logout}" method="post">
+        <button type="submit" class="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-gray-500 hover:bg-gray-50">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17l5-5-5-5M20 12H9m4 8H5a1 1 0 01-1-1V5a1 1 0 011-1h8"/></svg>
+            Sign Out
+        </button>
+    </form>
+</aside>
+</body>
+</html>
