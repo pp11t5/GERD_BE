@@ -28,6 +28,7 @@ import java.time.LocalDateTime
     indexes = [
         Index(name = "symptom_records_user_occurred_idx", columnList = "user_id, occurred_at"),
         Index(name = "symptom_records_user_state_occurred_idx", columnList = "user_id, symptom_state, occurred_at"),
+        Index(name = "symptom_records_meal_record_idx", columnList = "meal_record_id"),
     ],
 )
 @SQLDelete(sql = "UPDATE symptom_records SET deleted_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP WHERE symptom_id = ?")
