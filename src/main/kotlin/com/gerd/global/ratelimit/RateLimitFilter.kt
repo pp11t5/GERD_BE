@@ -14,6 +14,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.filter.OncePerRequestFilter
+import org.springframework.web.util.UrlPathHelper
 
 class RateLimitFilter(
     private val properties: RateLimitProperties,
@@ -28,7 +29,7 @@ class RateLimitFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val policy = findPolicy(request.requestURI)
+        val policy = findPolicy(UrlPathHelper.defaultInstance.getPathWithinApplication(request))
         if (!properties.enabled || policy == null) {
             filterChain.doFilter(request, response)
             return

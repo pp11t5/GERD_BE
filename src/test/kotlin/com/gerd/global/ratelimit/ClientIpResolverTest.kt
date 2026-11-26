@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
 
 class ClientIpResolverTest {
-    private fun resolver(header: String) = ClientIpResolver(RateLimitProperties(clientIpHeader = header))
+    private fun resolver(
+        header: String,
+        trustedProxies: List<String> = emptyList(),
+    ) = ClientIpResolver(RateLimitProperties(clientIpHeader = header, trustedProxies = trustedProxies))
 
     private fun request() = MockHttpServletRequest().apply { remoteAddr = "10.0.0.1" }
 
@@ -35,6 +38,26 @@ class ClientIpResolverTest {
             request.addHeader("X-Forwarded-For", "6.6.6.6, 1.2.3.4")
 
             assertThat(resolver("X-Forwarded-For").resolve(request)).isEqualTo("1.2.3.4")
+        }
+
+        @Test
+        fun `접속한 상대가 신뢰 프록시면 헤더를 쓴다`() {
+            val request = request()
+            request.addHeader("CF-Connecting-IP", "1.2.3.4")
+
+            val resolver = resolver("CF-Connecting-IP", listOf("10.0.0.0/24"))
+
+            assertThat(resolver.resolve(request)).isEqualTo("1.2.3.4")
+        }
+
+        @Test
+        fun `접속한 상대가 신뢰 프록시가 아니면 헤더를 무시하고 remoteAddr를 쓴다`() {
+            val request = request()
+            request.addHeader("CF-Connecting-IP", "6.6.6.6")
+
+            val resolver = resolver("CF-Connecting-IP", listOf("192.168.0.0/16"))
+
+            assertThat(resolver.resolve(request)).isEqualTo("10.0.0.1")
         }
 
         @Test

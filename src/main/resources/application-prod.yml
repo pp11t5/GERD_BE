@@ -3,6 +3,9 @@ app:
     grace-period: P14D
     schedule-in-memory: false
 
+rate-limit:
+  enabled: ${RATE_LIMIT_ENABLED:false}
+
 springdoc:
   api-docs:
     enabled: true

@@ -96,6 +96,7 @@ llm:
 rate-limit:
   enabled: ${RATE_LIMIT_ENABLED:true}
   client-ip-header: ${RATE_LIMIT_CLIENT_IP_HEADER:}
+  trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:}
   policies:
     - name: admin-login
       path-patterns:

@@ -34,7 +34,14 @@
 
 앱에 forward 헤더 설정이 없어서 `request.remoteAddr`는 프록시의 IP일 수 있다. 그러면 모든 사용자가 한 IP로 묶인다. 그래서 `RATE_LIMIT_CLIENT_IP_HEADER`로 헤더 이름을 받고, 헤더가 쉼표로 이어져 있으면 프록시가 마지막에 붙인 값만 쓴다. 앞쪽 값은 클라이언트가 위조할 수 있다.
 
-Cloudflare를 쓰고 있어서 `CF-Connecting-IP`를 쓸 계획이다. 다만 Railway 기본 도메인으로 직접 접속하면 Cloudflare를 거치지 않아 이 헤더를 위조할 수 있다. 직접 접속을 막거나 Cloudflare 경유만 허용하는 확인이 필요하다. 이 헤더가 실제로 어떻게 들어오는지는 staging에서 확인한 뒤에 정하고, 그 전에는 prod에서 IP 기준 제한을 켜지 않는다.
+Cloudflare를 쓰고 있어서 `CF-Connecting-IP`를 쓸 계획이다. 다만 Railway 기본 도메인으로 직접 접속하면 Cloudflare를 거치지 않아 이 헤더를 위조할 수 있다. 이를 막기 위해 `RATE_LIMIT_TRUSTED_PROXIES`(IP 또는 CIDR 목록)를 두었다. 목록이 있으면 접속한 상대(`remoteAddr`)가 목록에 있을 때만 헤더를 믿고, 아니면 헤더를 무시한다. 목록이 비어 있으면 모든 상대를 믿으므로, 직접 접속 경로를 막지 못하는 환경에서는 반드시 채워야 한다. Cloudflare나 Railway 프록시의 실제 대역은 아직 확인하지 못했다.
+
+이 헤더가 실제로 어떻게 들어오는지는 staging에서 확인한 뒤에 정한다. 그 전에 prod에서 IP 기준 제한이 켜지지 않도록 `application-prod.yml`의 `rate-limit.enabled` 기본값을 `false`로 두었고, 확인이 끝나면 `RATE_LIMIT_ENABLED=true`로 켠다. 기본 설정(local, staging)은 켜져 있다.
+
+## 경로 매칭과 설정 검증
+
+- 정책 경로 매칭은 Spring MVC가 라우팅하는 경로와 같은 기준으로 한다. `UrlPathHelper`로 퍼센트 인코딩을 풀고 세미콜론 뒤를 제거한 경로를 쓰므로 `/admin/%6cogin` 같은 우회가 통하지 않는다.
+- 활성화된 정책의 한도와 주기가 0 이하이거나 이름이 중복되면 앱이 시작할 때 실패한다. 환경변수 오입력이 첫 요청에서야 오류로 드러나는 것을 막기 위해서다.
 
 ## 결과와 한계
 
