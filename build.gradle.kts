@@ -49,6 +49,7 @@ dependencies {
 
     // circuit breaker
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
+    implementation("com.bucket4j:bucket4j_jdk17-core:8.20.0")
 
     // web
     implementation("org.springframework.boot:spring-boot-starter-webmvc")

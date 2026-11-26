@@ -93,6 +93,25 @@ llm:
     daily-limit-usd: ${LLM_DAILY_BUDGET_USD:0}
     discord-webhook-url: ${LLM_BUDGET_DISCORD_WEBHOOK_URL:${DISCORD_WEBHOOK_URL:}}
 
+rate-limit:
+  enabled: ${RATE_LIMIT_ENABLED:true}
+  client-ip-header: ${RATE_LIMIT_CLIENT_IP_HEADER:}
+  policies:
+    - name: admin-login
+      path-patterns:
+        - /api/v1/auth/admin/login
+      key-type: IP
+      limit-for-period: ${RATE_LIMIT_ADMIN_LOGIN_LIMIT:5}
+      refresh-period: ${RATE_LIMIT_ADMIN_LOGIN_PERIOD:10m}
+    - name: auth-token
+      path-patterns:
+        - /api/v1/auth/*/login
+        - /api/v1/auth/*/recover
+        - /api/v1/auth/refresh
+      key-type: IP
+      limit-for-period: 20
+      refresh-period: 1m
+
 resilience4j:
   circuitbreaker:
     configs:
