@@ -89,6 +89,130 @@ class SentryWebhookServiceTest {
         }
 
         @Test
+        fun `릴리스, 발생 위치, 런북, 시각을 임베드에 담고 레벨에 맞게 꾸민다`() {
+            properties.runbookUrl = "https://example.com/runbook"
+            val payload = """
+                {
+                  "data": {
+                    "issue": {
+                      "title": "서버 오류",
+                      "culprit": "com.gerd.Foo in bar",
+                      "project": { "slug": "gerd" }
+                    },
+                    "event": {
+                      "level": "warning",
+                      "environment": "production",
+                      "release": "0123456789abcdef0123456789abcdef01234567",
+                      "datetime": "2026-11-25T09:00:00.123456Z"
+                    }
+                  }
+                }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            assertThat(embed.title).isEqualTo("⚠️ 서버 오류")
+            assertThat(embed.timestamp).isEqualTo("2026-11-25T09:00:00.123456Z")
+            assertThat(embed.footer).isEqualTo(DiscordEmbedFooter("Sentry"))
+            assertThat(embed.fields).contains(
+                DiscordEmbedField("Release", "0123456", true),
+                DiscordEmbedField("Culprit", "`com.gerd.Foo in bar`", false),
+                DiscordEmbedField("Runbook", "[런북 열기](https://example.com/runbook)", false),
+            )
+        }
+
+        @Test
+        fun `긴 제목은 Discord 임베드 제한 길이로 자른다`() {
+            val longTitle = "a".repeat(300)
+            val payload = """
+                { "data": { "issue": { "title": "$longTitle", "project": { "slug": "gerd" } }, "event": {} } }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            assertThat(captor.firstValue.embeds.single().title).hasSize(256)
+        }
+
+        @Test
+        fun `런북 링크가 필드 제한 길이를 넘으면 Runbook 필드만 생략한다`() {
+            properties.runbookUrl = "https://example.com/" + "a".repeat(1_100)
+            val payload = """
+                { "data": { "issue": { "title": "서버 오류", "project": { "slug": "gerd" } }, "event": {} } }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            assertThat(embed.fields.map { it.name }).containsExactly("Project", "Environment", "Level")
+        }
+
+        @Test
+        fun `임베드 전체 글자 수가 Discord 제한을 넘지 않도록 설명을 줄인다`() {
+            properties.runbookUrl = "https://example.com/" + "a".repeat(900)
+            val payload = """
+                {
+                  "data": {
+                    "issue": {
+                      "title": "${"t".repeat(300)}",
+                      "culprit": "${"c".repeat(2_000)}",
+                      "project": { "slug": "gerd" }
+                    },
+                    "event": {
+                      "message": "${"m".repeat(5_000)}",
+                      "level": "error",
+                      "environment": "production",
+                      "release": "${"r".repeat(200)}"
+                    }
+                  }
+                }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            val total = embed.title.length + embed.description.length + embed.footer!!.text.length +
+                embed.fields.sumOf { it.name.length + it.value.length }
+            assertThat(total).isLessThanOrEqualTo(6_000)
+            assertThat(embed.description).isNotEmpty()
+        }
+
+        @Test
+        fun `프로젝트, 환경, 레벨 값이 매우 길어도 임베드 전체가 제한을 넘지 않는다`() {
+            val payload = """
+                {
+                  "data": {
+                    "issue": { "title": "서버 오류", "project": { "slug": "${"p".repeat(7_000)}" } },
+                    "event": {
+                      "message": "${"m".repeat(5_000)}",
+                      "level": "${"l".repeat(7_000)}",
+                      "environment": "${"e".repeat(7_000)}"
+                    }
+                  }
+                }
+            """.trimIndent().toByteArray()
+
+            service.receive(payload, signatureOf(payload))
+
+            val captor = argumentCaptor<DiscordWebhookMessage>()
+            verify(discordWebhookClient).send(eq(properties.discordWebhookUrl), captor.capture())
+            val embed = captor.firstValue.embeds.single()
+            val total = embed.title.length + embed.description.length + embed.footer!!.text.length +
+                embed.fields.sumOf { it.name.length + it.value.length }
+            assertThat(total).isLessThanOrEqualTo(6_000)
+            assertThat(embed.fields).allMatch { it.value.length <= 1_024 }
+            assertThat(embed.description).isNotEmpty()
+        }
+
+        @Test
         fun `서명이 다르면 Discord로 전달하지 않는다`() {
             val payload = "{}".toByteArray()
 

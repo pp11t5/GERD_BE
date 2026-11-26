@@ -67,7 +67,7 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
             .compact()
     }
 
-    // sub = userId, tokenType = REFRESH, jti = Redis 키
+    // sub = userId, tokenType = REFRESH, jti = DB 저장 토큰 식별자
     fun createRefreshToken(user: User): JwtToken {
         val now = Date()
         val jti = UUID.randomUUID().toString()

@@ -6,6 +6,7 @@ import com.gerd.domain.auth.security.JwtProvider
 import com.gerd.global.apiPayload.GeneralException
 import com.gerd.global.config.properties.AdminProperties
 import org.springframework.stereotype.Service
+import java.security.MessageDigest
 
 @Service
 class AdminAuthService(
@@ -17,9 +18,14 @@ class AdminAuthService(
         if (adminProperties.email.isBlank() || adminProperties.secret.isBlank()) {
             throw GeneralException(AuthErrorCode.INVALID_ADMIN_CREDENTIALS)
         }
-        if (email != adminProperties.email || secret != adminProperties.secret) {
+        val emailMatches = constantTimeEquals(email, adminProperties.email)
+        val secretMatches = constantTimeEquals(secret, adminProperties.secret)
+        if (!(emailMatches and secretMatches)) {
             throw GeneralException(AuthErrorCode.INVALID_ADMIN_CREDENTIALS)
         }
         return AdminLoginResponseDTO(accessToken = jwtProvider.createAdminAccessToken(email))
     }
+
+    private fun constantTimeEquals(actual: String, expected: String): Boolean =
+        MessageDigest.isEqual(actual.toByteArray(Charsets.UTF_8), expected.toByteArray(Charsets.UTF_8))
 }

@@ -27,7 +27,7 @@ notification:
 
 jwt:
   secret: ${JWT_SECRET}
-  access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
+  access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:1800000}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:259200000}
 
 sentry:
@@ -35,7 +35,7 @@ sentry:
   environment: staging
   release: ${SENTRY_RELEASE:${RAILWAY_GIT_COMMIT_SHA:unknown}}
   exception-resolver-order: -2147483647
-  max-request-body-size: always
+  max-request-body-size: none
   send-default-pii: false
   traces-sample-rate: 0.1
 

@@ -1,5 +1,6 @@
 package com.gerd.infra.monitoring.sentry
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -40,12 +41,19 @@ data class DiscordWebhookMessage(
     val embeds: List<DiscordEmbed>,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class DiscordEmbed(
     val title: String,
     val description: String,
     val url: String?,
     val color: Int,
     val fields: List<DiscordEmbedField>,
+    val timestamp: String? = null,
+    val footer: DiscordEmbedFooter? = null,
+)
+
+data class DiscordEmbedFooter(
+    val text: String,
 )
 
 data class DiscordEmbedField(

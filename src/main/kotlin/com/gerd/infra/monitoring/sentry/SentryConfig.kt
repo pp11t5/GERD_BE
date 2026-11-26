@@ -43,6 +43,9 @@ class SentryConfig(
             options.isSendDefaultPii = sendDefaultPii
             options.maxRequestBodySize = parseRequestSize(maxRequestBodySize)
             options.beforeSend = io.sentry.SentryOptions.BeforeSendCallback { event, _ ->
+                if (ClientErrorFilter.isClientError(event.throwable)) {
+                    return@BeforeSendCallback null
+                }
                 event.request?.headers?.apply {
                     remove("Authorization")
                     remove("Cookie")
