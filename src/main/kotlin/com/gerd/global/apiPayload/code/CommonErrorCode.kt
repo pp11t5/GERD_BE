@@ -39,6 +39,9 @@ enum class CommonErrorCode(
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "COMMON409_1", "이미 존재하는 리소스입니다."),
     CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "COMMON409_2", "동시 수정 충돌이 발생했습니다."),
 
+    // 429
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "COMMON429_1", "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."),
+
     // 500
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON500_1", "서버 오류가 발생했습니다."),
 }

@@ -5,7 +5,11 @@ import com.gerd.domain.auth.filter.JwtExceptionFilter
 import com.gerd.domain.auth.security.CustomAccessDeniedHandler
 import com.gerd.domain.auth.security.CustomAuthenticationEntryPoint
 import com.gerd.global.filter.SensitivePathBlockFilter
+import com.gerd.global.config.properties.RateLimitProperties
 import com.gerd.global.config.properties.SwaggerProperties
+import com.gerd.global.ratelimit.ClientIpResolver
+import com.gerd.global.ratelimit.RateLimitBuckets
+import com.gerd.global.ratelimit.RateLimitFilter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
@@ -30,6 +34,9 @@ class WebSecurityConfig(
     private val customAccessDeniedHandler: CustomAccessDeniedHandler,
     private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
     private val swaggerProperties: SwaggerProperties,
+    private val rateLimitProperties: RateLimitProperties,
+    private val rateLimitBuckets: RateLimitBuckets,
+    private val clientIpResolver: ClientIpResolver,
 ) {
     companion object {
         val SWAGGER_URLS = arrayOf(
@@ -100,6 +107,10 @@ class WebSecurityConfig(
             .addFilterBefore(SensitivePathBlockFilter(), UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(jwtExceptionFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterAfter(jwtAuthenticationFilter, JwtExceptionFilter::class.java)
+            .addFilterAfter(
+                RateLimitFilter(rateLimitProperties, rateLimitBuckets, clientIpResolver),
+                JwtAuthenticationFilter::class.java,
+            )
 
         return http.build()
     }
